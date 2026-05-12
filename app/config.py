@@ -1,0 +1,17 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/localez"
+    secret_key: str = "change-me"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
+    webauthn_rp_id: str = "localhost"
+    webauthn_rp_name: str = "Localez"
+    webauthn_origin: str = "http://localhost:8000"
+    recovery_word_list_path: str = "app/core/wordlist.txt"
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+
+settings = Settings()

@@ -1,0 +1,237 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Don't translate" : {
+      "comment" : "This string should not be translated",
+      "shouldTranslate" : false
+    },
+    "Marked for review" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Zur Prüfung markiert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Marked for review"
+          }
+        },
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Marked for review"
+          }
+        }
+      }
+    },
+    "Print %@" : {
+      "comment" : "This key includes a string"
+    },
+    "Reviewed" : {
+      "comment" : "This key is reviewed",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überprüft"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reviewed"
+          }
+        },
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reviewed"
+          }
+        }
+      }
+    },
+    "Save to your iPhone" : {
+      "comment" : "This key includes variation per device",
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "device" : {
+              "appletv" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your Apple TV"
+                }
+              },
+              "applevision" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your Apple Vision"
+                }
+              },
+              "applewatch" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your Apple Watch"
+                }
+              },
+              "ipad" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your iPad"
+                }
+              },
+              "iphone" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your iPhone"
+                }
+              },
+              "ipod" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your iPod"
+                }
+              },
+              "mac" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your Mac"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your other"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "device" : {
+              "appletv" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your Apple TV"
+                }
+              },
+              "applevision" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your Apple Vision"
+                }
+              },
+              "applewatch" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your Apple Watch"
+                }
+              },
+              "ipad" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your iPad"
+                }
+              },
+              "iphone" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Save to your iPhone"
+                }
+              },
+              "ipod" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your iPod"
+                }
+              },
+              "mac" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your Mac"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Save to your other device"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Show %lld strings" : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Show %lld string"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "new",
+                  "value" : "Show %lld strings"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "Show no strings"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Show one string"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "new",
+                  "value" : "Show %lld strings"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Show zero strings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This %@ includes %lld placeholders" : {
+      "comment" : "This key includes multiple placeholders",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This %1$@ includes %2$lld placeholders"
+          }
+        }
+      }
+    },
+    "Todays date: %@" : {
+      "comment" : "This key includes a date"
+    }
+  },
+  "version" : "1.2"
+}

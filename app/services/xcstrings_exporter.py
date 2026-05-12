@@ -1,0 +1,78 @@
+"""
+Build a .xcstrings-compatible dict from DB rows. Pure function — no DB calls.
+"""
+from __future__ import annotations
+
+from collections import defaultdict
+
+from app.models.localization import Localization, VariationType
+from app.models.project import Project
+from app.models.string_key import StringKey
+
+
+def build_xcstrings(
+    project: Project,
+    string_keys: list[StringKey],
+    localizations: list[Localization],
+) -> dict:
+    # group localizations by string_key_id
+    locs_by_key: dict = defaultdict(list)
+    for loc in localizations:
+        locs_by_key[loc.string_key_id].append(loc)
+
+    strings: dict = {}
+    for sk in string_keys:
+        key_data: dict = {}
+        if sk.comment:
+            key_data["comment"] = sk.comment
+        if not sk.should_translate:
+            key_data["shouldTranslate"] = False
+
+        key_locs = locs_by_key.get(sk.id, [])
+        if key_locs:
+            key_data["localizations"] = _build_localizations(key_locs)
+
+        strings[sk.key] = key_data
+
+    return {
+        "sourceLanguage": project.source_language,
+        "version": "1.2",
+        "strings": strings,
+    }
+
+
+def _build_localizations(locs: list[Localization]) -> dict:
+    # group by language, then by (variation_type, variation_key)
+    by_lang: dict = defaultdict(list)
+    for loc in locs:
+        by_lang[loc.language].append(loc)
+
+    result: dict = {}
+    for lang, lang_locs in by_lang.items():
+        flat = [l for l in lang_locs if l.variation_type == VariationType.none]
+        device_locs = [l for l in lang_locs if l.variation_type == VariationType.device]
+        plural_locs = [l for l in lang_locs if l.variation_type == VariationType.plural]
+
+        lang_data: dict = {}
+
+        if flat:
+            loc = flat[0]
+            lang_data["stringUnit"] = {"state": loc.state.value, "value": loc.value or ""}
+
+        if device_locs or plural_locs:
+            variations: dict = {}
+            if device_locs:
+                variations["device"] = {
+                    l.variation_key: {"stringUnit": {"state": l.state.value, "value": l.value or ""}}
+                    for l in device_locs
+                }
+            if plural_locs:
+                variations["plural"] = {
+                    l.variation_key: {"stringUnit": {"state": l.state.value, "value": l.value or ""}}
+                    for l in plural_locs
+                }
+            lang_data["variations"] = variations
+
+        result[lang] = lang_data
+
+    return result
