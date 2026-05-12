@@ -2,7 +2,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/localez"
+    postgres_db:str = "localez"
+    postgres_user: str = "localez"
+    postgres_password: str = "change-me"
+    postgres_port: int = 5432
     secret_key: str = "change-me"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
