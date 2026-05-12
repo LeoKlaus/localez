@@ -23,7 +23,7 @@ def _get_engine() -> AsyncEngine:
     if _engine is None:
         from app.config import settings
 
-        database_url = f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}@localhost:{settings.postgres_port}/{settings.postgres_password}"
+        database_url = f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}@localhost:{settings.postgres_port}/{settings.postgres_db}"
         
         _engine = create_async_engine(database_url, echo=False)
         _session_factory = async_sessionmaker(_engine, expire_on_commit=False)

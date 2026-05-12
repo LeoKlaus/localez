@@ -6,11 +6,13 @@ from webauthn.helpers.structs import (
     ResidentKeyRequirement,
     UserVerificationRequirement,
 )
+from webauthn.registration.verify_registration_response import VerifiedRegistration
+from webauthn.authentication.verify_authentication_response import VerifiedAuthentication
 
 from app.config import settings
 
 
-def get_registration_options(user_id: bytes, username: str, existing_credential_ids: list[bytes]) -> webauthn.WebAuthnCredentialCreationOptions:
+def get_registration_options(user_id: bytes, username: str, existing_credential_ids: list[bytes]):
     exclude = [PublicKeyCredentialDescriptor(id=cid) for cid in existing_credential_ids]
     return webauthn.generate_registration_options(
         rp_id=settings.webauthn_rp_id,
@@ -26,7 +28,7 @@ def get_registration_options(user_id: bytes, username: str, existing_credential_
     )
 
 
-def verify_registration(credential: dict, expected_challenge: bytes) -> webauthn.VerifiedRegistration:
+def verify_registration(credential: dict, expected_challenge: bytes) -> VerifiedRegistration:
     return webauthn.verify_registration_response(
         credential=credential,
         expected_challenge=expected_challenge,
@@ -35,7 +37,7 @@ def verify_registration(credential: dict, expected_challenge: bytes) -> webauthn
     )
 
 
-def get_authentication_options(credential_ids: list[bytes] | None = None) -> webauthn.WebAuthnCredentialRequestOptions:
+def get_authentication_options(credential_ids: list[bytes] | None = None):
     allow = [PublicKeyCredentialDescriptor(id=cid) for cid in (credential_ids or [])]
     return webauthn.generate_authentication_options(
         rp_id=settings.webauthn_rp_id,
@@ -49,7 +51,7 @@ def verify_authentication(
     expected_challenge: bytes,
     stored_public_key: bytes,
     stored_sign_count: int,
-) -> webauthn.VerifiedAuthentication:
+) -> VerifiedAuthentication:
     return webauthn.verify_authentication_response(
         credential=credential,
         expected_challenge=expected_challenge,
