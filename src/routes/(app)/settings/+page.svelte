@@ -139,7 +139,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${auth.accessToken}`
 				},
-				body: JSON.stringify({ code: totpCode })
+				body: JSON.stringify({ code: totpCode, secret: totpSecret })
 			});
 
 			if (!res.ok) {

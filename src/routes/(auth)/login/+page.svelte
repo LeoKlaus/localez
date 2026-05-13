@@ -41,15 +41,14 @@
 				body
 			});
 
-			if (res.status === 403) {
-				needsTotp = true;
-				error = 'Two-factor authentication required.';
-				return;
-			}
-
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
-				error = data.detail ?? 'Login failed. Check your credentials.';
+				if (res.status === 401 && data.detail?.code === 'TOTP_REQUIRED') {
+					needsTotp = true;
+					error = '';
+					return;
+				}
+				error = data.detail ?? data.message ?? 'Login failed. Check your credentials.';
 				return;
 			}
 
