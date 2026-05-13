@@ -48,6 +48,8 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     result = await auth_service.authenticate_user(db, form.username.lower(), form.password, totp_code)
+    if result == "TOTP_REQUIRED":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "TOTP_REQUIRED", "message": "TOTP code required"})
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
     _, access_token, refresh_token = result

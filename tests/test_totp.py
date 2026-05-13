@@ -89,7 +89,7 @@ async def test_totp_verify_wrong_code_rejected(client: AsyncClient, unique_usern
 # Login enforcement
 # ---------------------------------------------------------------------------
 
-async def test_login_without_totp_code_rejected_when_enabled(client: AsyncClient, unique_username):
+async def test_login_without_totp_code_returns_totp_required(client: AsyncClient, unique_username):
     username = unique_username("totp_login_nototp")
     password = "securepass1"
     headers = await _register_and_login(client, username, password)
@@ -97,6 +97,7 @@ async def test_login_without_totp_code_rejected_when_enabled(client: AsyncClient
 
     resp = await client.post("/auth/token", data={"username": username, "password": password})
     assert resp.status_code == 401
+    assert resp.json()["detail"]["code"] == "TOTP_REQUIRED"
 
 
 async def test_login_with_wrong_totp_code_rejected(client: AsyncClient, unique_username):

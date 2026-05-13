@@ -32,13 +32,15 @@ async def register_user(db: AsyncSession, username: str, password: str) -> tuple
     return user, recovery_words, access_token, refresh_token_raw
 
 
-async def authenticate_user(db: AsyncSession, username: str, password: str, totp_code: str | None = None) -> tuple[User, str, str] | None:
+async def authenticate_user(db: AsyncSession, username: str, password: str, totp_code: str | None = None) -> tuple[User, str, str] | str | None:
     result = await db.execute(select(User).where(User.username == username, User.is_active == True))  # noqa: E712
     user = result.scalar_one_or_none()
     if user is None or not verify_password(password, user.hashed_password):
         return None
     if user.totp_secret is not None:
-        if not totp_code or not verify_totp(user.totp_secret, totp_code):
+        if not totp_code:
+            return "TOTP_REQUIRED"
+        if not verify_totp(user.totp_secret, totp_code):
             return None
     access_token, refresh_token_raw = await _issue_tokens(db, user)
     return user, access_token, refresh_token_raw
