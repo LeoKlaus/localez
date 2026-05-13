@@ -145,6 +145,9 @@ async def xcstrings_project(admin_client: AsyncClient) -> dict:
     assert resp.status_code == 201
     proj = resp.json()
     example = Path(__file__).parent.parent / "Example.xcstrings"
-    imp = await admin_client.post(f"/projects/{proj['id']}/import", json=json.loads(example.read_text()))
+    imp = await admin_client.post(
+        f"/projects/{proj['id']}/import",
+        files={"file": (example.name, example.read_bytes(), "application/json")},
+    )
     assert imp.status_code == 200
     return proj

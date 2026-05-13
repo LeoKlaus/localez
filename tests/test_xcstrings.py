@@ -1,5 +1,6 @@
 """Integration tests for xcstrings import and export endpoints."""
 import json
+import uuid
 from pathlib import Path
 
 import pytest
@@ -10,8 +11,18 @@ pytestmark = pytest.mark.usefixtures("setup_database")
 EXAMPLE_PATH = Path(__file__).parent.parent / "Example.xcstrings"
 
 
+def _example_bytes() -> bytes:
+    return EXAMPLE_PATH.read_bytes()
+
+
 def _example_data() -> dict:
     return json.loads(EXAMPLE_PATH.read_text())
+
+
+def _upload(data: dict | None = None) -> dict:
+    """Build an httpx files= payload from a dict (or the example file if omitted)."""
+    content = json.dumps(data).encode() if data is not None else _example_bytes()
+    return {"file": ("Example.xcstrings", content, "application/json")}
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +31,7 @@ def _example_data() -> dict:
 
 async def test_import_creates_string_keys(admin_client: AsyncClient):
     proj = (await admin_client.post("/projects", json={"name": "ImportTest", "source_language": "en"})).json()
-    resp = await admin_client.post(f"/projects/{proj['id']}/import", json=_example_data())
+    resp = await admin_client.post(f"/projects/{proj['id']}/import", files=_upload())
 
     assert resp.status_code == 200
     data = resp.json()
@@ -36,7 +47,7 @@ async def test_import_creates_string_keys(admin_client: AsyncClient):
 
 async def test_import_marks_non_translatable(admin_client: AsyncClient):
     proj = (await admin_client.post("/projects", json={"name": "ImportNT", "source_language": "en"})).json()
-    await admin_client.post(f"/projects/{proj['id']}/import", json=_example_data())
+    await admin_client.post(f"/projects/{proj['id']}/import", files=_upload())
 
     strings = (await admin_client.get(f"/projects/{proj['id']}/strings")).json()
     nt = next(s for s in strings if s["key"] == "Don't translate")
@@ -45,7 +56,7 @@ async def test_import_marks_non_translatable(admin_client: AsyncClient):
 
 async def test_import_creates_localizations_with_states(admin_client: AsyncClient):
     proj = (await admin_client.post("/projects", json={"name": "ImportState", "source_language": "en"})).json()
-    await admin_client.post(f"/projects/{proj['id']}/import", json=_example_data())
+    await admin_client.post(f"/projects/{proj['id']}/import", files=_upload())
 
     strings = (await admin_client.get(f"/projects/{proj['id']}/strings")).json()
     reviewed = next(s for s in strings if s["key"] == "Reviewed")
@@ -56,20 +67,17 @@ async def test_import_creates_localizations_with_states(admin_client: AsyncClien
 
 async def test_import_skip_does_not_overwrite(admin_client: AsyncClient):
     proj = (await admin_client.post("/projects", json={"name": "ImportSkip", "source_language": "en"})).json()
-    await admin_client.post(f"/projects/{proj['id']}/import", json=_example_data())
+    await admin_client.post(f"/projects/{proj['id']}/import", files=_upload())
 
-    # Patch the data to have a different value
+    # Patch the data to have a different value and re-import with skip
     data = _example_data()
     data["strings"]["Reviewed"]["localizations"]["en"]["stringUnit"]["value"] = "CHANGED"
-
-    # Re-import with skip (default)
-    await admin_client.post(f"/projects/{proj['id']}/import?conflict=skip", json=data)
+    await admin_client.post(f"/projects/{proj['id']}/import?conflict=skip", files=_upload(data))
 
     strings = (await admin_client.get(f"/projects/{proj['id']}/strings")).json()
     reviewed = next(s for s in strings if s["key"] == "Reviewed")
     locs = (await admin_client.get(f"/projects/{proj['id']}/strings/{reviewed['id']}/localizations")).json()
     en_loc = next(loc for loc in locs if loc["language"] == "en" and loc["variation_type"] == "none")
-    # Original value preserved
     assert en_loc["value"] != "CHANGED"
 
 
@@ -81,10 +89,9 @@ async def test_import_overwrite_updates_values(admin_client: AsyncClient):
     unique indexes means ON CONFLICT never fires for them — a known limitation.
     """
     proj = (await admin_client.post("/projects", json={"name": "ImportOverwrite", "source_language": "en"})).json()
-    await admin_client.post(f"/projects/{proj['id']}/import", json=_example_data())
+    await admin_client.post(f"/projects/{proj['id']}/import", files=_upload())
 
     data = _example_data()
-    # Modify a device variation (non-NULL variation_key) so ON CONFLICT DO UPDATE fires
     save_locs = data["strings"]["Save to your iPhone"]["localizations"]
     if "en" in save_locs and "variations" in save_locs["en"] and "device" in save_locs["en"]["variations"]:
         device_vars = save_locs["en"]["variations"]["device"]
@@ -93,7 +100,7 @@ async def test_import_overwrite_updates_values(admin_client: AsyncClient):
     else:
         pytest.skip("Expected device variation not found in fixture")
 
-    await admin_client.post(f"/projects/{proj['id']}/import?conflict=overwrite", json=data)
+    await admin_client.post(f"/projects/{proj['id']}/import?conflict=overwrite", files=_upload(data))
 
     strings = (await admin_client.get(f"/projects/{proj['id']}/strings")).json()
     save_key = next(s for s in strings if s["key"] == "Save to your iPhone")
@@ -106,27 +113,37 @@ async def test_import_overwrite_updates_values(admin_client: AsyncClient):
 
 async def test_import_idempotent(admin_client: AsyncClient):
     proj = (await admin_client.post("/projects", json={"name": "ImportIdempotent", "source_language": "en"})).json()
-    data = _example_data()
 
-    r1 = await admin_client.post(f"/projects/{proj['id']}/import", json=data)
-    r2 = await admin_client.post(f"/projects/{proj['id']}/import?conflict=skip", json=data)
+    r1 = await admin_client.post(f"/projects/{proj['id']}/import", files=_upload())
+    r2 = await admin_client.post(f"/projects/{proj['id']}/import?conflict=skip", files=_upload())
 
     assert r1.status_code == 200
     assert r2.status_code == 200
     assert r1.json()["imported_keys"] == r2.json()["imported_keys"]
 
 
+async def test_import_invalid_json(admin_client: AsyncClient):
+    proj = (await admin_client.post("/projects", json={"name": "ImportBadJSON", "source_language": "en"})).json()
+    resp = await admin_client.post(
+        f"/projects/{proj['id']}/import",
+        files={"file": ("bad.xcstrings", b"not json at all", "application/json")},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["code"] == "INVALID_XCSTRINGS"
+
+
 async def test_import_requires_admin(member_client, unique_username):
     username = unique_username("import_norole")
-    # member_client creates a regular user; they need admin to import
     async with member_client(username) as c:
-        resp = await c.post("/projects/00000000-0000-0000-0000-000000000000/import", json=_example_data())
+        resp = await c.post(
+            f"/projects/{uuid.uuid4()}/import",
+            files=_upload(),
+        )
         assert resp.status_code == 403
 
 
 async def test_import_nonexistent_project(admin_client: AsyncClient):
-    import uuid
-    resp = await admin_client.post(f"/projects/{uuid.uuid4()}/import", json=_example_data())
+    resp = await admin_client.post(f"/projects/{uuid.uuid4()}/import", files=_upload())
     assert resp.status_code == 404
 
 
@@ -170,7 +187,6 @@ async def test_export_content_disposition_header(admin_client: AsyncClient, xcst
 async def test_export_guest_can_access(admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict):
     username = unique_username("export_guest")
     async with member_client(username) as c:
-        # Get the user's own ID via /users/me rather than searching the full list
         user_id = (await c.get("/users/me")).json()["id"]
         await admin_client.post(f"/projects/{xcstrings_project['id']}/members", json={
             "user_id": user_id, "project_role": "guest",

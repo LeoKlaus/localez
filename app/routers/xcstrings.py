@@ -1,6 +1,7 @@
+import json
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -23,11 +24,17 @@ router = APIRouter()
 @router.post("/{project_id}/import", status_code=status.HTTP_200_OK)
 async def import_xcstrings(
     project_id: uuid.UUID,
-    data: dict,
+    file: UploadFile = File(..., description="xcstrings file to import"),
     conflict: str = Query(default="skip", pattern="^(skip|overwrite)$"),
     _: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        contents = await file.read()
+        data = json.loads(contents)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "INVALID_XCSTRINGS", "message": f"File is not valid JSON: {e}"})
+
     project = await db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
