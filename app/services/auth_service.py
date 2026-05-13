@@ -81,6 +81,7 @@ async def recover_account(db: AsyncSession, username: str, words: list[str], new
         return None
 
     user.hashed_password = hash_password(new_password)
+    user.totp_secret = None
 
     # revoke all existing refresh tokens
     await db.execute(
