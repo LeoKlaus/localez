@@ -24,7 +24,7 @@
 	const stringDetail = createQuery(() => ({
 		queryKey: ['string', projectId, keyId],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/projects/{project_id}/strings/{key_id}', {
+			const { data, error } = await client.GET('/api/projects/{project_id}/strings/{key_id}', {
 				params: { path: { project_id: projectId, key_id: keyId } }
 			});
 			if (error) throw error;
@@ -46,7 +46,7 @@
 	const createProposal = createMutation(() => ({
 		mutationFn: async () => {
 			const { data, error } = await client.POST(
-				'/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
 				{
 					params: { path: { project_id: projectId, key_id: keyId, loc_id: selectedLocId } },
 					body: { proposed_value: proposedValue }
@@ -147,7 +147,7 @@
 		queryKey: ['proposals', projectId, keyId, loc.id],
 		queryFn: async () => {
 			const { data, error } = await client.GET(
-				'/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
 				{
 					params: {
 						path: { project_id: projectId, key_id: keyId, loc_id: loc.id },
@@ -163,7 +163,7 @@
 	{@const acceptProposal = createMutation(() => ({
 		mutationFn: async (proposalId: string) => {
 			const { error } = await client.POST(
-				'/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept',
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept',
 				{
 					params: {
 						path: {
@@ -186,7 +186,7 @@
 	{@const rejectProposal = createMutation(() => ({
 		mutationFn: async (proposalId: string) => {
 			const { error } = await client.POST(
-				'/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject',
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject',
 				{
 					params: {
 						path: {

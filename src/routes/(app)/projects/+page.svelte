@@ -16,7 +16,7 @@
 	const projects = createQuery(() => ({
 		queryKey: ['projects'],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/projects', { params: { query: { limit: 100 } } });
+			const { data, error } = await client.GET('/api/projects', { params: { query: { limit: 100 } } });
 			if (error) throw error;
 			return data;
 		}
@@ -29,7 +29,7 @@
 
 	const createProject = createMutation(() => ({
 		mutationFn: async () => {
-			const { data, error } = await client.POST('/projects', {
+			const { data, error } = await client.POST('/api/projects', {
 				body: { name, source_language: sourceLanguage }
 			});
 			if (error) throw error;

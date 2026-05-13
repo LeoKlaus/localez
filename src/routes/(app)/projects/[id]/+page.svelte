@@ -24,7 +24,7 @@
 	const project = createQuery(() => ({
 		queryKey: ['project', projectId],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/projects/{project_id}', {
+			const { data, error } = await client.GET('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } }
 			});
 			if (error) throw error;
@@ -45,7 +45,7 @@
 
 	const updateProject = createMutation(() => ({
 		mutationFn: async () => {
-			const { data, error } = await client.PATCH('/projects/{project_id}', {
+			const { data, error } = await client.PATCH('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } },
 				body: { name: editName, source_language: editLang }
 			});
@@ -61,7 +61,7 @@
 
 	const deleteProject = createMutation(() => ({
 		mutationFn: async () => {
-			const { error } = await client.DELETE('/projects/{project_id}', {
+			const { error } = await client.DELETE('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } }
 			});
 			if (error) throw error;
@@ -75,7 +75,7 @@
 	async function handleExport() {
 		const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 		const token = localStorage.getItem('lz_access');
-		const res = await fetch(`${BASE_URL}/projects/${projectId}/export`, {
+		const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export`, {
 			headers: token ? { Authorization: `Bearer ${token}` } : {}
 		});
 		if (!res.ok) return;
@@ -94,7 +94,7 @@
 		const file = importInput?.files?.[0];
 		if (!file) return;
 		const json = JSON.parse(await file.text());
-		await client.POST('/projects/{project_id}/import', {
+		await client.POST('/api/projects/{project_id}/import', {
 			params: { path: { project_id: projectId } },
 			body: json
 		});

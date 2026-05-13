@@ -22,7 +22,7 @@
 	const members = createQuery(() => ({
 		queryKey: ['members', projectId],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/projects/{project_id}/members', {
+			const { data, error } = await client.GET('/api/projects/{project_id}/members', {
 				params: { path: { project_id: projectId }, query: { limit: 100 } }
 			});
 			if (error) throw error;
@@ -33,7 +33,7 @@
 	const users = createQuery(() => ({
 		queryKey: ['users'],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/users', { params: { query: { limit: 100 } } });
+			const { data, error } = await client.GET('/api/users', { params: { query: { limit: 100 } } });
 			if (error) throw error;
 			return data;
 		}
@@ -46,7 +46,7 @@
 
 	const addMember = createMutation(() => ({
 		mutationFn: async () => {
-			const { data, error } = await client.POST('/projects/{project_id}/members', {
+			const { data, error } = await client.POST('/api/projects/{project_id}/members', {
 				params: { path: { project_id: projectId } },
 				body: { user_id: selectedUserId, project_role: selectedRole }
 			});
@@ -67,7 +67,7 @@
 
 	const updateMember = createMutation(() => ({
 		mutationFn: async ({ userId, role }: { userId: string; role: ProjectRole }) => {
-			const { data, error } = await client.PATCH('/projects/{project_id}/members/{user_id}', {
+			const { data, error } = await client.PATCH('/api/projects/{project_id}/members/{user_id}', {
 				params: { path: { project_id: projectId, user_id: userId } },
 				body: { project_role: role }
 			});
@@ -79,7 +79,7 @@
 
 	const removeMember = createMutation(() => ({
 		mutationFn: async (userId: string) => {
-			const { error } = await client.DELETE('/projects/{project_id}/members/{user_id}', {
+			const { error } = await client.DELETE('/api/projects/{project_id}/members/{user_id}', {
 				params: { path: { project_id: projectId, user_id: userId } }
 			});
 			if (error) throw error;

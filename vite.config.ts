@@ -6,9 +6,7 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 export default defineConfig({
 	server: {
 		proxy: {
-			'/auth': { target: process.env.VITE_API_URL ?? 'http://localhost:8000', changeOrigin: true },
-			'/users': { target: process.env.VITE_API_URL ?? 'http://localhost:8000', changeOrigin: true },
-			'/projects': { target: process.env.VITE_API_URL ?? 'http://localhost:8000', changeOrigin: true }
+			'/api': { target: process.env.VITE_API_URL ?? 'http://localhost:8000', changeOrigin: true }
 		}
 	},
 	plugins: [

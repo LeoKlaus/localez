@@ -26,7 +26,7 @@
 	const strings = createQuery(() => ({
 		queryKey: ['strings', projectId, { q, language, stateFilter, shouldTranslate, offset }],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/projects/{project_id}/strings', {
+			const { data, error } = await client.GET('/api/projects/{project_id}/strings', {
 				params: {
 					path: { project_id: projectId },
 					query: {

@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/auth/register": {
+    "/api/auth/register": {
         parameters: {
             query?: never;
             header?: never;
@@ -14,14 +14,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Register */
-        post: operations["register_auth_register_post"];
+        post: operations["register_api_auth_register_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/token": {
+    "/api/auth/token": {
         parameters: {
             query?: never;
             header?: never;
@@ -31,14 +31,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Login */
-        post: operations["login_auth_token_post"];
+        post: operations["login_api_auth_token_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/refresh": {
+    "/api/auth/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -48,14 +48,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Refresh */
-        post: operations["refresh_auth_refresh_post"];
+        post: operations["refresh_api_auth_refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/logout": {
+    "/api/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -65,14 +65,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Logout */
-        post: operations["logout_auth_logout_post"];
+        post: operations["logout_api_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/recover": {
+    "/api/auth/recover": {
         parameters: {
             query?: never;
             header?: never;
@@ -82,14 +82,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Recover */
-        post: operations["recover_auth_recover_post"];
+        post: operations["recover_api_auth_recover_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/passkey/register/begin": {
+    "/api/auth/passkey/register/begin": {
         parameters: {
             query?: never;
             header?: never;
@@ -99,14 +99,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Register Begin */
-        post: operations["passkey_register_begin_auth_passkey_register_begin_post"];
+        post: operations["passkey_register_begin_api_auth_passkey_register_begin_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/passkey/register/complete": {
+    "/api/auth/passkey/register/complete": {
         parameters: {
             query?: never;
             header?: never;
@@ -116,14 +116,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Register Complete */
-        post: operations["passkey_register_complete_auth_passkey_register_complete_post"];
+        post: operations["passkey_register_complete_api_auth_passkey_register_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/passkey/authenticate/begin": {
+    "/api/auth/passkey/authenticate/begin": {
         parameters: {
             query?: never;
             header?: never;
@@ -133,14 +133,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Auth Begin */
-        post: operations["passkey_auth_begin_auth_passkey_authenticate_begin_post"];
+        post: operations["passkey_auth_begin_api_auth_passkey_authenticate_begin_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/passkey/authenticate/complete": {
+    "/api/auth/passkey/authenticate/complete": {
         parameters: {
             query?: never;
             header?: never;
@@ -150,14 +150,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Auth Complete */
-        post: operations["passkey_auth_complete_auth_passkey_authenticate_complete_post"];
+        post: operations["passkey_auth_complete_api_auth_passkey_authenticate_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/users/me": {
+    "/api/users/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -165,17 +165,17 @@ export interface paths {
             cookie?: never;
         };
         /** Get Me */
-        get: operations["get_me_users_me_get"];
+        get: operations["get_me_api_users_me_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         /** Update Password */
-        patch: operations["update_password_users_me_patch"];
+        patch: operations["update_password_api_users_me_patch"];
         trace?: never;
     };
-    "/users": {
+    "/api/users": {
         parameters: {
             query?: never;
             header?: never;
@@ -183,7 +183,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Users */
-        get: operations["list_users_users_get"];
+        get: operations["list_users_api_users_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -192,7 +192,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/{user_id}": {
+    "/api/users/{user_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -200,17 +200,17 @@ export interface paths {
             cookie?: never;
         };
         /** Get User */
-        get: operations["get_user_users__user_id__get"];
+        get: operations["get_user_api_users__user_id__get"];
         put?: never;
         post?: never;
         /** Deactivate User */
-        delete: operations["deactivate_user_users__user_id__delete"];
+        delete: operations["deactivate_user_api_users__user_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/users/{user_id}/role": {
+    "/api/users/{user_id}/role": {
         parameters: {
             query?: never;
             header?: never;
@@ -224,10 +224,61 @@ export interface paths {
         options?: never;
         head?: never;
         /** Update Role */
-        patch: operations["update_role_users__user_id__role_patch"];
+        patch: operations["update_role_api_users__user_id__role_patch"];
         trace?: never;
     };
-    "/projects": {
+    "/api/users/me/totp/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Totp Setup */
+        post: operations["totp_setup_api_users_me_totp_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/me/totp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Totp Verify */
+        post: operations["totp_verify_api_users_me_totp_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/me/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Totp Disable */
+        delete: operations["totp_disable_api_users_me_totp_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects": {
         parameters: {
             query?: never;
             header?: never;
@@ -235,17 +286,17 @@ export interface paths {
             cookie?: never;
         };
         /** List Projects */
-        get: operations["list_projects_projects_get"];
+        get: operations["list_projects_api_projects_get"];
         put?: never;
         /** Create Project */
-        post: operations["create_project_projects_post"];
+        post: operations["create_project_api_projects_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}": {
+    "/api/projects/{project_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -253,18 +304,18 @@ export interface paths {
             cookie?: never;
         };
         /** Get Project */
-        get: operations["get_project_projects__project_id__get"];
+        get: operations["get_project_api_projects__project_id__get"];
         put?: never;
         post?: never;
         /** Delete Project */
-        delete: operations["delete_project_projects__project_id__delete"];
+        delete: operations["delete_project_api_projects__project_id__delete"];
         options?: never;
         head?: never;
         /** Update Project */
-        patch: operations["update_project_projects__project_id__patch"];
+        patch: operations["update_project_api_projects__project_id__patch"];
         trace?: never;
     };
-    "/projects/{project_id}/members": {
+    "/api/projects/{project_id}/members": {
         parameters: {
             query?: never;
             header?: never;
@@ -272,17 +323,17 @@ export interface paths {
             cookie?: never;
         };
         /** List Members */
-        get: operations["list_members_projects__project_id__members_get"];
+        get: operations["list_members_api_projects__project_id__members_get"];
         put?: never;
         /** Add Member */
-        post: operations["add_member_projects__project_id__members_post"];
+        post: operations["add_member_api_projects__project_id__members_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/members/{user_id}": {
+    "/api/projects/{project_id}/members/{user_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -293,14 +344,14 @@ export interface paths {
         put?: never;
         post?: never;
         /** Remove Member */
-        delete: operations["remove_member_projects__project_id__members__user_id__delete"];
+        delete: operations["remove_member_api_projects__project_id__members__user_id__delete"];
         options?: never;
         head?: never;
         /** Update Member */
-        patch: operations["update_member_projects__project_id__members__user_id__patch"];
+        patch: operations["update_member_api_projects__project_id__members__user_id__patch"];
         trace?: never;
     };
-    "/projects/{project_id}/strings": {
+    "/api/projects/{project_id}/strings": {
         parameters: {
             query?: never;
             header?: never;
@@ -308,7 +359,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Strings */
-        get: operations["list_strings_projects__project_id__strings_get"];
+        get: operations["list_strings_api_projects__project_id__strings_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -317,7 +368,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/strings/{key_id}": {
+    "/api/projects/{project_id}/strings/{key_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -325,7 +376,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get String */
-        get: operations["get_string_projects__project_id__strings__key_id__get"];
+        get: operations["get_string_api_projects__project_id__strings__key_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -334,7 +385,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/strings/{key_id}/localizations": {
+    "/api/projects/{project_id}/strings/{key_id}/localizations": {
         parameters: {
             query?: never;
             header?: never;
@@ -342,7 +393,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Localizations */
-        get: operations["list_localizations_projects__project_id__strings__key_id__localizations_get"];
+        get: operations["list_localizations_api_projects__project_id__strings__key_id__localizations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -351,7 +402,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/strings/{key_id}/localizations/{loc_id}": {
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -359,7 +410,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Localization */
-        get: operations["get_localization_projects__project_id__strings__key_id__localizations__loc_id__get"];
+        get: operations["get_localization_api_projects__project_id__strings__key_id__localizations__loc_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -368,7 +419,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/import": {
+    "/api/projects/{project_id}/import": {
         parameters: {
             query?: never;
             header?: never;
@@ -378,14 +429,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Import Xcstrings */
-        post: operations["import_xcstrings_projects__project_id__import_post"];
+        post: operations["import_xcstrings_api_projects__project_id__import_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/export": {
+    "/api/projects/{project_id}/export": {
         parameters: {
             query?: never;
             header?: never;
@@ -393,7 +444,7 @@ export interface paths {
             cookie?: never;
         };
         /** Export Xcstrings */
-        get: operations["export_xcstrings_projects__project_id__export_get"];
+        get: operations["export_xcstrings_api_projects__project_id__export_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -402,7 +453,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/proposals": {
+    "/api/projects/{project_id}/proposals": {
         parameters: {
             query?: never;
             header?: never;
@@ -410,7 +461,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Project Proposals */
-        get: operations["list_project_proposals_projects__project_id__proposals_get"];
+        get: operations["list_project_proposals_api_projects__project_id__proposals_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -419,7 +470,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals": {
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals": {
         parameters: {
             query?: never;
             header?: never;
@@ -427,17 +478,17 @@ export interface paths {
             cookie?: never;
         };
         /** List Proposals */
-        get: operations["list_proposals_projects__project_id__strings__key_id__localizations__loc_id__proposals_get"];
+        get: operations["list_proposals_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_get"];
         put?: never;
         /** Create Proposal */
-        post: operations["create_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals_post"];
+        post: operations["create_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept": {
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept": {
         parameters: {
             query?: never;
             header?: never;
@@ -447,14 +498,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Accept Proposal */
-        post: operations["accept_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post"];
+        post: operations["accept_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject": {
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject": {
         parameters: {
             query?: never;
             header?: never;
@@ -464,7 +515,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Reject Proposal */
-        post: operations["reject_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__reject_post"];
+        post: operations["reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -475,8 +526,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Body_login_auth_token_post */
-        Body_login_auth_token_post: {
+        /** Body_import_xcstrings_api_projects__project_id__import_post */
+        Body_import_xcstrings_api_projects__project_id__import_post: {
+            /**
+             * File
+             * @description xcstrings file to import
+             */
+            file: string;
+        };
+        /** Body_login_api_auth_token_post */
+        Body_login_api_auth_token_post: {
+            /** Totp Code */
+            totp_code?: string | null;
             /** Grant Type */
             grant_type?: string | null;
             /** Username */
@@ -804,6 +865,25 @@ export interface components {
              */
             token_type: string;
         };
+        /** TotpCodeRequest */
+        TotpCodeRequest: {
+            /** Code */
+            code: string;
+        };
+        /** TotpSetupResponse */
+        TotpSetupResponse: {
+            /** Secret */
+            secret: string;
+            /** Uri */
+            uri: string;
+        };
+        /** TotpVerifyRequest */
+        TotpVerifyRequest: {
+            /** Secret */
+            secret: string;
+            /** Code */
+            code: string;
+        };
         /** UpdatePasswordRequest */
         UpdatePasswordRequest: {
             /** Current Password */
@@ -860,7 +940,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    register_auth_register_post: {
+    register_api_auth_register_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -893,7 +973,7 @@ export interface operations {
             };
         };
     };
-    login_auth_token_post: {
+    login_api_auth_token_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -902,7 +982,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/x-www-form-urlencoded": components["schemas"]["Body_login_auth_token_post"];
+                "application/x-www-form-urlencoded": components["schemas"]["Body_login_api_auth_token_post"];
             };
         };
         responses: {
@@ -926,7 +1006,7 @@ export interface operations {
             };
         };
     };
-    refresh_auth_refresh_post: {
+    refresh_api_auth_refresh_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -959,7 +1039,7 @@ export interface operations {
             };
         };
     };
-    logout_auth_logout_post: {
+    logout_api_auth_logout_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -990,7 +1070,7 @@ export interface operations {
             };
         };
     };
-    recover_auth_recover_post: {
+    recover_api_auth_recover_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1023,7 +1103,7 @@ export interface operations {
             };
         };
     };
-    passkey_register_begin_auth_passkey_register_begin_post: {
+    passkey_register_begin_api_auth_passkey_register_begin_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1043,7 +1123,7 @@ export interface operations {
             };
         };
     };
-    passkey_register_complete_auth_passkey_register_complete_post: {
+    passkey_register_complete_api_auth_passkey_register_complete_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1076,7 +1156,7 @@ export interface operations {
             };
         };
     };
-    passkey_auth_begin_auth_passkey_authenticate_begin_post: {
+    passkey_auth_begin_api_auth_passkey_authenticate_begin_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1096,7 +1176,7 @@ export interface operations {
             };
         };
     };
-    passkey_auth_complete_auth_passkey_authenticate_complete_post: {
+    passkey_auth_complete_api_auth_passkey_authenticate_complete_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1129,7 +1209,7 @@ export interface operations {
             };
         };
     };
-    get_me_users_me_get: {
+    get_me_api_users_me_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1149,7 +1229,7 @@ export interface operations {
             };
         };
     };
-    update_password_users_me_patch: {
+    update_password_api_users_me_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1182,7 +1262,7 @@ export interface operations {
             };
         };
     };
-    list_users_users_get: {
+    list_users_api_users_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1214,7 +1294,7 @@ export interface operations {
             };
         };
     };
-    get_user_users__user_id__get: {
+    get_user_api_users__user_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1245,7 +1325,7 @@ export interface operations {
             };
         };
     };
-    deactivate_user_users__user_id__delete: {
+    deactivate_user_api_users__user_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1274,7 +1354,7 @@ export interface operations {
             };
         };
     };
-    update_role_users__user_id__role_patch: {
+    update_role_api_users__user_id__role_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1309,7 +1389,89 @@ export interface operations {
             };
         };
     };
-    list_projects_projects_get: {
+    totp_setup_api_users_me_totp_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TotpSetupResponse"];
+                };
+            };
+        };
+    };
+    totp_verify_api_users_me_totp_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    totp_disable_api_users_me_totp_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_projects_api_projects_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1341,7 +1503,7 @@ export interface operations {
             };
         };
     };
-    create_project_projects_post: {
+    create_project_api_projects_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1374,7 +1536,7 @@ export interface operations {
             };
         };
     };
-    get_project_projects__project_id__get: {
+    get_project_api_projects__project_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1405,7 +1567,7 @@ export interface operations {
             };
         };
     };
-    delete_project_projects__project_id__delete: {
+    delete_project_api_projects__project_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1434,7 +1596,7 @@ export interface operations {
             };
         };
     };
-    update_project_projects__project_id__patch: {
+    update_project_api_projects__project_id__patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1469,7 +1631,7 @@ export interface operations {
             };
         };
     };
-    list_members_projects__project_id__members_get: {
+    list_members_api_projects__project_id__members_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1503,7 +1665,7 @@ export interface operations {
             };
         };
     };
-    add_member_projects__project_id__members_post: {
+    add_member_api_projects__project_id__members_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1538,7 +1700,7 @@ export interface operations {
             };
         };
     };
-    remove_member_projects__project_id__members__user_id__delete: {
+    remove_member_api_projects__project_id__members__user_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1568,7 +1730,7 @@ export interface operations {
             };
         };
     };
-    update_member_projects__project_id__members__user_id__patch: {
+    update_member_api_projects__project_id__members__user_id__patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1604,7 +1766,7 @@ export interface operations {
             };
         };
     };
-    list_strings_projects__project_id__strings_get: {
+    list_strings_api_projects__project_id__strings_get: {
         parameters: {
             query?: {
                 language?: string | null;
@@ -1642,7 +1804,7 @@ export interface operations {
             };
         };
     };
-    get_string_projects__project_id__strings__key_id__get: {
+    get_string_api_projects__project_id__strings__key_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1674,7 +1836,7 @@ export interface operations {
             };
         };
     };
-    list_localizations_projects__project_id__strings__key_id__localizations_get: {
+    list_localizations_api_projects__project_id__strings__key_id__localizations_get: {
         parameters: {
             query?: {
                 language?: string | null;
@@ -1711,7 +1873,7 @@ export interface operations {
             };
         };
     };
-    get_localization_projects__project_id__strings__key_id__localizations__loc_id__get: {
+    get_localization_api_projects__project_id__strings__key_id__localizations__loc_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1744,7 +1906,7 @@ export interface operations {
             };
         };
     };
-    import_xcstrings_projects__project_id__import_post: {
+    import_xcstrings_api_projects__project_id__import_post: {
         parameters: {
             query?: {
                 conflict?: string;
@@ -1757,9 +1919,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
+                "multipart/form-data": components["schemas"]["Body_import_xcstrings_api_projects__project_id__import_post"];
             };
         };
         responses: {
@@ -1783,7 +1943,7 @@ export interface operations {
             };
         };
     };
-    export_xcstrings_projects__project_id__export_get: {
+    export_xcstrings_api_projects__project_id__export_get: {
         parameters: {
             query?: {
                 /** @description Comma-separated language codes */
@@ -1818,7 +1978,7 @@ export interface operations {
             };
         };
     };
-    list_project_proposals_projects__project_id__proposals_get: {
+    list_project_proposals_api_projects__project_id__proposals_get: {
         parameters: {
             query?: {
                 proposal_status?: components["schemas"]["ProposalStatus"] | null;
@@ -1853,7 +2013,7 @@ export interface operations {
             };
         };
     };
-    list_proposals_projects__project_id__strings__key_id__localizations__loc_id__proposals_get: {
+    list_proposals_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_get: {
         parameters: {
             query?: {
                 proposal_status?: components["schemas"]["ProposalStatus"] | null;
@@ -1890,7 +2050,7 @@ export interface operations {
             };
         };
     };
-    create_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals_post: {
+    create_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1927,7 +2087,7 @@ export interface operations {
             };
         };
     };
-    accept_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post: {
+    accept_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1965,7 +2125,7 @@ export interface operations {
             };
         };
     };
-    reject_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__reject_post: {
+    reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__reject_post: {
         parameters: {
             query?: never;
             header?: never;

@@ -33,7 +33,7 @@
 
 		passwordLoading = true;
 		try {
-			const { error } = await client.PATCH('/users/me', {
+			const { error } = await client.PATCH('/api/users/me', {
 				body: { current_password: currentPassword, new_password: newPassword }
 			});
 			if (error) {
@@ -60,7 +60,7 @@
 		passkeyLoading = true;
 
 		try {
-			const beginRes = await fetch(`${BASE_URL}/auth/passkey/register/begin`, {
+			const beginRes = await fetch(`${BASE_URL}/api/auth/passkey/register/begin`, {
 				method: 'POST',
 				headers: { Authorization: `Bearer ${auth.accessToken}` }
 			});
@@ -71,7 +71,7 @@
 			const { options, challenge_token } = await beginRes.json();
 			const credential = await startRegistration({ optionsJSON: options });
 
-			const completeRes = await fetch(`${BASE_URL}/auth/passkey/register/complete`, {
+			const completeRes = await fetch(`${BASE_URL}/api/auth/passkey/register/complete`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -108,7 +108,7 @@
 		totpSuccess = false;
 		totpCode = '';
 
-		const res = await fetch(`${BASE_URL}/users/me/totp/setup`, {
+		const res = await fetch(`${BASE_URL}/api/users/me/totp/setup`, {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${auth.accessToken}` }
 		});
@@ -133,7 +133,7 @@
 		totpLoading = true;
 
 		try {
-			const res = await fetch(`${BASE_URL}/users/me/totp/verify`, {
+			const res = await fetch(`${BASE_URL}/api/users/me/totp/verify`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

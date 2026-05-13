@@ -31,7 +31,7 @@
 			return;
 		}
 		if (!auth.user) {
-			const { data } = await client.GET('/users/me');
+			const { data } = await client.GET('/api/users/me');
 			if (data) auth.user = data;
 		}
 	});
@@ -39,7 +39,7 @@
 	async function handleLogout() {
 		const refreshToken = auth.refreshToken;
 		if (refreshToken) {
-			await client.POST('/auth/logout', { body: { refresh_token: refreshToken } });
+			await client.POST('/api/auth/logout', { body: { refresh_token: refreshToken } });
 		}
 		auth.clear();
 		goto('/login');

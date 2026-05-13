@@ -20,7 +20,7 @@
 	let loading = $state(false);
 
 	async function fetchMe(token: string) {
-		const res = await fetch(`${BASE_URL}/users/me`, {
+		const res = await fetch(`${BASE_URL}/api/users/me`, {
 			headers: { Authorization: `Bearer ${token}` }
 		});
 		if (res.ok) auth.user = await res.json();
@@ -35,7 +35,7 @@
 			const body = new URLSearchParams({ username, password, grant_type: 'password' });
 			if (needsTotp && totpCode) body.set('totp_code', totpCode);
 
-			const res = await fetch(`${BASE_URL}/auth/token`, {
+			const res = await fetch(`${BASE_URL}/api/auth/token`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body
@@ -66,7 +66,7 @@
 		loading = true;
 
 		try {
-			const beginRes = await fetch(`${BASE_URL}/auth/passkey/authenticate/begin`, {
+			const beginRes = await fetch(`${BASE_URL}/api/auth/passkey/authenticate/begin`, {
 				method: 'POST'
 			});
 			if (!beginRes.ok) {
@@ -76,7 +76,7 @@
 			const { options, challenge_token } = await beginRes.json();
 			const credential = await startAuthentication({ optionsJSON: options });
 
-			const completeRes = await fetch(`${BASE_URL}/auth/passkey/authenticate/complete`, {
+			const completeRes = await fetch(`${BASE_URL}/api/auth/passkey/authenticate/complete`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ credential, challenge_token })

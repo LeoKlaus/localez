@@ -23,7 +23,7 @@
 	const users = createQuery(() => ({
 		queryKey: ['users'],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/users', { params: { query: { limit: 100 } } });
+			const { data, error } = await client.GET('/api/users', { params: { query: { limit: 100 } } });
 			if (error) throw error;
 			return data;
 		}
@@ -31,7 +31,7 @@
 
 	const updateRole = createMutation(() => ({
 		mutationFn: async ({ userId, role }: { userId: string; role: GlobalRole }) => {
-			const { error } = await client.PATCH('/users/{user_id}/role', {
+			const { error } = await client.PATCH('/api/users/{user_id}/role', {
 				params: { path: { user_id: userId } },
 				body: { global_role: role }
 			});
@@ -42,7 +42,7 @@
 
 	const deactivateUser = createMutation(() => ({
 		mutationFn: async (userId: string) => {
-			const { error } = await client.DELETE('/users/{user_id}', {
+			const { error } = await client.DELETE('/api/users/{user_id}', {
 				params: { path: { user_id: userId } }
 			});
 			if (error) throw error;

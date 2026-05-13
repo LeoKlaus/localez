@@ -1,6 +1,7 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 import type { paths } from './schema.d.ts';
 import { auth } from '$lib/stores/auth.svelte';
+import { goto } from '$app/navigation';
 
 const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
@@ -29,6 +30,7 @@ const authMiddleware: Middleware = {
 		const refreshToken = auth.refreshToken;
 		if (!refreshToken) {
 			auth.clear();
+			goto('/login');
 			return response;
 		}
 
@@ -44,7 +46,7 @@ const authMiddleware: Middleware = {
 
 		isRefreshing = true;
 		try {
-			const res = await fetch(`${BASE_URL}/auth/refresh`, {
+			const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ refresh_token: refreshToken })
@@ -53,6 +55,7 @@ const authMiddleware: Middleware = {
 			if (!res.ok) {
 				auth.clear();
 				drainQueue(null);
+				goto('/login');
 				return response;
 			}
 

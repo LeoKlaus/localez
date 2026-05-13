@@ -38,7 +38,7 @@
 
 		loading = true;
 		try {
-			const res = await fetch(`${BASE_URL}/auth/recover`, {
+			const res = await fetch(`${BASE_URL}/api/auth/recover`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username, recovery_words, new_password: newPassword })

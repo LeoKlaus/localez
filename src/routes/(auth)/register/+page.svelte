@@ -29,7 +29,7 @@
 
 		loading = true;
 		try {
-			const res = await fetch(`${BASE_URL}/auth/register`, {
+			const res = await fetch(`${BASE_URL}/api/auth/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username, password })
@@ -46,7 +46,7 @@
 			recoveryWords = data.recovery_words;
 			showRecovery = true;
 
-			const meRes = await fetch(`${BASE_URL}/users/me`, {
+			const meRes = await fetch(`${BASE_URL}/api/users/me`, {
 				headers: { Authorization: `Bearer ${data.access_token}` }
 			});
 			if (meRes.ok) auth.user = await meRes.json();
