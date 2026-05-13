@@ -66,6 +66,8 @@ async def add_member(
         granted_by=admin.id,
     )
     db.add(member)
+    await db.flush()
+    await db.refresh(member)
     return member
 
 

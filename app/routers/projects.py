@@ -49,6 +49,8 @@ async def create_project(
 ):
     project = Project(name=body.name, source_language=body.source_language, created_by=user.id)
     db.add(project)
+    await db.flush()
+    await db.refresh(project)
     return project
 
 
