@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.recovery import generate_recovery_words, hash_recovery_words, verify_recovery_words
+from app.core.totp import verify_totp
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -31,11 +32,14 @@ async def register_user(db: AsyncSession, username: str, password: str) -> tuple
     return user, recovery_words, access_token, refresh_token_raw
 
 
-async def authenticate_user(db: AsyncSession, username: str, password: str) -> tuple[User, str, str] | None:
+async def authenticate_user(db: AsyncSession, username: str, password: str, totp_code: str | None = None) -> tuple[User, str, str] | None:
     result = await db.execute(select(User).where(User.username == username, User.is_active == True))  # noqa: E712
     user = result.scalar_one_or_none()
     if user is None or not verify_password(password, user.hashed_password):
         return None
+    if user.totp_secret is not None:
+        if not totp_code or not verify_totp(user.totp_secret, totp_code):
+            return None
     access_token, refresh_token_raw = await _issue_tokens(db, user)
     return user, access_token, refresh_token_raw
 

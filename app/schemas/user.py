@@ -23,3 +23,17 @@ class UpdatePasswordRequest(BaseModel):
 
 class UpdateRoleRequest(BaseModel):
     global_role: GlobalRole
+
+
+class TotpSetupResponse(BaseModel):
+    secret: str
+    uri: str
+
+
+class TotpCodeRequest(BaseModel):
+    code: str
+
+
+class TotpVerifyRequest(BaseModel):
+    secret: str
+    code: str

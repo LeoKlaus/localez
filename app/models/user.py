@@ -22,6 +22,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     global_role: Mapped[GlobalRole] = mapped_column(Enum(GlobalRole), nullable=False, default=GlobalRole.user)
     recovery_word_hash: Mapped[str] = mapped_column(String, nullable=False)
+    totp_secret: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from typing import Annotated, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,8 +42,12 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/token", response_model=TokenResponse)
-async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    result = await auth_service.authenticate_user(db, form.username.lower(), form.password)
+async def login(
+    form: OAuth2PasswordRequestForm = Depends(),
+    totp_code: Annotated[Optional[str], Form()] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await auth_service.authenticate_user(db, form.username.lower(), form.password, totp_code)
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
     _, access_token, refresh_token = result
