@@ -130,7 +130,7 @@
 
 		const data = await res.json();
 		totpSecret = data.secret ?? '';
-		const uri = data.uri ?? data.otpauth_uri ?? '';
+		const uri = data.uri ?? '';
 		if (uri) {
 			totpQrDataUrl = await QRCode.toDataURL(uri, { width: 200, margin: 2 });
 		}
