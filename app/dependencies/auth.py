@@ -9,7 +9,7 @@ from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.user import GlobalRole, User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 async def get_current_user(

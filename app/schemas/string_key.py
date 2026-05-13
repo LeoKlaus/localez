@@ -3,12 +3,13 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.core.language import LanguageCode
 from app.models.localization import LocalizationState, VariationType
 
 
 class LocalizationResponse(BaseModel):
     id: uuid.UUID
-    language: str
+    language: LanguageCode
     variation_type: VariationType
     variation_key: str | None
     state: LocalizationState

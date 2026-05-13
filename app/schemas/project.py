@@ -3,17 +3,18 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.language import LanguageCode
 from app.models.project_member import ProjectRole
 
 
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
-    source_language: str = Field(min_length=2, max_length=20)
+    source_language: LanguageCode
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    source_language: str | None = Field(default=None, min_length=2, max_length=20)
+    source_language: LanguageCode | None = None
 
 
 class ProjectResponse(BaseModel):

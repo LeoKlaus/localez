@@ -7,6 +7,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 
+from app.core.language import _LANGUAGE_RE
 from app.models.localization import Localization, LocalizationState, VariationType
 from app.models.string_key import StringKey
 
@@ -40,6 +41,8 @@ def parse_xcstrings(data: dict, project_id: uuid.UUID) -> ParseResult:
         result.string_keys.append(sk)
 
         for lang_code, loc_data in key_data.get("localizations", {}).items():
+            if not _LANGUAGE_RE.match(lang_code):
+                raise ValueError(f"Invalid language code '{lang_code}' in xcstrings file")
             if "stringUnit" in loc_data:
                 result.localizations.append(
                     _make_localization(sk, lang_code, VariationType.none, None, loc_data["stringUnit"])

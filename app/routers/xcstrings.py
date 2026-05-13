@@ -39,7 +39,10 @@ async def import_xcstrings(
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
 
-    parsed = parse_xcstrings(data, project_id)
+    try:
+        parsed = parse_xcstrings(data, project_id)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "INVALID_XCSTRINGS", "message": str(e)})
 
     # Upsert string keys
     key_id_by_str: dict[str, uuid.UUID] = {}
