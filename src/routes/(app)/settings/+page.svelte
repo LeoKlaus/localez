@@ -7,11 +7,17 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as Alert from '$lib/components/ui/alert';
-	import { Separator } from '$lib/components/ui/separator';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import QRCode from 'qrcode';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
+
+	async function refreshMe() {
+		const res = await fetch(`${BASE_URL}/api/users/me`, {
+			headers: { Authorization: `Bearer ${auth.accessToken}` }
+		});
+		if (res.ok) auth.user = await res.json();
+	}
 
 	// ── Password change ──────────────────────────────────────────────────────
 	let currentPassword = $state('');
@@ -85,6 +91,7 @@
 				return;
 			}
 			passkeySuccess = true;
+			await refreshMe();
 		} catch (err) {
 			if (err instanceof Error && err.name !== 'NotAllowedError') {
 				passkeyError = err.message;
@@ -100,12 +107,15 @@
 	let totpSecret = $state('');
 	let totpCode = $state('');
 	let totpError = $state('');
-	let totpSuccess = $state(false);
 	let totpLoading = $state(false);
+
+	let totpDisableOpen = $state(false);
+	let totpDisableCode = $state('');
+	let totpDisableError = $state('');
+	let totpDisableLoading = $state(false);
 
 	async function beginTotpSetup() {
 		totpError = '';
-		totpSuccess = false;
 		totpCode = '';
 
 		const res = await fetch(`${BASE_URL}/api/users/me/totp/setup`, {
@@ -146,10 +156,35 @@
 				totpError = 'Invalid code. Try again.';
 				return;
 			}
-			totpSuccess = true;
 			totpOpen = false;
+			await refreshMe();
 		} finally {
 			totpLoading = false;
+		}
+	}
+
+	async function disableTotp(e: SubmitEvent) {
+		e.preventDefault();
+		totpDisableError = '';
+		totpDisableLoading = true;
+		try {
+			const res = await fetch(`${BASE_URL}/api/users/me/totp`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${auth.accessToken}`
+				},
+				body: JSON.stringify({ code: totpDisableCode })
+			});
+			if (!res.ok) {
+				totpDisableError = 'Invalid code or failed to disable two-factor authentication.';
+				return;
+			}
+			totpDisableOpen = false;
+			totpDisableCode = '';
+			await refreshMe();
+		} finally {
+			totpDisableLoading = false;
 		}
 	}
 </script>
@@ -249,9 +284,16 @@
 						<Alert.Description>Passkey registered successfully.</Alert.Description>
 					</Alert.Root>
 				{/if}
-				<Button variant="outline" onclick={handlePasskeyRegister} disabled={passkeyLoading}>
-					{passkeyLoading ? 'Registering…' : 'Add passkey'}
-				</Button>
+				<div class="flex items-center gap-3">
+					{#if auth.passkeysConfigured}
+						<span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+							Configured
+						</span>
+					{/if}
+					<Button variant="outline" onclick={handlePasskeyRegister} disabled={passkeyLoading}>
+						{passkeyLoading ? 'Registering…' : auth.passkeysConfigured ? 'Add another passkey' : 'Add passkey'}
+					</Button>
+				</div>
 			</Card.Content>
 		</Card.Root>
 
@@ -264,17 +306,23 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-3">
-				{#if totpSuccess}
-					<Alert.Root>
-						<Alert.Description>Two-factor authentication enabled.</Alert.Description>
-					</Alert.Root>
-				{/if}
 				{#if totpError && !totpOpen}
 					<Alert.Root variant="destructive">
 						<Alert.Description>{totpError}</Alert.Description>
 					</Alert.Root>
 				{/if}
-				<Button variant="outline" onclick={beginTotpSetup}>Set up authenticator</Button>
+				{#if auth.totpEnabled}
+					<div class="flex items-center gap-3">
+						<span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+							Enabled
+						</span>
+						<Button variant="outline" onclick={() => { totpDisableOpen = true; totpDisableCode = ''; totpDisableError = ''; }}>
+							Disable
+						</Button>
+					</div>
+				{:else}
+					<Button variant="outline" onclick={beginTotpSetup}>Set up authenticator</Button>
+				{/if}
 			</Card.Content>
 		</Card.Root>
 	</div>
@@ -322,6 +370,41 @@
 				<Button variant="outline" onclick={() => (totpOpen = false)}>Cancel</Button>
 				<Button type="submit" disabled={totpLoading}>
 					{totpLoading ? 'Verifying…' : 'Enable'}
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- TOTP disable dialog -->
+<Dialog.Root bind:open={totpDisableOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Disable two-factor authentication</Dialog.Title>
+			<Dialog.Description>
+				Enter the current code from your authenticator app to confirm.
+			</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={disableTotp} class="space-y-4">
+			{#if totpDisableError}
+				<p class="text-sm text-destructive">{totpDisableError}</p>
+			{/if}
+			<div class="space-y-2">
+				<Label for="disablecode">Authenticator code</Label>
+				<Input
+					id="disablecode"
+					bind:value={totpDisableCode}
+					inputmode="numeric"
+					maxlength={6}
+					placeholder="000000"
+					autocomplete="one-time-code"
+					required
+				/>
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (totpDisableOpen = false)}>Cancel</Button>
+				<Button type="submit" variant="destructive" disabled={totpDisableLoading}>
+					{totpDisableLoading ? 'Disabling…' : 'Disable'}
 				</Button>
 			</Dialog.Footer>
 		</form>

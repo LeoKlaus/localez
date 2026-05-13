@@ -596,6 +596,28 @@ export interface components {
          * @enum {string}
          */
         LocalizationState: "new" | "needs_review" | "translated";
+        /** MeResponse */
+        MeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            global_role: components["schemas"]["GlobalRole"];
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Totp Enabled */
+            totp_enabled: boolean;
+            /** Passkeys Configured */
+            passkeys_configured: boolean;
+        };
         /** MemberAdd */
         MemberAdd: {
             /**
@@ -1224,7 +1246,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["MeResponse"];
                 };
             };
         };

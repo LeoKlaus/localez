@@ -1,13 +1,13 @@
 import type { components } from '$lib/api/schema.d.ts';
 
-type User = components['schemas']['UserResponse'];
+type MeResponse = components['schemas']['MeResponse'];
 
 const ACCESS_TOKEN_KEY = 'lz_access';
 const REFRESH_TOKEN_KEY = 'lz_refresh';
 
 function createAuth() {
 	let accessToken = $state<string | null>(null);
-	let user = $state<User | null>(null);
+	let user = $state<MeResponse | null>(null);
 
 	function init() {
 		if (typeof localStorage === 'undefined') return;
@@ -29,25 +29,17 @@ function createAuth() {
 	}
 
 	return {
-		get accessToken() {
-			return accessToken;
-		},
+		get accessToken() { return accessToken; },
 		get refreshToken() {
 			if (typeof localStorage === 'undefined') return null;
 			return localStorage.getItem(REFRESH_TOKEN_KEY);
 		},
-		get user() {
-			return user;
-		},
-		set user(u: User | null) {
-			user = u;
-		},
-		get isAuthenticated() {
-			return !!accessToken;
-		},
-		get isAdmin() {
-			return user?.global_role === 'admin';
-		},
+		get user() { return user; },
+		set user(u: MeResponse | null) { user = u; },
+		get isAuthenticated() { return !!accessToken; },
+		get isAdmin() { return user?.global_role === 'admin'; },
+		get totpEnabled() { return user?.totp_enabled ?? false; },
+		get passkeysConfigured() { return user?.passkeys_configured ?? false; },
 		init,
 		setTokens,
 		clear
