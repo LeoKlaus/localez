@@ -6,6 +6,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.models.project_language import ProjectLanguage
+from app.models.project_member import ProjectMember
+from app.models.string_key import StringKey
 
 
 class Project(Base):

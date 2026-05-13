@@ -45,7 +45,7 @@ def parse_xcstrings(data: dict, project_id: uuid.UUID) -> ParseResult:
                 raise ValueError(f"Invalid language code '{lang_code}' in xcstrings file")
             if "stringUnit" in loc_data:
                 result.localizations.append(
-                    _make_localization(sk, lang_code, VariationType.none, None, loc_data["stringUnit"])
+                    _make_localization(sk, lang_code, VariationType.none, "", loc_data["stringUnit"])
                 )
             elif "variations" in loc_data:
                 for variation_kind, variations in loc_data["variations"].items():
@@ -63,7 +63,7 @@ def _make_localization(
     sk: StringKey,
     language: str,
     variation_type: VariationType,
-    variation_key: str | None,
+    variation_key: str,
     string_unit: dict,
 ) -> Localization:
     raw_state = string_unit.get("state", "new")

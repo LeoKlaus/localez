@@ -32,7 +32,7 @@ class Localization(Base):
     string_key_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("string_keys.id", ondelete="CASCADE"), nullable=False)
     language: Mapped[str] = mapped_column(Text, nullable=False)
     variation_type: Mapped[VariationType] = mapped_column(Enum(VariationType), nullable=False, default=VariationType.none)
-    variation_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    variation_key: Mapped[str] = mapped_column(Text, nullable=False, default="")
     state: Mapped[LocalizationState] = mapped_column(Enum(LocalizationState), nullable=False, default=LocalizationState.new)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
