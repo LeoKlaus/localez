@@ -2,7 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    postgres_db:str = "localez"
+    postgres_host: str = "localhost"
+    postgres_db: str = "localez"
     postgres_user: str = "localez"
     postgres_password: str = "change-me"
     postgres_port: int = 5432
