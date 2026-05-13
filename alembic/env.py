@@ -14,7 +14,7 @@ import app.models  # noqa: F401
 config = context.config
 config.set_main_option(
     "sqlalchemy.url",
-    f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
+    f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password.get_secret_value()}"
     f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}",
 )
 

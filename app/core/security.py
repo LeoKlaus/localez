@@ -31,7 +31,7 @@ def create_access_token(user_id: uuid.UUID, global_role: str) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode(
         {"sub": str(user_id), "role": global_role, "exp": expire, "type": "access"},
-        settings.secret_key,
+        settings.secret_key.get_secret_value(),
         algorithm=ALGORITHM,
     )
 
@@ -45,7 +45,7 @@ def create_refresh_token(user_id: uuid.UUID) -> tuple[str, str, datetime]:
 
 def decode_access_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[ALGORITHM])
         if payload.get("type") != "access":
             raise ValueError("Not an access token")
         return payload
@@ -57,14 +57,14 @@ def create_webauthn_challenge_token(challenge: bytes) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=5)
     return jwt.encode(
         {"challenge": challenge.hex(), "exp": expire, "type": "webauthn_challenge"},
-        settings.secret_key,
+        settings.secret_key.get_secret_value(),
         algorithm=ALGORITHM,
     )
 
 
 def decode_webauthn_challenge_token(token: str) -> bytes:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[ALGORITHM])
         if payload.get("type") != "webauthn_challenge":
             raise ValueError("Not a webauthn challenge token")
         return bytes.fromhex(payload["challenge"])

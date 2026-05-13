@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -5,9 +6,9 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_db: str = "localez"
     postgres_user: str = "localez"
-    postgres_password: str = "change-me"
+    postgres_password: SecretStr = "change-me"
     postgres_port: int = 5432
-    secret_key: str = "change-me"
+    secret_key: SecretStr = "change-me"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
     webauthn_rp_id: str = "localhost"
