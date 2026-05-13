@@ -222,3 +222,24 @@ async def test_import_languages_idempotent(admin_client: AsyncClient):
     updated = (await admin_client.get(f"/api/projects/{proj['id']}")).json()
     # Languages should not be duplicated
     assert len(updated["languages"]) == len(set(updated["languages"]))
+
+
+async def test_import_fills_variation_placeholders_for_missing_languages(admin_client: AsyncClient):
+    """After import, a language added post-import should receive variation placeholders
+    matching those of the source language, not a flat root localization."""
+    proj = (await admin_client.post("/api/projects", json={"name": "VarFill", "source_language": "en"})).json()
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload())
+
+    # Add a language that wasn't in the xcstrings file
+    await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "ja"})
+
+    strings = (await admin_client.get(f"/api/projects/{proj['id']}/strings")).json()
+    save_key = next(s for s in strings if s["key"] == "Save to your iPhone")
+    locs = (await admin_client.get(f"/api/projects/{proj['id']}/strings/{save_key['id']}/localizations")).json()
+
+    ja_locs = [l for l in locs if l["language"] == "ja"]
+    # Should have device variation placeholders, not a flat root localization
+    assert all(l["variation_type"] == "device" for l in ja_locs), \
+        f"Expected only device variations for 'ja', got: {[(l['variation_type'], l['variation_key']) for l in ja_locs]}"
+    assert all(l["state"] == "new" for l in ja_locs)
+    assert all(l["value"] is None for l in ja_locs)
