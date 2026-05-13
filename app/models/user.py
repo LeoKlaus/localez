@@ -7,6 +7,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.models.passkey import PasskeyCredential
+from app.models.project_member import ProjectMember
+from app.models.refresh_token import RefreshToken
 
 
 class GlobalRole(str, enum.Enum):
