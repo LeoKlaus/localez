@@ -9,16 +9,22 @@ from app.core.totp import generate_totp_secret, get_totp_uri, verify_totp
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.user import User
-from app.schemas.user import TotpCodeRequest, TotpSetupResponse, TotpVerifyRequest, UpdatePasswordRequest, UpdateRoleRequest, UserResponse
+from app.models.passkey import PasskeyCredential
+from app.schemas.user import MeResponse, TotpCodeRequest, TotpSetupResponse, TotpVerifyRequest, UpdatePasswordRequest, UpdateRoleRequest, UserResponse
 
 router = APIRouter()
 
 MAX_LIMIT = 200
 
 
-@router.get("/me", response_model=UserResponse)
-async def get_me(user: User = Depends(get_current_active_user)):
-    return user
+@router.get("/me", response_model=MeResponse)
+async def get_me(user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+    passkey_count = await db.scalar(select(func.count()).select_from(PasskeyCredential).where(PasskeyCredential.user_id == user.id))
+    return MeResponse(
+        **UserResponse.model_validate(user).model_dump(),
+        totp_enabled=user.totp_secret is not None,
+        passkeys_configured=passkey_count > 0,
+    )
 
 
 @router.patch("/me", response_model=UserResponse)

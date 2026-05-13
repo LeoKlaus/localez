@@ -16,6 +16,11 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MeResponse(UserResponse):
+    totp_enabled: bool
+    passkeys_configured: bool
+
+
 class UpdatePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8)
