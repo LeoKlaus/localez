@@ -25,7 +25,7 @@ from app.models.user import GlobalRole, User
 def _build_engine():
     url = (
         f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
-        f"@localhost:{settings.postgres_port}/{settings.postgres_db}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
     )
     return create_async_engine(url, echo=False)
 
