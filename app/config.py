@@ -3,12 +3,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    postgres_host: str = "localhost"
+    postgres_host: str = "db"
     postgres_db: str = "localez"
     postgres_user: str = "localez"
-    postgres_password: SecretStr = "change-me"
+    postgres_password: SecretStr
     postgres_port: int = 5432
-    secret_key: SecretStr = "change-me"
+    secret_key: SecretStr
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
     webauthn_rp_id: str = "localhost"
