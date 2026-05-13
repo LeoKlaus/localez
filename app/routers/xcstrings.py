@@ -45,6 +45,9 @@ async def import_xcstrings(
     except ValueError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "INVALID_XCSTRINGS", "message": str(e)})
 
+    if project.source_language != parsed.source_language:
+        project.source_language = parsed.source_language
+
     # Upsert string keys
     key_id_by_str: dict[str, uuid.UUID] = {}
     for sk in parsed.string_keys:

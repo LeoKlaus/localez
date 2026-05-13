@@ -27,7 +27,10 @@ _STATE_MAP: dict[str, LocalizationState] = {
 
 
 def parse_xcstrings(data: dict, project_id: uuid.UUID) -> ParseResult:
-    result = ParseResult(source_language=data.get("sourceLanguage", "en"))
+    source_language = data.get("sourceLanguage", "en")
+    if not _LANGUAGE_RE.match(source_language):
+        raise ValueError(f"Invalid sourceLanguage '{source_language}' in xcstrings file")
+    result = ParseResult(source_language=source_language)
 
     for key_str, key_data in data.get("strings", {}).items():
         sk_id = uuid.uuid4()
