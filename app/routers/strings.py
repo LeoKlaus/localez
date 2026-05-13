@@ -67,8 +67,12 @@ async def get_string(
     result = await db.execute(select(Localization).where(Localization.string_key_id == key_id))
     localizations = result.scalars().all()
 
-    detail = StringKeyDetail.model_validate(sk)
-    detail.localizations = [LocalizationResponse.model_validate(l) for l in localizations]
+    # Validate base fields from the ORM object first (avoids lazy-loading sk.localizations)
+    base = StringKeyResponse.model_validate(sk)
+    detail = StringKeyDetail(
+        **base.model_dump(),
+        localizations=[LocalizationResponse.model_validate(l) for l in localizations],
+    )
     return detail
 
 
