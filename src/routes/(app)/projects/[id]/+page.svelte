@@ -3,10 +3,12 @@
 	import { goto } from '$app/navigation';
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
+	import { auth } from '$lib/stores/auth.svelte';
 	import { formatDate } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import * as Alert from '$lib/components/ui/alert';
 	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Badge } from '$lib/components/ui/badge';
@@ -17,6 +19,8 @@
 	import AlignLeft from 'lucide-svelte/icons/align-left';
 	import Download from 'lucide-svelte/icons/download';
 	import Upload from 'lucide-svelte/icons/upload';
+
+	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
 	const qc = useQueryClient();
 	let projectId = $derived($page.params.id as string);
@@ -73,10 +77,8 @@
 	}));
 
 	async function handleExport() {
-		const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
-		const token = localStorage.getItem('lz_access');
 		const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export`, {
-			headers: token ? { Authorization: `Bearer ${token}` } : {}
+			headers: { Authorization: `Bearer ${auth.accessToken}` }
 		});
 		if (!res.ok) return;
 		const blob = await res.blob();
@@ -89,16 +91,35 @@
 	}
 
 	let importInput = $state<HTMLInputElement | undefined>(undefined);
+	let importLoading = $state(false);
+	let importError = $state('');
+	let importSuccess = $state(false);
 
 	async function handleImport() {
 		const file = importInput?.files?.[0];
 		if (!file) return;
-		const json = JSON.parse(await file.text());
-		await client.POST('/api/projects/{project_id}/import', {
-			params: { path: { project_id: projectId } },
-			body: json
-		});
-		qc.invalidateQueries({ queryKey: ['strings', projectId] });
+		importError = '';
+		importSuccess = false;
+		importLoading = true;
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			const res = await fetch(`${BASE_URL}/api/projects/${projectId}/import`, {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${auth.accessToken}` },
+				body: formData
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				importError = data.detail ?? 'Import failed.';
+				return;
+			}
+			importSuccess = true;
+			qc.invalidateQueries({ queryKey: ['strings', projectId] });
+		} finally {
+			importLoading = false;
+			if (importInput) importInput.value = '';
+		}
 	}
 </script>
 
@@ -124,8 +145,8 @@
 				<Button variant="outline" size="sm" onclick={handleExport}>
 					<Download size={14} class="mr-1" /> Export
 				</Button>
-				<Button variant="outline" size="sm" onclick={() => importInput?.click()}>
-					<Upload size={14} class="mr-1" /> Import
+				<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
+					<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
 				</Button>
 				<input
 					bind:this={importInput}
@@ -144,6 +165,17 @@
 				</Button>
 			</div>
 		</div>
+
+		{#if importSuccess}
+			<Alert.Root class="mb-4">
+				<Alert.Description>File imported successfully.</Alert.Description>
+			</Alert.Root>
+		{/if}
+		{#if importError}
+			<Alert.Root variant="destructive" class="mb-4">
+				<Alert.Description>{importError}</Alert.Description>
+			</Alert.Root>
+		{/if}
 
 		<Separator class="mb-6" />
 
