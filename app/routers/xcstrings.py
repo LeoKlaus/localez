@@ -12,6 +12,7 @@ from app.dependencies.auth import require_admin
 from app.dependencies.project_access import require_guest_plus
 from app.models.localization import Localization
 from app.models.project import Project
+from app.models.project_language import ProjectLanguage
 from app.models.project_member import ProjectMember
 from app.models.string_key import StringKey
 from app.models.user import User
@@ -97,6 +98,14 @@ async def import_xcstrings(
             stmt = stmt.on_conflict_do_nothing()
 
         await db.execute(stmt)
+
+    # Register all language codes found in the file
+    for lang in {loc.language for loc in parsed.localizations}:
+        await db.execute(
+            pg_insert(ProjectLanguage)
+            .values(project_id=project_id, language=lang)
+            .on_conflict_do_nothing()
+        )
 
     keys_count = len(parsed.string_keys)
     locs_count = len(parsed.localizations)

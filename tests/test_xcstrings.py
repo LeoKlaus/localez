@@ -200,3 +200,25 @@ async def test_export_non_member_gets_403(member_client, unique_username, xcstri
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{xcstrings_project['id']}/export")
         assert resp.status_code == 403
+
+
+async def test_import_registers_languages(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "ImportLang", "source_language": "en"})).json()
+    assert proj["languages"] == []
+
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload())
+
+    updated = (await admin_client.get(f"/api/projects/{proj['id']}")).json()
+    assert len(updated["languages"]) > 0
+    assert "en" in updated["languages"]
+
+
+async def test_import_languages_idempotent(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "ImportLangIdem", "source_language": "en"})).json()
+
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload())
+    await admin_client.post(f"/api/projects/{proj['id']}/import?conflict=skip", files=_upload())
+
+    updated = (await admin_client.get(f"/api/projects/{proj['id']}")).json()
+    # Languages should not be duplicated
+    assert len(updated["languages"]) == len(set(updated["languages"]))
