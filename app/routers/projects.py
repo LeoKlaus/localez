@@ -12,6 +12,7 @@ from app.models.project_language import ProjectLanguage
 from app.models.project_member import ProjectMember
 from app.models.user import GlobalRole, User
 from app.schemas.project import LanguageAdd, ProjectCreate, ProjectResponse, ProjectUpdate
+from app.services.localization_service import fill_missing_localizations
 
 router = APIRouter()
 
@@ -129,6 +130,7 @@ async def add_language(
 
     db.add(ProjectLanguage(project_id=project_id, language=body.language))
     await db.flush()
+    await fill_missing_localizations(project_id, db)
     db.expire(project)
     project = await _get_project(project_id, db)
     return project

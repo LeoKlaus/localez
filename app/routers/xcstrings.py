@@ -16,6 +16,7 @@ from app.models.project_language import ProjectLanguage
 from app.models.project_member import ProjectMember
 from app.models.string_key import StringKey
 from app.models.user import User
+from app.services.localization_service import fill_missing_localizations
 from app.services.xcstrings_exporter import build_xcstrings
 from app.services.xcstrings_parser import parse_xcstrings
 
@@ -109,6 +110,9 @@ async def import_xcstrings(
             .values(project_id=project_id, language=lang)
             .on_conflict_do_nothing()
         )
+
+    # Fill placeholder rows for any (string_key, project_language) without a flat localization
+    await fill_missing_localizations(project_id, db)
 
     keys_count = len(parsed.string_keys)
     locs_count = len(parsed.localizations)
