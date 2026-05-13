@@ -24,17 +24,17 @@ def _challenge_from_token(challenge_token: str) -> bytes:
 # ---------------------------------------------------------------------------
 
 async def test_passkey_register_begin_requires_auth(client: AsyncClient):
-    resp = await client.post("/auth/passkey/register/begin")
+    resp = await client.post("/api/auth/passkey/register/begin")
     assert resp.status_code == 401
 
 
 async def test_passkey_register_begin_returns_options(client: AsyncClient, unique_username):
     username = unique_username("pk_begin")
-    reg = await client.post("/auth/register", json={"username": username, "password": "securepass1"})
+    reg = await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
     token = reg.json()["access_token"]
 
     resp = await client.post(
-        "/auth/passkey/register/begin",
+        "/api/auth/passkey/register/begin",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
@@ -51,16 +51,16 @@ async def test_passkey_register_begin_returns_options(client: AsyncClient, uniqu
 
 async def test_passkey_register_complete_success(client: AsyncClient, unique_username):
     username = unique_username("pk_reg")
-    reg = await client.post("/auth/register", json={"username": username, "password": "securepass1"})
+    reg = await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
     token = reg.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    begin = (await client.post("/auth/passkey/register/begin", headers=headers)).json()
+    begin = (await client.post("/api/auth/passkey/register/begin", headers=headers)).json()
     challenge = _challenge_from_token(begin["challenge_token"])
 
     auth = _make_authenticator()
     resp = await client.post(
-        "/auth/passkey/register/complete",
+        "/api/auth/passkey/register/complete",
         headers=headers,
         json={
             "credential": auth.registration_response(challenge),
@@ -74,18 +74,18 @@ async def test_passkey_register_complete_success(client: AsyncClient, unique_use
 
 async def test_passkey_register_complete_wrong_challenge(client: AsyncClient, unique_username):
     username = unique_username("pk_badchallenge")
-    reg = await client.post("/auth/register", json={"username": username, "password": "securepass1"})
+    reg = await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
     token = reg.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    begin = (await client.post("/auth/passkey/register/begin", headers=headers)).json()
+    begin = (await client.post("/api/auth/passkey/register/begin", headers=headers)).json()
 
     # Produce a credential for a *different* challenge
     import os
     wrong_challenge = os.urandom(32)
     auth = _make_authenticator()
     resp = await client.post(
-        "/auth/passkey/register/complete",
+        "/api/auth/passkey/register/complete",
         headers=headers,
         json={
             "credential": auth.registration_response(wrong_challenge),
@@ -98,7 +98,7 @@ async def test_passkey_register_complete_wrong_challenge(client: AsyncClient, un
 
 async def test_passkey_register_complete_requires_auth(client: AsyncClient):
     resp = await client.post(
-        "/auth/passkey/register/complete",
+        "/api/auth/passkey/register/complete",
         json={"credential": {}, "challenge_token": "fake"},
     )
     assert resp.status_code == 401
@@ -109,7 +109,7 @@ async def test_passkey_register_complete_requires_auth(client: AsyncClient):
 # ---------------------------------------------------------------------------
 
 async def test_passkey_auth_begin_returns_options(client: AsyncClient):
-    resp = await client.post("/auth/passkey/authenticate/begin")
+    resp = await client.post("/api/auth/passkey/authenticate/begin")
     assert resp.status_code == 200
     data = resp.json()
     assert "options" in data
@@ -123,16 +123,16 @@ async def test_passkey_auth_begin_returns_options(client: AsyncClient):
 
 async def _register_passkey(client: AsyncClient, username: str, password: str = "securepass1"):
     """Helper: register a user, add a passkey, return (access_token, authenticator)."""
-    reg = await client.post("/auth/register", json={"username": username, "password": password})
+    reg = await client.post("/api/auth/register", json={"username": username, "password": password})
     token = reg.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    begin = (await client.post("/auth/passkey/register/begin", headers=headers)).json()
+    begin = (await client.post("/api/auth/passkey/register/begin", headers=headers)).json()
     challenge = _challenge_from_token(begin["challenge_token"])
 
     auth = _make_authenticator()
     complete = await client.post(
-        "/auth/passkey/register/complete",
+        "/api/auth/passkey/register/complete",
         headers=headers,
         json={
             "credential": auth.registration_response(challenge),
@@ -147,11 +147,11 @@ async def test_passkey_auth_complete_success(client: AsyncClient, unique_usernam
     username = unique_username("pk_authn")
     _, auth = await _register_passkey(client, username)
 
-    begin = (await client.post("/auth/passkey/authenticate/begin")).json()
+    begin = (await client.post("/api/auth/passkey/authenticate/begin")).json()
     challenge = _challenge_from_token(begin["challenge_token"])
 
     resp = await client.post(
-        "/auth/passkey/authenticate/complete",
+        "/api/auth/passkey/authenticate/complete",
         json={
             "credential": auth.authentication_response(challenge),
             "challenge_token": begin["challenge_token"],
@@ -169,10 +169,10 @@ async def test_passkey_auth_complete_wrong_challenge(client: AsyncClient, unique
 
     import os
     wrong_challenge = os.urandom(32)
-    begin = (await client.post("/auth/passkey/authenticate/begin")).json()
+    begin = (await client.post("/api/auth/passkey/authenticate/begin")).json()
 
     resp = await client.post(
-        "/auth/passkey/authenticate/complete",
+        "/api/auth/passkey/authenticate/complete",
         json={
             "credential": auth.authentication_response(wrong_challenge),
             "challenge_token": begin["challenge_token"],
@@ -184,12 +184,12 @@ async def test_passkey_auth_complete_wrong_challenge(client: AsyncClient, unique
 
 async def test_passkey_auth_unknown_credential(client: AsyncClient):
     """A credential ID the server has never seen returns 401."""
-    begin = (await client.post("/auth/passkey/authenticate/begin")).json()
+    begin = (await client.post("/api/auth/passkey/authenticate/begin")).json()
     challenge = _challenge_from_token(begin["challenge_token"])
 
     auth = _make_authenticator()
     resp = await client.post(
-        "/auth/passkey/authenticate/complete",
+        "/api/auth/passkey/authenticate/complete",
         json={
             "credential": auth.authentication_response(challenge),
             "challenge_token": begin["challenge_token"],
@@ -204,17 +204,17 @@ async def test_passkey_tokens_are_usable(client: AsyncClient, unique_username):
     username = unique_username("pk_tokens")
     _, auth = await _register_passkey(client, username)
 
-    begin = (await client.post("/auth/passkey/authenticate/begin")).json()
+    begin = (await client.post("/api/auth/passkey/authenticate/begin")).json()
     challenge = _challenge_from_token(begin["challenge_token"])
 
     tokens = (await client.post(
-        "/auth/passkey/authenticate/complete",
+        "/api/auth/passkey/authenticate/complete",
         json={
             "credential": auth.authentication_response(challenge),
             "challenge_token": begin["challenge_token"],
         },
     )).json()
 
-    me = await client.get("/users/me", headers={"Authorization": f"Bearer {tokens['access_token']}"})
+    me = await client.get("/api/users/me", headers={"Authorization": f"Bearer {tokens['access_token']}"})
     assert me.status_code == 200
     assert me.json()["username"] == username

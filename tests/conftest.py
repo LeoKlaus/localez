@@ -84,7 +84,7 @@ async def admin_client(session_factory) -> AsyncClient:
 
     app.dependency_overrides[get_db] = override_get_db
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        resp = await c.post("/auth/register", json={"username": "admin_user", "password": "adminpass123"})
+        resp = await c.post("/api/auth/register", json={"username": "admin_user", "password": "adminpass123"})
         assert resp.status_code == 201
 
         async with session_factory() as session:
@@ -93,7 +93,7 @@ async def admin_client(session_factory) -> AsyncClient:
             await session.execute(update(User).where(User.username == "admin_user").values(global_role=GlobalRole.admin))
             await session.commit()
 
-        resp2 = await c.post("/auth/token", data={"username": "admin_user", "password": "adminpass123"})
+        resp2 = await c.post("/api/auth/token", data={"username": "admin_user", "password": "adminpass123"})
         token = resp2.json()["access_token"]
         c.headers["Authorization"] = f"Bearer {token}"
         yield c
@@ -121,9 +121,9 @@ def member_client(client: AsyncClient):
     @asynccontextmanager
     async def _make(username: str, password: str = "securepass1"):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-            reg = await c.post("/auth/register", json={"username": username, "password": password})
+            reg = await c.post("/api/auth/register", json={"username": username, "password": password})
             assert reg.status_code in (201, 409), f"Registration failed: {reg.status_code} {reg.json()}"
-            token_resp = await c.post("/auth/token", data={"username": username, "password": password})
+            token_resp = await c.post("/api/auth/token", data={"username": username, "password": password})
             assert token_resp.status_code == 200
             c.headers["Authorization"] = f"Bearer {token_resp.json()['access_token']}"
             yield c
@@ -133,7 +133,7 @@ def member_client(client: AsyncClient):
 @pytest_asyncio.fixture
 async def project(admin_client: AsyncClient) -> dict:
     """Create a bare project and return its JSON body."""
-    resp = await admin_client.post("/projects", json={"name": "Test Project", "source_language": "en"})
+    resp = await admin_client.post("/api/projects", json={"name": "Test Project", "source_language": "en"})
     assert resp.status_code == 201
     return resp.json()
 
@@ -141,12 +141,12 @@ async def project(admin_client: AsyncClient) -> dict:
 @pytest_asyncio.fixture
 async def xcstrings_project(admin_client: AsyncClient) -> dict:
     """Create a project and import Example.xcstrings into it."""
-    resp = await admin_client.post("/projects", json={"name": "XCStrings Project", "source_language": "en"})
+    resp = await admin_client.post("/api/projects", json={"name": "XCStrings Project", "source_language": "en"})
     assert resp.status_code == 201
     proj = resp.json()
     example = Path(__file__).parent.parent / "Example.xcstrings"
     imp = await admin_client.post(
-        f"/projects/{proj['id']}/import",
+        f"/api/projects/{proj['id']}/import",
         files={"file": (example.name, example.read_bytes(), "application/json")},
     )
     assert imp.status_code == 200
