@@ -167,12 +167,12 @@
 		</div>
 
 		{#if importSuccess}
-			<Alert.Root class="mb-4">
+			<Alert.Root class="mb-4 border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
 				<Alert.Description>File imported successfully.</Alert.Description>
 			</Alert.Root>
 		{/if}
 		{#if importError}
-			<Alert.Root variant="destructive" class="mb-4">
+			<Alert.Root class="mb-4 border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
 				<Alert.Description>{importError}</Alert.Description>
 			</Alert.Root>
 		{/if}
