@@ -1,9 +1,14 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=64)
     password: str = Field(min_length=8)
+
+    @field_validator("username")
+    @classmethod
+    def normalise_username(cls, v: str) -> str:
+        return v.lower()
 
 
 class RegisterResponse(BaseModel):
@@ -27,6 +32,11 @@ class RecoverRequest(BaseModel):
     username: str
     recovery_words: list[str] = Field(min_length=12, max_length=12)
     new_password: str = Field(min_length=8)
+
+    @field_validator("username")
+    @classmethod
+    def normalise_username(cls, v: str) -> str:
+        return v.lower()
 
 
 class PasskeyRegisterBeginResponse(BaseModel):

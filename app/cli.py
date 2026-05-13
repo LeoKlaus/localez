@@ -143,10 +143,10 @@ def main() -> None:
         if len(password) < 8:
             print("Error: password must be at least 8 characters.", file=sys.stderr)
             sys.exit(1)
-        asyncio.run(_create_admin(args.username, password))
+        asyncio.run(_create_admin(args.username.lower(), password))
 
     elif args.command == "promote-admin":
-        asyncio.run(_promote_admin(args.username))
+        asyncio.run(_promote_admin(args.username.lower()))
 
     elif args.command == "list-admins":
         asyncio.run(_list_admins())

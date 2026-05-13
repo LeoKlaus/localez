@@ -42,7 +42,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/token", response_model=TokenResponse)
 async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    result = await auth_service.authenticate_user(db, form.username, form.password)
+    result = await auth_service.authenticate_user(db, form.username.lower(), form.password)
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
     _, access_token, refresh_token = result

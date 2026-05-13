@@ -73,7 +73,7 @@ async def test_admin_can_list_users(admin_client: AsyncClient, client: AsyncClie
     username = unique_username("listed")
     await client.post("/auth/register", json={"username": username, "password": "securepass1"})
 
-    resp = await admin_client.get("/users")
+    resp = await admin_client.get("/users?limit=200")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
     assert "X-Total-Count" in resp.headers

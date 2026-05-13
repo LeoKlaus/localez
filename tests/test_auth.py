@@ -79,3 +79,25 @@ async def test_recovery_wrong_words(client: AsyncClient):
         "new_password": "newpass123",
     })
     assert resp.status_code == 401
+
+
+async def test_username_case_insensitive_register(client: AsyncClient):
+    resp = await client.post("/auth/register", json={"username": "CaseUser", "password": "securepass1"})
+    assert resp.status_code == 201
+
+    # Same username in different case should conflict
+    resp2 = await client.post("/auth/register", json={"username": "caseuser", "password": "securepass1"})
+    assert resp2.status_code == 409
+    assert resp2.json()["detail"]["code"] == "USERNAME_TAKEN"
+
+
+async def test_username_case_insensitive_login(client: AsyncClient):
+    await client.post("/auth/register", json={"username": "MixedCase", "password": "securepass1"})
+
+    # Login with uppercase should work
+    resp = await client.post("/auth/token", data={"username": "MIXEDCASE", "password": "securepass1"})
+    assert resp.status_code == 200
+
+    # Login with lowercase should work
+    resp2 = await client.post("/auth/token", data={"username": "mixedcase", "password": "securepass1"})
+    assert resp2.status_code == 200
