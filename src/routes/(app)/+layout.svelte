@@ -50,9 +50,7 @@
 
 <div class="flex min-h-svh bg-background">
 	<!-- Sidebar (desktop) -->
-	<aside
-		class="hidden w-56 flex-col border-r bg-card md:flex"
-	>
+	<aside class="hidden w-56 flex-shrink-0 flex-col border-r bg-card md:flex md:sticky md:top-0 md:h-screen">
 		<div class="flex h-14 items-center border-b px-4">
 			<span class="font-bold tracking-tight">Localez</span>
 		</div>
