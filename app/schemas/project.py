@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.language import LanguageCode
 from app.models.project_member import ProjectRole
@@ -23,8 +23,29 @@ class ProjectResponse(BaseModel):
     source_language: str
     created_by: uuid.UUID | None
     created_at: datetime
+    languages: list[LanguageCode] = []
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_languages(cls, data):
+        if isinstance(data, dict):
+            return data
+        # ORM object: convert ProjectLanguage rows to plain strings
+        langs = getattr(data, "languages", None) or []
+        return {
+            "id": data.id,
+            "name": data.name,
+            "source_language": data.source_language,
+            "created_by": data.created_by,
+            "created_at": data.created_at,
+            "languages": sorted(pl.language for pl in langs),
+        }
+
+
+class LanguageAdd(BaseModel):
+    language: LanguageCode
 
 
 class MemberAdd(BaseModel):

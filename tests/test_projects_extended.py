@@ -191,3 +191,73 @@ async def test_remove_member(admin_client: AsyncClient, project: dict, client: A
 async def test_remove_nonexistent_member_returns_404(admin_client: AsyncClient, project: dict):
     resp = await admin_client.delete(f"/api/projects/{project['id']}/members/{uuid.uuid4()}")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Language management
+# ---------------------------------------------------------------------------
+
+async def test_project_response_includes_languages(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangTest", "source_language": "en"})).json()
+    assert "languages" in proj
+    assert proj["languages"] == []
+
+
+async def test_add_language_to_project(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangAdd", "source_language": "en"})).json()
+
+    resp = await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "de"})
+    assert resp.status_code == 201
+    assert "de" in resp.json()["languages"]
+
+
+async def test_add_multiple_languages(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangMulti", "source_language": "en"})).json()
+    await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "de"})
+    await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "fr"})
+
+    resp = await admin_client.get(f"/api/projects/{proj['id']}")
+    assert resp.status_code == 200
+    assert set(resp.json()["languages"]) == {"de", "fr"}
+
+
+async def test_add_duplicate_language_returns_409(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangDup", "source_language": "en"})).json()
+    await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "de"})
+
+    resp = await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "de"})
+    assert resp.status_code == 409
+    assert resp.json()["detail"]["code"] == "LANGUAGE_ALREADY_EXISTS"
+
+
+async def test_add_invalid_language_code_returns_422(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangInvalid", "source_language": "en"})).json()
+
+    resp = await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "not-a-valid-!!-code"})
+    assert resp.status_code == 422
+
+
+async def test_remove_language_from_project(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangRemove", "source_language": "en"})).json()
+    await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "de"})
+
+    resp = await admin_client.delete(f"/api/projects/{proj['id']}/languages/de")
+    assert resp.status_code == 204
+
+    updated = (await admin_client.get(f"/api/projects/{proj['id']}")).json()
+    assert "de" not in updated["languages"]
+
+
+async def test_remove_nonexistent_language_returns_404(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "LangRemove404", "source_language": "en"})).json()
+
+    resp = await admin_client.delete(f"/api/projects/{proj['id']}/languages/de")
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "LANGUAGE_NOT_FOUND"
+
+
+async def test_add_language_requires_admin(member_client, unique_username):
+    username = unique_username("lang_norole")
+    async with member_client(username) as c:
+        resp = await c.post(f"/api/projects/{uuid.uuid4()}/languages", json={"language": "de"})
+        assert resp.status_code == 403

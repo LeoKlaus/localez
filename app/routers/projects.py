@@ -1,19 +1,28 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.project import Project
+from app.models.project_language import ProjectLanguage
 from app.models.project_member import ProjectMember
 from app.models.user import GlobalRole, User
-from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from app.schemas.project import LanguageAdd, ProjectCreate, ProjectResponse, ProjectUpdate
 
 router = APIRouter()
 
 MAX_LIMIT = 200
+
+
+async def _get_project(project_id: uuid.UUID, db: AsyncSession) -> Project | None:
+    result = await db.execute(
+        select(Project).where(Project.id == project_id).options(selectinload(Project.languages))
+    )
+    return result.scalar_one_or_none()
 
 
 @router.get("", response_model=list[ProjectResponse])
@@ -26,11 +35,11 @@ async def list_projects(
 ):
     limit = min(limit, MAX_LIMIT)
     if user.global_role == GlobalRole.admin:
-        q = select(Project)
+        q = select(Project).options(selectinload(Project.languages))
         count_q = select(func.count()).select_from(Project)
     else:
         member_project_ids = select(ProjectMember.project_id).where(ProjectMember.user_id == user.id)
-        q = select(Project).where(Project.id.in_(member_project_ids))
+        q = select(Project).where(Project.id.in_(member_project_ids)).options(selectinload(Project.languages))
         count_q = select(func.count()).select_from(Project).where(Project.id.in_(member_project_ids))
 
     total = await db.scalar(count_q)
@@ -50,7 +59,7 @@ async def create_project(
     project = Project(name=body.name, source_language=body.source_language, created_by=user.id)
     db.add(project)
     await db.flush()
-    await db.refresh(project)
+    project = await _get_project(project.id, db)
     return project
 
 
@@ -60,7 +69,7 @@ async def get_project(
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
+    project = await _get_project(project_id, db)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
 
@@ -81,7 +90,7 @@ async def update_project(
     _: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
+    project = await _get_project(project_id, db)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
 
@@ -102,3 +111,43 @@ async def delete_project(
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
     await db.delete(project)
+
+
+@router.post("/{project_id}/languages", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def add_language(
+    project_id: uuid.UUID,
+    body: LanguageAdd,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await _get_project(project_id, db)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    if any(pl.language == body.language for pl in project.languages):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "LANGUAGE_ALREADY_EXISTS", "message": f"Language '{body.language}' is already added to this project"})
+
+    db.add(ProjectLanguage(project_id=project_id, language=body.language))
+    await db.flush()
+    db.expire(project)
+    project = await _get_project(project_id, db)
+    return project
+
+
+@router.delete("/{project_id}/languages/{language}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_language(
+    project_id: uuid.UUID,
+    language: str,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ProjectLanguage).where(
+            ProjectLanguage.project_id == project_id,
+            ProjectLanguage.language == language,
+        )
+    )
+    pl = result.scalar_one_or_none()
+    if pl is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
+    await db.delete(pl)
