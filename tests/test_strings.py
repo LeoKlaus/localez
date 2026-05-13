@@ -14,7 +14,7 @@ async def _add_member(admin_client, project_id, user_id, role):
 
 
 async def _get_user_id(admin_client, username):
-    users = (await admin_client.get("/users")).json()
+    users = (await admin_client.get("/users?limit=200")).json()
     return next(u["id"] for u in users if u["username"] == username)
 
 

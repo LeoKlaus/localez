@@ -6,7 +6,7 @@ pytestmark = pytest.mark.usefixtures("setup_database")
 
 
 async def _get_user_id(admin_client, username):
-    users = (await admin_client.get("/users")).json()
+    users = (await admin_client.get("/users?limit=200")).json()
     return next(u["id"] for u in users if u["username"] == username)
 
 

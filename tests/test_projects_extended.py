@@ -31,7 +31,7 @@ async def test_list_projects_member_sees_only_own(
     await admin_client.post("/projects", json={"name": "Hidden Project", "source_language": "en"})
 
     async with member_client(username) as c:
-        users = (await admin_client.get("/users")).json()
+        users = (await admin_client.get("/users?limit=200")).json()
         user = next(u for u in users if u["username"] == username)
         await admin_client.post(f"/projects/{proj_visible['id']}/members", json={
             "user_id": user["id"], "project_role": "guest",
@@ -58,7 +58,7 @@ async def test_get_project_as_admin(admin_client: AsyncClient, project: dict):
 async def test_get_project_as_member(admin_client: AsyncClient, member_client, unique_username, project: dict):
     username = unique_username("getmember")
     async with member_client(username) as c:
-        users = (await admin_client.get("/users")).json()
+        users = (await admin_client.get("/users?limit=200")).json()
         user = next(u for u in users if u["username"] == username)
         await admin_client.post(f"/projects/{project['id']}/members", json={
             "user_id": user["id"], "project_role": "guest",
@@ -124,7 +124,7 @@ async def test_delete_project_non_admin_gets_403(member_client, unique_username,
 async def test_list_members(admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username):
     username = unique_username("listed_member")
     await client.post("/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/users")).json()
+    users = (await admin_client.get("/users?limit=200")).json()
     user = next(u for u in users if u["username"] == username)
     await admin_client.post(f"/projects/{project['id']}/members", json={
         "user_id": user["id"], "project_role": "translator",
@@ -142,7 +142,7 @@ async def test_add_member_duplicate_returns_409(
 ):
     username = unique_username("dup_member")
     await client.post("/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/users")).json()
+    users = (await admin_client.get("/users?limit=200")).json()
     user = next(u for u in users if u["username"] == username)
 
     payload = {"user_id": user["id"], "project_role": "guest"}
@@ -155,7 +155,7 @@ async def test_add_member_duplicate_returns_409(
 async def test_update_member_role(admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username):
     username = unique_username("updaterole")
     await client.post("/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/users")).json()
+    users = (await admin_client.get("/users?limit=200")).json()
     user = next(u for u in users if u["username"] == username)
     await admin_client.post(f"/projects/{project['id']}/members", json={
         "user_id": user["id"], "project_role": "guest",
@@ -172,7 +172,7 @@ async def test_update_member_role(admin_client: AsyncClient, project: dict, clie
 async def test_remove_member(admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username):
     username = unique_username("removemember")
     await client.post("/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/users")).json()
+    users = (await admin_client.get("/users?limit=200")).json()
     user = next(u for u in users if u["username"] == username)
     await admin_client.post(f"/projects/{project['id']}/members", json={
         "user_id": user["id"], "project_role": "guest",

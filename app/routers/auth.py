@@ -85,8 +85,8 @@ async def passkey_register_begin(
         username=user.username,
         existing_credential_ids=existing_ids,
     )
-    import webauthn
-    options_dict = webauthn.options_to_json(options)
+    import webauthn, json
+    options_dict = json.loads(webauthn.options_to_json(options))
     challenge_token = create_webauthn_challenge_token(options.challenge)
     return PasskeyRegisterBeginResponse(options=options_dict, challenge_token=challenge_token)
 
@@ -117,8 +117,8 @@ async def passkey_register_complete(
 @router.post("/passkey/authenticate/begin", response_model=PasskeyAuthBeginResponse)
 async def passkey_auth_begin(db: AsyncSession = Depends(get_db)):
     options = get_authentication_options()
-    import webauthn
-    options_dict = webauthn.options_to_json(options)
+    import webauthn, json
+    options_dict = json.loads(webauthn.options_to_json(options))
     challenge_token = create_webauthn_challenge_token(options.challenge)
     return PasskeyAuthBeginResponse(options=options_dict, challenge_token=challenge_token)
 
@@ -127,7 +127,9 @@ async def passkey_auth_begin(db: AsyncSession = Depends(get_db)):
 async def passkey_auth_complete(body: PasskeyAuthCompleteRequest, db: AsyncSession = Depends(get_db)):
     try:
         challenge = decode_webauthn_challenge_token(body.challenge_token)
-        raw_cred_id = bytes.fromhex(body.credential.get("rawId", ""))
+        import base64
+        raw_id_str = body.credential.get("rawId", "")
+        raw_cred_id = base64.urlsafe_b64decode(raw_id_str + "==")
         result = await db.execute(select(PasskeyCredential).where(PasskeyCredential.credential_id == raw_cred_id))
         cred = result.scalar_one_or_none()
         if cred is None:

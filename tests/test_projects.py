@@ -28,7 +28,7 @@ async def test_admin_can_add_member(admin_client: AsyncClient):
     project_id = proj.json()["id"]
 
     # get user id
-    users_resp = await admin_client.get("/users")
+    users_resp = await admin_client.get("/users?limit=200")
     users = users_resp.json()
     member_user = next(u for u in users if u["username"] == "new_member")
 
