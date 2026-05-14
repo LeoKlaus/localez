@@ -44,6 +44,18 @@ class ProjectResponse(BaseModel):
         }
 
 
+class LanguageStats(BaseModel):
+    language: str
+    translated: int
+    needs_review: int
+    missing: int
+
+
+class ProjectStats(BaseModel):
+    total_strings: int
+    languages: list[LanguageStats]
+
+
 class LanguageAdd(BaseModel):
     language: LanguageCode
 

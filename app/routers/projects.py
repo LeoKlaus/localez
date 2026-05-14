@@ -1,17 +1,20 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user, require_admin
+from app.dependencies.project_access import require_guest_plus
+from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
 from app.models.project_member import ProjectMember
+from app.models.string_key import StringKey
 from app.models.user import GlobalRole, User
-from app.schemas.project import LanguageAdd, ProjectCreate, ProjectResponse, ProjectUpdate
+from app.schemas.project import LanguageAdd, LanguageStats, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
 from app.services.localization_service import fill_missing_localizations
 
 router = APIRouter()
@@ -153,3 +156,59 @@ async def remove_language(
     if pl is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
     await db.delete(pl)
+
+
+@router.get("/{project_id}/stats", response_model=ProjectStats)
+async def get_project_stats(
+    project_id: uuid.UUID,
+    _: ProjectMember = Depends(require_guest_plus),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    total_strings = await db.scalar(
+        select(func.count()).where(StringKey.project_id == project_id)
+    )
+
+    # Per (string_key, language), compute worst-case state:
+    # any 'new' → missing, else any 'needs_review' → needs_review, else → translated
+    rows = await db.execute(
+        text("""
+            SELECT
+                l.language,
+                SUM(CASE WHEN worst = 'new' THEN 1 ELSE 0 END)          AS missing,
+                SUM(CASE WHEN worst = 'needs_review' THEN 1 ELSE 0 END) AS needs_review,
+                SUM(CASE WHEN worst = 'translated' THEN 1 ELSE 0 END)   AS translated
+            FROM (
+                SELECT
+                    l.language,
+                    l.string_key_id,
+                    CASE
+                        WHEN bool_or(l.state = 'new')          THEN 'new'
+                        WHEN bool_or(l.state = 'needs_review') THEN 'needs_review'
+                        ELSE 'translated'
+                    END AS worst
+                FROM localizations l
+                JOIN string_keys sk ON sk.id = l.string_key_id
+                WHERE sk.project_id = :project_id
+                GROUP BY l.language, l.string_key_id
+            ) l
+            GROUP BY l.language
+            ORDER BY l.language
+        """),
+        {"project_id": project_id},
+    )
+
+    languages = [
+        LanguageStats(
+            language=row.language,
+            translated=row.translated,
+            needs_review=row.needs_review,
+            missing=row.missing,
+        )
+        for row in rows
+    ]
+
+    return ProjectStats(total_strings=total_strings, languages=languages)

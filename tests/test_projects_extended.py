@@ -261,3 +261,67 @@ async def test_add_language_requires_admin(member_client, unique_username):
     async with member_client(username) as c:
         resp = await c.post(f"/api/projects/{uuid.uuid4()}/languages", json={"language": "de"})
         assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+
+async def test_stats_empty_project(admin_client: AsyncClient):
+    proj = (await admin_client.post("/api/projects", json={"name": "StatsEmpty", "source_language": "en"})).json()
+
+    resp = await admin_client.get(f"/api/projects/{proj['id']}/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_strings"] == 0
+    assert body["languages"] == []
+
+
+async def test_stats_after_import(admin_client: AsyncClient, xcstrings_project: dict):
+    resp = await admin_client.get(f"/api/projects/{xcstrings_project['id']}/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["total_strings"] > 0
+    lang_codes = [l["language"] for l in body["languages"]]
+    # Example.xcstrings includes at least "de" and "en"
+    assert len(body["languages"]) > 0
+
+    for lang in body["languages"]:
+        assert "language" in lang
+        assert "translated" in lang
+        assert "needs_review" in lang
+        assert "missing" in lang
+        assert lang["translated"] + lang["needs_review"] + lang["missing"] == body["total_strings"]
+
+
+async def test_stats_counts_match_total(admin_client: AsyncClient):
+    """Each language's (translated + needs_review + missing) must equal total_strings."""
+    proj = (await admin_client.post("/api/projects", json={"name": "StatsCount", "source_language": "en"})).json()
+    from pathlib import Path
+    example = Path(__file__).parent.parent / "Example.xcstrings"
+    await admin_client.post(
+        f"/api/projects/{proj['id']}/import",
+        files={"file": (example.name, example.read_bytes(), "application/json")},
+    )
+
+    resp = await admin_client.get(f"/api/projects/{proj['id']}/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    for lang in body["languages"]:
+        total = lang["translated"] + lang["needs_review"] + lang["missing"]
+        assert total == body["total_strings"], f"Language {lang['language']}: {total} != {body['total_strings']}"
+
+
+async def test_stats_not_found(admin_client: AsyncClient):
+    resp = await admin_client.get(f"/api/projects/{uuid.uuid4()}/stats")
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "PROJECT_NOT_FOUND"
+
+
+async def test_stats_requires_project_access(member_client, unique_username, project: dict):
+    username = unique_username("stats_noauth")
+    async with member_client(username) as c:
+        resp = await c.get(f"/api/projects/{project['id']}/stats")
+        assert resp.status_code == 403
