@@ -146,6 +146,12 @@
 		return [...new Set(text.match(/%(?:\d+\$)?(?:@|lld|ld|d|f|s)/g) ?? [])];
 	}
 
+	function placeholderLabel(ph: string): string {
+		if (ph.endsWith('@') || ph.endsWith('s')) return 'string';
+		if (ph.endsWith('f')) return 'decimal';
+		return 'number';
+	}
+
 	const stateColors: Record<LocalizationState, string> = {
 		new: 'bg-muted text-muted-foreground',
 		needs_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -177,14 +183,18 @@
 			<span class="px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
 		{/if}
 		{#if placeholders.length > 0}
-			<div class="mt-1 flex flex-wrap gap-1">
+			<div class="mt-1 flex flex-wrap items-center gap-1">
+				<span class="text-xs text-muted-foreground">Placeholders:</span>
 				{#each placeholders as ph}
-					<button
-						type="button"
-						class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
-						onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = (drafts[loc.id] ?? '') + ph; }}
-						title="Click to insert"
-					>{ph}</button>
+					<span class="flex items-center gap-0.5">
+						<button
+							type="button"
+							class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
+							onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = (drafts[loc.id] ?? '') + ph; }}
+							title="Click to insert into translation"
+						>{ph}</button>
+						<span class="text-xs text-muted-foreground">{placeholderLabel(ph)}</span>
+					</span>
 				{/each}
 			</div>
 		{/if}
