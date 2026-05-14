@@ -181,7 +181,7 @@ async def list_language_localizations(
 
     limit = min(limit, MAX_LIMIT)
     query = (
-        select(Localization, StringKey.key)
+        select(Localization, StringKey.key, StringKey.comment)
         .join(StringKey, StringKey.id == Localization.string_key_id)
         .where(StringKey.project_id == project_id, Localization.language == language)
     )
@@ -197,9 +197,10 @@ async def list_language_localizations(
     rows = await db.execute(query.offset(offset).limit(limit))
 
     items = []
-    for loc, key in rows:
+    for loc, key, comment in rows:
         data = {c.name: getattr(loc, c.name) for c in loc.__table__.columns}
         data["key"] = key
+        data["comment"] = comment
         items.append(LocalizationWithKeyResponse.model_validate(data))
 
     if response:

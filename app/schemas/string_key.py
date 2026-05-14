@@ -27,6 +27,7 @@ class LocalizationResponse(BaseModel):
 class LocalizationWithKeyResponse(LocalizationResponse):
     string_key_id: uuid.UUID
     key: str
+    comment: str | None
 
 
 class StringKeyResponse(BaseModel):
