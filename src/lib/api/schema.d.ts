@@ -349,6 +349,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/languages/{language}/localizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Language Localizations */
+        get: operations["list_language_localizations_api_projects__project_id__languages__language__localizations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/stats": {
         parameters: {
             query?: never;
@@ -663,6 +680,34 @@ export interface components {
          * @enum {string}
          */
         LocalizationState: "new" | "needs_review" | "translated";
+        /** LocalizationWithKeyResponse */
+        LocalizationWithKeyResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Language */
+            language: string;
+            variation_type: components["schemas"]["VariationType"];
+            /** Variation Key */
+            variation_key: string | null;
+            state: components["schemas"]["LocalizationState"];
+            /** Value */
+            value: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * String Key Id
+             * Format: uuid
+             */
+            string_key_id: string;
+            /** Key */
+            key: string;
+        };
         /** MeResponse */
         MeResponse: {
             /**
@@ -1785,6 +1830,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_language_localizations_api_projects__project_id__languages__language__localizations_get: {
+        parameters: {
+            query?: {
+                state?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalizationWithKeyResponse"][];
+                };
             };
             /** @description Validation Error */
             422: {
