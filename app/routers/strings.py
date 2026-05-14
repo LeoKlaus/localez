@@ -64,6 +64,9 @@ async def get_string(
     if sk is None or sk.project_id != project_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "STRING_NOT_FOUND", "message": "String key not found"})
 
+    if not sk.should_translate:
+        return StringKeyDetail(**StringKeyResponse.model_validate(sk).model_dump(), localizations=[])
+
     result = await db.execute(select(Localization).where(Localization.string_key_id == key_id))
     localizations = result.scalars().all()
 
@@ -92,6 +95,11 @@ async def list_localizations(
     if sk is None or sk.project_id != project_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "STRING_NOT_FOUND", "message": "String key not found"})
 
+    if not sk.should_translate:
+        if response:
+            response.headers["X-Total-Count"] = "0"
+        return []
+
     limit = min(limit, MAX_LIMIT)
     query = select(Localization).where(Localization.string_key_id == key_id)
     if language:
@@ -118,6 +126,9 @@ async def get_localization(
     sk = await db.get(StringKey, key_id)
     if sk is None or sk.project_id != project_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "STRING_NOT_FOUND", "message": "String key not found"})
+
+    if not sk.should_translate:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
 
     loc = await db.get(Localization, loc_id)
     if loc is None or loc.string_key_id != key_id:

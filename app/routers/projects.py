@@ -183,7 +183,7 @@ async def list_language_localizations(
     query = (
         select(Localization, StringKey.key, StringKey.comment)
         .join(StringKey, StringKey.id == Localization.string_key_id)
-        .where(StringKey.project_id == project_id, Localization.language == language)
+        .where(StringKey.project_id == project_id, StringKey.should_translate == True, Localization.language == language)
     )
 
     if state is not None:
