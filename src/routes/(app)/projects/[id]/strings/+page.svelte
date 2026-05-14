@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { createQuery } from '@tanstack/svelte-query';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
@@ -16,6 +16,7 @@
 	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
 	type ProposalResponse = components['schemas']['ProposalResponse'];
 
+	const qc = useQueryClient();
 	const LIMIT = 50;
 	let projectId = $derived($page.params.id as string);
 
@@ -129,6 +130,8 @@
 				}
 			);
 			if (error) throw error;
+			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
+			qc.invalidateQueries({ queryKey: ['proposals-pending', projectId] });
 		} catch {
 			submitError[loc.id] = 'Failed to submit.';
 			drafts[loc.id] = loc.value ?? '';
