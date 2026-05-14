@@ -202,7 +202,7 @@
 			<span class="px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
 		{/if}
 		{#if placeholders.length > 0}
-			<div class="mt-1 flex flex-wrap items-center gap-1">
+			<div class="mt-1 flex flex-wrap items-center gap-1 pl-1">
 				<span class="text-xs text-muted-foreground">Placeholders:</span>
 				{#each placeholders as ph}
 					<span class="flex items-center gap-0.5">
