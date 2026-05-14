@@ -26,20 +26,6 @@
 	let stateFilter = $state<LocalizationState | ''>('');
 	let offset = $state(0);
 
-	const projectQuery = createQuery(() => ({
-		queryKey: ['project', projectId],
-		enabled: !!language,
-		queryFn: async () => {
-			const { data, error } = await client.GET('/api/projects/{project_id}', {
-				params: { path: { project_id: projectId } }
-			});
-			if (error) throw error;
-			return data;
-		}
-	}));
-
-	let sourceLanguage = $derived(projectQuery.data?.source_language ?? '');
-
 	const langStrings = createQuery(() => ({
 		queryKey: ['lang-strings', projectId, language, { stateFilter, offset }],
 		enabled: !!language,
@@ -58,32 +44,6 @@
 			return { items: data ?? [], total };
 		}
 	}));
-
-	const sourceLocs = createQuery(() => ({
-		queryKey: ['lang-strings', projectId, sourceLanguage, { stateFilter: '', offset: 0 }],
-		enabled: !!language && !!sourceLanguage && sourceLanguage !== language,
-		queryFn: async () => {
-			const { data, error } = await client.GET(
-				'/api/projects/{project_id}/languages/{language}/localizations',
-				{
-					params: {
-						path: { project_id: projectId, language: sourceLanguage },
-						query: { limit: 1000 }
-					}
-				}
-			);
-			if (error) throw error;
-			return data ?? [];
-		}
-	}));
-
-	let sourceValueMap = $derived.by((): Map<string, string> => {
-		const map = new Map<string, string>();
-		for (const loc of sourceLocs.data ?? []) {
-			if (loc.value) map.set(loc.string_key_id, loc.value);
-		}
-		return map;
-	});
 
 	const strings = createQuery(() => ({
 		queryKey: ['strings', projectId, { q, stateFilter, offset }],
@@ -181,32 +141,9 @@
 		}
 	}
 
-	// Placeholder parsing — new regex per call to avoid shared /g state across rows
-	const PLACEHOLDER_PATTERN = /%(?:\d+\$)?(?:@|lld|ld|d|f|s)/g;
-
-	type Segment = { type: 'text' | 'placeholder'; value: string };
-
-	function parseSegments(text: string): Segment[] {
-		const re = new RegExp(PLACEHOLDER_PATTERN.source, 'g');
-		const segments: Segment[] = [];
-		let last = 0;
-		for (const match of text.matchAll(re)) {
-			if (match.index > last) segments.push({ type: 'text', value: text.slice(last, match.index) });
-			segments.push({ type: 'placeholder', value: match[0] });
-			last = match.index + match[0].length;
-		}
-		if (last < text.length) segments.push({ type: 'text', value: text.slice(last) });
-		return segments;
-	}
-
+	// Placeholder parsing
 	function extractPlaceholders(text: string): string[] {
-		const re = new RegExp(PLACEHOLDER_PATTERN.source, 'g');
-		const seen = new Set<string>();
-		const result: string[] = [];
-		for (const match of text.matchAll(re)) {
-			if (!seen.has(match[0])) { seen.add(match[0]); result.push(match[0]); }
-		}
-		return result;
+		return [...new Set(text.match(/%(?:\d+\$)?(?:@|lld|ld|d|f|s)/g) ?? [])];
 	}
 
 	const stateColors: Record<LocalizationState, string> = {
@@ -224,8 +161,7 @@
 </script>
 
 {#snippet translationCell(loc: LocalizationWithKey)}
-	{@const sourceValue = sourceValueMap.get(loc.string_key_id) ?? ''}
-	{@const placeholders = sourceValue ? extractPlaceholders(sourceValue) : []}
+	{@const placeholders = extractPlaceholders(loc.key)}
 	<Table.Cell>
 		{#if auth.isAuthenticated}
 			<input
@@ -240,19 +176,15 @@
 		{:else}
 			<span class="px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
 		{/if}
-		{#if sourceValue}
-			<div class="mt-1 flex flex-wrap items-baseline gap-x-0.5 gap-y-0 text-xs text-muted-foreground/70">
-				{#each parseSegments(sourceValue) as seg}
-					{#if seg.type === 'placeholder'}
-						<button
-							type="button"
-							class="inline rounded bg-blue-100 px-1 font-mono text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
-							onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = (drafts[loc.id] ?? '') + seg.value; }}
-							title="Click to append"
-						>{seg.value}</button>
-					{:else}
-						<span>{seg.value}</span>
-					{/if}
+		{#if placeholders.length > 0}
+			<div class="mt-1 flex flex-wrap gap-1">
+				{#each placeholders as ph}
+					<button
+						type="button"
+						class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
+						onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = (drafts[loc.id] ?? '') + ph; }}
+						title="Click to insert"
+					>{ph}</button>
 				{/each}
 			</div>
 		{/if}
