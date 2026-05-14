@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
+	import { auth } from '$lib/stores/auth.svelte';
 	import { formatDate } from '$lib/utils';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
@@ -215,9 +216,11 @@
 						{loc.state.replace('_', ' ')}
 					</span>
 				</div>
-				<Button variant="outline" size="sm" onclick={() => openProposalDialog(loc.id)}>
-					<Plus size={12} class="mr-1" /> Propose
-				</Button>
+				{#if auth.isAuthenticated}
+					<Button variant="outline" size="sm" onclick={() => openProposalDialog(loc.id)}>
+						<Plus size={12} class="mr-1" /> Propose
+					</Button>
+				{/if}
 			</div>
 		</Card.Header>
 		<Card.Content class="space-y-3">

@@ -14,7 +14,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import Pencil from 'lucide-svelte/icons/pencil';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
-	import Users from 'lucide-svelte/icons/users';
+	import Plus from 'lucide-svelte/icons/plus';
 	import Download from 'lucide-svelte/icons/download';
 	import Upload from 'lucide-svelte/icons/upload';
 
@@ -45,8 +45,8 @@
 		}
 	}));
 
+	// Edit project
 	let editOpen = $state(false);
-	let deleteOpen = $state(false);
 	let editName = $state('');
 	let editLang = $state('');
 
@@ -72,6 +72,9 @@
 		}
 	}));
 
+	// Delete project
+	let deleteOpen = $state(false);
+
 	const deleteProject = createMutation(() => ({
 		mutationFn: async () => {
 			const { error } = await client.DELETE('/api/projects/{project_id}', {
@@ -85,6 +88,46 @@
 		}
 	}));
 
+	// Add language
+	let addLangOpen = $state(false);
+	let newLanguage = $state('');
+	let addLangError = $state('');
+
+	const addLanguage = createMutation(() => ({
+		mutationFn: async () => {
+			const { error } = await client.POST('/api/projects/{project_id}/languages', {
+				params: { path: { project_id: projectId } },
+				body: { language: newLanguage.trim() }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['project', projectId] });
+			qc.invalidateQueries({ queryKey: ['stats', projectId] });
+			addLangOpen = false;
+			newLanguage = '';
+			addLangError = '';
+		},
+		onError: () => {
+			addLangError = 'Failed to add language.';
+		}
+	}));
+
+	// Delete language
+	const deleteLanguage = createMutation(() => ({
+		mutationFn: async (language: string) => {
+			const { error } = await client.DELETE('/api/projects/{project_id}/languages/{language}', {
+				params: { path: { project_id: projectId, language } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['project', projectId] });
+			qc.invalidateQueries({ queryKey: ['stats', projectId] });
+		}
+	}));
+
+	// Export
 	async function handleExport() {
 		const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export`, {
 			headers: { Authorization: `Bearer ${auth.accessToken}` }
@@ -99,6 +142,7 @@
 		URL.revokeObjectURL(url);
 	}
 
+	// Import
 	let importInput = $state<HTMLInputElement | undefined>(undefined);
 	let importLoading = $state(false);
 	let importError = $state('');
@@ -126,6 +170,7 @@
 			importSuccess = true;
 			qc.invalidateQueries({ queryKey: ['strings', projectId] });
 			qc.invalidateQueries({ queryKey: ['stats', projectId] });
+			qc.invalidateQueries({ queryKey: ['project', projectId] });
 		} finally {
 			importLoading = false;
 			if (importInput) importInput.value = '';
@@ -152,26 +197,23 @@
 				</div>
 				<p class="mt-1 text-sm text-muted-foreground">Created {formatDate(p.created_at)}</p>
 			</div>
-			<div class="flex flex-wrap gap-2">
-				<Button variant="outline" size="sm" onclick={openEdit}>
-					<Pencil size={14} class="mr-1" /> Edit
-				</Button>
-				<Button variant="outline" size="sm" onclick={handleExport}>
-					<Download size={14} class="mr-1" /> Export
-				</Button>
-				<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
-					<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
-				</Button>
-				<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
-				<a href="/projects/{p.id}/members">
-					<Button variant="outline" size="sm">
-						<Users size={14} class="mr-1" /> Members
+			{#if auth.isAdmin}
+				<div class="flex flex-wrap gap-2">
+					<Button variant="outline" size="sm" onclick={openEdit}>
+						<Pencil size={14} class="mr-1" /> Edit
 					</Button>
-				</a>
-				<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
-					<Trash2 size={14} class="mr-1" /> Delete
-				</Button>
-			</div>
+					<Button variant="outline" size="sm" onclick={handleExport}>
+						<Download size={14} class="mr-1" /> Export
+					</Button>
+					<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
+						<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
+					</Button>
+					<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
+					<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
+						<Trash2 size={14} class="mr-1" /> Delete
+					</Button>
+				</div>
+			{/if}
 		</div>
 
 		{#if importSuccess}
@@ -188,9 +230,16 @@
 		<Separator class="mb-6" />
 
 		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-lg font-semibold">Languages</h2>
-			{#if stats.data}
-				<span class="text-sm text-muted-foreground">{stats.data.total_strings} translatable strings</span>
+			<div>
+				<h2 class="text-lg font-semibold">Languages</h2>
+				{#if stats.data}
+					<p class="text-sm text-muted-foreground">{stats.data.total_strings} translatable strings</p>
+				{/if}
+			</div>
+			{#if auth.isAuthenticated}
+				<Button size="sm" onclick={() => { addLangOpen = true; newLanguage = ''; addLangError = ''; }}>
+					<Plus size={14} class="mr-1" /> Add language
+				</Button>
 			{/if}
 		</div>
 
@@ -203,32 +252,45 @@
 		{#if stats.isPending}
 			<div class="h-32 animate-pulse rounded-lg bg-muted"></div>
 		{:else if (stats.data?.languages.length ?? 0) === 0}
-			<p class="text-sm text-muted-foreground">No languages configured. Import an xcstrings file to add languages.</p>
+			<p class="text-sm text-muted-foreground">No languages configured. {auth.isAuthenticated ? 'Add a language or import an xcstrings file.' : 'Sign in to add languages.'}</p>
 		{:else}
 			<div class="divide-y rounded-lg border">
 				{#each stats.data!.languages as lang}
 					{@const total = lang.translated + lang.needs_review + lang.missing}
-					<a
-						href="/projects/{p.id}/strings?language={lang.language}"
-						class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
-					>
-						<span class="w-12 font-mono text-sm font-medium">{lang.language}</span>
+					<div class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50">
+						<a
+							href="/projects/{p.id}/strings?language={lang.language}"
+							class="flex flex-1 items-center gap-4"
+						>
+							<span class="w-12 font-mono text-sm font-medium">{lang.language}</span>
 
-						<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
-							{#if total > 0}
-								<div class="h-full bg-green-500 transition-all" style="width: {pct(lang.translated, total)}%"></div>
-								<div class="h-full bg-yellow-400 transition-all" style="width: {pct(lang.needs_review, total)}%"></div>
-							{/if}
-						</div>
+							<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
+								{#if total > 0}
+									<div class="h-full bg-green-500 transition-all" style="width: {pct(lang.translated, total)}%"></div>
+									<div class="h-full bg-yellow-400 transition-all" style="width: {pct(lang.needs_review, total)}%"></div>
+								{/if}
+							</div>
 
-						<span class="text-right text-xs text-muted-foreground">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
-					</a>
+							<span class="text-right text-xs text-muted-foreground">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
+						</a>
+						{#if auth.isAuthenticated}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+								onclick={() => deleteLanguage.mutate(lang.language)}
+							>
+								<Trash2 size={14} />
+							</Button>
+						{/if}
+					</div>
 				{/each}
 			</div>
 		{/if}
 	{/if}
 </div>
 
+<!-- Edit project dialog -->
 <Dialog.Root bind:open={editOpen}>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
@@ -251,6 +313,7 @@
 	</Dialog.Content>
 </Dialog.Root>
 
+<!-- Delete project dialog -->
 <Dialog.Root bind:open={deleteOpen}>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
@@ -265,5 +328,30 @@
 				{deleteProject.isPending ? 'Deleting…' : 'Delete project'}
 			</Button>
 		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Add language dialog -->
+<Dialog.Root bind:open={addLangOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Add language</Dialog.Title>
+			<Dialog.Description>Enter a BCP 47 language tag, e.g. <code>de</code>, <code>fr-FR</code>.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={(e) => { e.preventDefault(); addLanguage.mutate(); }} class="space-y-4">
+			{#if addLangError}
+				<p class="text-sm text-destructive">{addLangError}</p>
+			{/if}
+			<div class="space-y-2">
+				<Label>Language code</Label>
+				<Input bind:value={newLanguage} placeholder="de" required maxlength={20} />
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (addLangOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={!newLanguage.trim() || addLanguage.isPending}>
+					{addLanguage.isPending ? 'Adding…' : 'Add'}
+				</Button>
+			</Dialog.Footer>
+		</form>
 	</Dialog.Content>
 </Dialog.Root>
