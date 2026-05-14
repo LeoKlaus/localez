@@ -142,8 +142,19 @@
 	}
 
 	// Placeholder parsing
+	const PLACEHOLDER_RE = /%(?:\d+\$)?(?:@|lld|ld|d|f|s)/;
+
+	type Segment = { type: 'text' | 'placeholder'; value: string };
+
+	function parseSegments(text: string): Segment[] {
+		const parts = text.split(new RegExp(`(${PLACEHOLDER_RE.source})`));
+		return parts
+			.map((value, i) => ({ type: (i % 2 === 1 ? 'placeholder' : 'text') as Segment['type'], value }))
+			.filter((s) => s.value !== '');
+	}
+
 	function extractPlaceholders(text: string): string[] {
-		return [...new Set(text.match(/%(?:\d+\$)?(?:@|lld|ld|d|f|s)/g) ?? [])];
+		return [...new Set(text.match(new RegExp(PLACEHOLDER_RE.source, 'g')) ?? [])];
 	}
 
 	function placeholderLabel(ph: string): string {
@@ -170,15 +181,23 @@
 	{@const placeholders = extractPlaceholders(loc.key)}
 	<Table.Cell>
 		{#if auth.isAuthenticated}
-			<input
-				class="w-full rounded bg-transparent px-1 py-0.5 text-sm outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
-				value={drafts[loc.id] ?? ''}
-				placeholder="Enter translation…"
-				disabled={submitting[loc.id]}
-				oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-				onblur={() => submitProposal(loc)}
-				onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
-			/>
+			<div class="relative">
+				<!-- Mirror layer for placeholder highlighting -->
+				<div
+					aria-hidden="true"
+					class="pointer-events-none absolute inset-0 flex items-center overflow-hidden whitespace-pre px-1 text-sm"
+				>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}</div>
+				<input
+					class="relative w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+					style="caret-color: hsl(var(--foreground))"
+					value={drafts[loc.id] ?? ''}
+					placeholder="Enter translation…"
+					disabled={submitting[loc.id]}
+					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+					onblur={() => submitProposal(loc)}
+					onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+				/>
+			</div>
 		{:else}
 			<span class="px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
 		{/if}
