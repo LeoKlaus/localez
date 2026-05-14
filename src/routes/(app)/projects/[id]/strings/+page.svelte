@@ -3,6 +3,7 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
 	import { Input } from '$lib/components/ui/input';
+	import { Badge } from '$lib/components/ui/badge';
 	import * as Select from '$lib/components/ui/select';
 	import * as Table from '$lib/components/ui/table';
 	import { Button } from '$lib/components/ui/button';
@@ -82,6 +83,20 @@
 		translated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
 	};
 
+	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
+	type Group = { string_key_id: string; key: string; entries: LocalizationWithKey[] };
+
+	let grouped = $derived((): Group[] => {
+		const map = new Map<string, Group>();
+		for (const loc of langStrings.data?.items ?? []) {
+			if (!map.has(loc.string_key_id)) {
+				map.set(loc.string_key_id, { string_key_id: loc.string_key_id, key: loc.key, entries: [] });
+			}
+			map.get(loc.string_key_id)!.entries.push(loc);
+		}
+		return [...map.values()];
+	});
+
 	const stateLabel: Record<string, string> = {
 		'': 'All states',
 		new: 'New',
@@ -140,33 +155,54 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each langStrings.data?.items ?? [] as loc}
-						<Table.Row class="cursor-pointer hover:bg-muted/50">
-							<Table.Cell>
-								<a
-									href="/projects/{projectId}/strings/{loc.string_key_id}"
-									class="block font-mono text-xs font-medium hover:underline"
-								>
-									{loc.key}
-								</a>
-							</Table.Cell>
-							<Table.Cell class="text-sm">
-								{#if loc.value}
-									<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block hover:underline">
-										{loc.value}
+					{#each grouped() as group}
+						{#if group.entries.length === 1 && group.entries[0].variation_type === 'none'}
+							{@const loc = group.entries[0]}
+							<Table.Row class="hover:bg-muted/50">
+								<Table.Cell>
+									<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block font-mono text-xs font-medium hover:underline">
+										{loc.key}
 									</a>
-								{:else}
-									<span class="italic text-muted-foreground">No value</span>
-								{/if}
-							</Table.Cell>
-							<Table.Cell>
-								<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">
-									{loc.state.replace('_', ' ')}
-								</span>
-							</Table.Cell>
-						</Table.Row>
+								</Table.Cell>
+								<Table.Cell class="text-sm">
+									{#if loc.value}
+										<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block hover:underline">{loc.value}</a>
+									{:else}
+										<span class="italic text-muted-foreground">No value</span>
+									{/if}
+								</Table.Cell>
+								<Table.Cell>
+									<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
+								</Table.Cell>
+							</Table.Row>
+						{:else}
+							<Table.Row class="bg-muted/30 hover:bg-muted/50">
+								<Table.Cell colspan={3}>
+									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="font-mono text-xs font-medium hover:underline">
+										{group.key}
+									</a>
+								</Table.Cell>
+							</Table.Row>
+							{#each group.entries as loc}
+								<Table.Row class="hover:bg-muted/50">
+									<Table.Cell class="pl-8">
+										<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
+									</Table.Cell>
+									<Table.Cell class="text-sm">
+										{#if loc.value}
+											<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block hover:underline">{loc.value}</a>
+										{:else}
+											<span class="italic text-muted-foreground">No value</span>
+										{/if}
+									</Table.Cell>
+									<Table.Cell>
+										<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
+									</Table.Cell>
+								</Table.Row>
+							{/each}
+						{/if}
 					{/each}
-					{#if (langStrings.data?.items.length ?? 0) === 0}
+					{#if grouped().length === 0}
 						<Table.Row>
 							<Table.Cell colspan={3} class="py-12 text-center text-muted-foreground">
 								No translations found.
