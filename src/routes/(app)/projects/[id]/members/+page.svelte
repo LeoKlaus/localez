@@ -39,6 +39,21 @@
 		}
 	}));
 
+	const stats = createQuery(() => ({
+		queryKey: ['stats', projectId],
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/stats', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	let projectLanguages = $derived(
+		(stats.data?.languages ?? []).map((l) => l.language).sort()
+	);
+
 	let grouped = $derived.by((): Map<string, LanguageRoleResponse[]> => {
 		const map = new Map<string, LanguageRoleResponse[]>();
 		for (const r of roles.data ?? []) {
@@ -213,7 +228,7 @@
 						{addLanguage || 'Select language…'}
 					</Select.Trigger>
 					<Select.Content>
-						{#each languages as lang}
+						{#each projectLanguages as lang}
 							<Select.Item value={lang}>{lang}</Select.Item>
 						{/each}
 					</Select.Content>
