@@ -17,7 +17,7 @@
 	let projectId = $derived($page.params.id as string);
 
 	let q = $state('');
-	let language = $state('');
+	let language = $state($page.url.searchParams.get('language') ?? '');
 	let stateFilter = $state<LocalizationState | ''>('');
 	let shouldTranslate = $state<'true' | 'false' | ''>('');
 	let offset = $state(0);
@@ -25,7 +25,7 @@
 	const strings = createQuery(() => ({
 		queryKey: ['strings', projectId, { q, language, stateFilter, shouldTranslate, offset }],
 		queryFn: async () => {
-			const { data, error } = await client.GET('/api/projects/{project_id}/strings', {
+			const { data, error, response } = await client.GET('/api/projects/{project_id}/strings', {
 				params: {
 					path: { project_id: projectId },
 					query: {
@@ -39,7 +39,8 @@
 				}
 			});
 			if (error) throw error;
-			return data;
+			const total = parseInt(response.headers.get('X-Total-Count') ?? '0', 10);
+			return { items: data ?? [], total };
 		}
 	}));
 
@@ -47,7 +48,8 @@
 		offset = 0;
 	}
 
-	let hasMore = $derived((strings.data?.length ?? 0) === LIMIT);
+	let total = $derived(strings.data?.total ?? 0);
+	let hasMore = $derived(offset + LIMIT < total);
 
 	const stateLabel: Record<string, string> = {
 		'': 'All states',
@@ -67,7 +69,9 @@
 		<a href="/projects/{projectId}" class="text-sm text-muted-foreground hover:underline">
 			← Back to project
 		</a>
-		<h1 class="mt-1 text-2xl font-bold">Strings</h1>
+		<h1 class="mt-1 text-2xl font-bold">
+			Strings{language ? ` — ${language}` : ''}
+		</h1>
 	</div>
 
 	<div class="mb-4 flex flex-wrap gap-3">
@@ -124,7 +128,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each strings.data ?? [] as str}
+					{#each strings.data?.items ?? [] as str}
 						<Table.Row class={str.should_translate ? 'cursor-pointer hover:bg-muted/50' : 'opacity-50'}>
 							<Table.Cell>
 								{#if str.should_translate}
@@ -151,7 +155,7 @@
 							</Table.Cell>
 						</Table.Row>
 					{/each}
-					{#if (strings.data?.length ?? 0) === 0}
+					{#if (strings.data?.items.length ?? 0) === 0}
 						<Table.Row>
 							<Table.Cell colspan={3} class="py-12 text-center text-muted-foreground">
 								No strings match your filters.
@@ -163,7 +167,13 @@
 		</div>
 
 		<div class="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-			<span>Showing {offset + 1}–{offset + (strings.data?.length ?? 0)}</span>
+			<span>
+				{#if total > 0}
+					Showing {offset + 1}–{Math.min(offset + LIMIT, total)} of {total}
+				{:else}
+					No results
+				{/if}
+			</span>
 			<div class="flex gap-2">
 				<Button
 					variant="outline"

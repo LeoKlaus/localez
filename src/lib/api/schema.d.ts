@@ -349,6 +349,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Project Stats */
+        get: operations["get_project_stats_api_projects__project_id__stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/members": {
         parameters: {
             query?: never;
@@ -609,6 +626,17 @@ export interface components {
             /** Language */
             language: string;
         };
+        /** LanguageStats */
+        LanguageStats: {
+            /** Language */
+            language: string;
+            /** Translated */
+            translated: number;
+            /** Needs Review */
+            needs_review: number;
+            /** Missing */
+            missing: number;
+        };
         /** LocalizationResponse */
         LocalizationResponse: {
             /**
@@ -770,6 +798,13 @@ export interface components {
          * @enum {string}
          */
         ProjectRole: "guest" | "translator" | "reviewer";
+        /** ProjectStats */
+        ProjectStats: {
+            /** Total Strings */
+            total_strings: number;
+            /** Languages */
+            languages: components["schemas"]["LanguageStats"][];
+        };
         /** ProjectUpdate */
         ProjectUpdate: {
             /** Name */
@@ -1750,6 +1785,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_project_stats_api_projects__project_id__stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectStats"];
+                };
             };
             /** @description Validation Error */
             422: {

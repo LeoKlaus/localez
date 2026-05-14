@@ -9,14 +9,12 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as Alert from '$lib/components/ui/alert';
-	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
 	import Pencil from 'lucide-svelte/icons/pencil';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Users from 'lucide-svelte/icons/users';
-	import AlignLeft from 'lucide-svelte/icons/align-left';
 	import Download from 'lucide-svelte/icons/download';
 	import Upload from 'lucide-svelte/icons/upload';
 
@@ -29,6 +27,17 @@
 		queryKey: ['project', projectId],
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	const stats = createQuery(() => ({
+		queryKey: ['stats', projectId],
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/stats', {
 				params: { path: { project_id: projectId } }
 			});
 			if (error) throw error;
@@ -116,10 +125,15 @@
 			}
 			importSuccess = true;
 			qc.invalidateQueries({ queryKey: ['strings', projectId] });
+			qc.invalidateQueries({ queryKey: ['stats', projectId] });
 		} finally {
 			importLoading = false;
 			if (importInput) importInput.value = '';
 		}
+	}
+
+	function pct(n: number, total: number) {
+		return total === 0 ? 0 : Math.round((n / total) * 100);
 	}
 </script>
 
@@ -148,19 +162,13 @@
 				<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
 					<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
 				</Button>
-				<input
-					bind:this={importInput}
-					type="file"
-					accept=".xcstrings,.json"
-					class="hidden"
-					onchange={handleImport}
-				/>
-				<Button
-					variant="outline"
-					size="sm"
-					class="text-destructive"
-					onclick={() => (deleteOpen = true)}
-				>
+				<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
+				<a href="/projects/{p.id}/members">
+					<Button variant="outline" size="sm">
+						<Users size={14} class="mr-1" /> Members
+					</Button>
+				</a>
+				<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
 					<Trash2 size={14} class="mr-1" /> Delete
 				</Button>
 			</div>
@@ -179,28 +187,49 @@
 
 		<Separator class="mb-6" />
 
-		<div class="grid gap-4 sm:grid-cols-2">
-			<a href="/projects/{p.id}/strings">
-				<Card.Root class="transition-shadow hover:shadow-md">
-					<Card.Header>
-						<Card.Title class="flex items-center gap-2">
-							<AlignLeft size={18} /> Strings
-						</Card.Title>
-						<Card.Description>Manage and translate localization keys</Card.Description>
-					</Card.Header>
-				</Card.Root>
-			</a>
-			<a href="/projects/{p.id}/members">
-				<Card.Root class="transition-shadow hover:shadow-md">
-					<Card.Header>
-						<Card.Title class="flex items-center gap-2">
-							<Users size={18} /> Members
-						</Card.Title>
-						<Card.Description>Manage translators and reviewers</Card.Description>
-					</Card.Header>
-				</Card.Root>
-			</a>
+		<div class="mb-4 flex items-center justify-between">
+			<h2 class="text-lg font-semibold">Languages</h2>
+			{#if stats.data}
+				<span class="text-sm text-muted-foreground">{stats.data.total_strings} translatable strings</span>
+			{/if}
 		</div>
+
+		<div class="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
+			<span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm bg-green-500"></span>Translated</span>
+			<span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm bg-yellow-400"></span>Needs review</span>
+			<span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm bg-muted-foreground/25"></span>Missing</span>
+		</div>
+
+		{#if stats.isPending}
+			<div class="h-32 animate-pulse rounded-lg bg-muted"></div>
+		{:else if (stats.data?.languages.length ?? 0) === 0}
+			<p class="text-sm text-muted-foreground">No languages configured. Import an xcstrings file to add languages.</p>
+		{:else}
+			<div class="divide-y rounded-lg border">
+				{#each stats.data!.languages as lang}
+					{@const total = lang.translated + lang.needs_review + lang.missing}
+					<a
+						href="/projects/{p.id}/strings?language={lang.language}"
+						class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+					>
+						<span class="w-12 font-mono text-sm font-medium">{lang.language}</span>
+
+						<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
+							{#if total > 0}
+								<div class="h-full bg-green-500 transition-all" style="width: {pct(lang.translated, total)}%"></div>
+								<div class="h-full bg-yellow-400 transition-all" style="width: {pct(lang.needs_review, total)}%"></div>
+							{/if}
+						</div>
+
+						<span class="w-52 text-right text-xs text-muted-foreground">
+							{pct(lang.translated, total)}% done
+							· {pct(lang.needs_review, total)}% in review
+							· {pct(lang.missing, total)}% missing
+						</span>
+					</a>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -209,13 +238,7 @@
 		<Dialog.Header>
 			<Dialog.Title>Edit project</Dialog.Title>
 		</Dialog.Header>
-		<form
-			onsubmit={(e) => {
-				e.preventDefault();
-				updateProject.mutate();
-			}}
-			class="space-y-4"
-		>
+		<form onsubmit={(e) => { e.preventDefault(); updateProject.mutate(); }} class="space-y-4">
 			<div class="space-y-2">
 				<Label>Name</Label>
 				<Input bind:value={editName} required maxlength={255} />
@@ -237,17 +260,12 @@
 		<Dialog.Header>
 			<Dialog.Title>Delete project?</Dialog.Title>
 			<Dialog.Description>
-				This will permanently delete <strong>{project.data?.name}</strong> and all its strings.
-				This cannot be undone.
+				This will permanently delete <strong>{project.data?.name}</strong> and all its strings. This cannot be undone.
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (deleteOpen = false)}>Cancel</Button>
-			<Button
-				variant="destructive"
-				onclick={() => deleteProject.mutate()}
-				disabled={deleteProject.isPending}
-			>
+			<Button variant="destructive" onclick={() => deleteProject.mutate()} disabled={deleteProject.isPending}>
 				{deleteProject.isPending ? 'Deleting…' : 'Delete project'}
 			</Button>
 		</Dialog.Footer>
