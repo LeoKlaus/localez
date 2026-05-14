@@ -4,7 +4,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.language import LanguageCode
-from app.models.project_member import ProjectRole
 
 
 class ProjectCreate(BaseModel):
@@ -60,21 +59,3 @@ class LanguageAdd(BaseModel):
     language: LanguageCode
 
 
-class MemberAdd(BaseModel):
-    user_id: uuid.UUID
-    project_role: ProjectRole
-
-
-class MemberUpdate(BaseModel):
-    project_role: ProjectRole
-
-
-class MemberResponse(BaseModel):
-    id: uuid.UUID
-    project_id: uuid.UUID
-    user_id: uuid.UUID
-    project_role: ProjectRole
-    granted_by: uuid.UUID | None
-    granted_at: datetime
-
-    model_config = {"from_attributes": True}

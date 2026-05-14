@@ -184,22 +184,16 @@ async def test_export_content_disposition_header(admin_client: AsyncClient, xcst
     assert ".xcstrings" in resp.headers["Content-Disposition"]
 
 
-async def test_export_guest_can_access(admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict):
-    username = unique_username("export_guest")
+async def test_export_any_user_can_access(member_client, unique_username, xcstrings_project: dict):
+    username = unique_username("export_user")
     async with member_client(username) as c:
-        user_id = (await c.get("/api/users/me")).json()["id"]
-        await admin_client.post(f"/api/projects/{xcstrings_project['id']}/members", json={
-            "user_id": user_id, "project_role": "guest",
-        })
         resp = await c.get(f"/api/projects/{xcstrings_project['id']}/export")
         assert resp.status_code == 200
 
 
-async def test_export_non_member_gets_403(member_client, unique_username, xcstrings_project: dict):
-    username = unique_username("export_nomember")
-    async with member_client(username) as c:
-        resp = await c.get(f"/api/projects/{xcstrings_project['id']}/export")
-        assert resp.status_code == 403
+async def test_export_unauthenticated_gets_401(client: AsyncClient, xcstrings_project: dict):
+    resp = await client.get(f"/api/projects/{xcstrings_project['id']}/export")
+    assert resp.status_code == 401
 
 
 async def test_import_registers_languages(admin_client: AsyncClient):

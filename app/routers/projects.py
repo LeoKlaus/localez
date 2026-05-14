@@ -11,9 +11,8 @@ from app.dependencies.project_access import require_guest_plus
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
-from app.models.project_member import ProjectMember
 from app.models.string_key import StringKey
-from app.models.user import GlobalRole, User
+from app.models.user import User
 from app.schemas.project import LanguageAdd, LanguageStats, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
 from app.schemas.string_key import LocalizationWithKeyResponse
 from app.services.localization_service import fill_missing_localizations
@@ -39,14 +38,8 @@ async def list_projects(
     response: Response = None,
 ):
     limit = min(limit, MAX_LIMIT)
-    if user.global_role == GlobalRole.admin:
-        q = select(Project).options(selectinload(Project.languages))
-        count_q = select(func.count()).select_from(Project)
-    else:
-        member_project_ids = select(ProjectMember.project_id).where(ProjectMember.user_id == user.id)
-        q = select(Project).where(Project.id.in_(member_project_ids)).options(selectinload(Project.languages))
-        count_q = select(func.count()).select_from(Project).where(Project.id.in_(member_project_ids))
-
+    q = select(Project).options(selectinload(Project.languages))
+    count_q = select(func.count()).select_from(Project)
     total = await db.scalar(count_q)
     result = await db.execute(q.offset(offset).limit(limit))
     projects = result.scalars().all()
@@ -77,14 +70,6 @@ async def get_project(
     project = await _get_project(project_id, db)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
-
-    if user.global_role != GlobalRole.admin:
-        result = await db.execute(
-            select(ProjectMember).where(ProjectMember.project_id == project_id, ProjectMember.user_id == user.id)
-        )
-        if result.scalar_one_or_none() is None:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "INSUFFICIENT_PROJECT_ROLE", "message": "Not a project member"})
-
     return project
 
 
@@ -166,7 +151,7 @@ async def list_language_localizations(
     state: str | None = None,
     offset: int = 0,
     limit: int = 50,
-    _: ProjectMember = Depends(require_guest_plus),
+    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -211,7 +196,7 @@ async def list_language_localizations(
 @router.get("/{project_id}/stats", response_model=ProjectStats)
 async def get_project_stats(
     project_id: uuid.UUID,
-    _: ProjectMember = Depends(require_guest_plus),
+    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)

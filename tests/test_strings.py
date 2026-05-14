@@ -5,40 +5,22 @@ from httpx import AsyncClient
 pytestmark = pytest.mark.usefixtures("setup_database")
 
 
-async def _add_member(admin_client, project_id, user_id, role):
-    resp = await admin_client.post(
-        f"/api/projects/{project_id}/members",
-        json={"user_id": user_id, "project_role": role},
-    )
-    assert resp.status_code == 201
-
-
-async def _get_user_id(admin_client, username):
-    users = (await admin_client.get("/api/users?limit=200")).json()
-    return next(u["id"] for u in users if u["username"] == username)
-
-
 # ---------------------------------------------------------------------------
 # Strings list
 # ---------------------------------------------------------------------------
 
-async def test_list_strings_as_guest(admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict):
-    username = unique_username("str_guest")
+async def test_list_strings_as_any_user(member_client, unique_username, xcstrings_project: dict):
+    username = unique_username("str_user")
     async with member_client(username) as c:
-        user_id = await _get_user_id(admin_client, username)
-        await _add_member(admin_client, xcstrings_project["id"], user_id, "guest")
-
         resp = await c.get(f"/api/projects/{xcstrings_project['id']}/strings")
         assert resp.status_code == 200
         assert len(resp.json()) > 0
         assert "X-Total-Count" in resp.headers
 
 
-async def test_list_strings_non_member_gets_403(member_client, unique_username, xcstrings_project: dict):
-    username = unique_username("str_nomember")
-    async with member_client(username) as c:
-        resp = await c.get(f"/api/projects/{xcstrings_project['id']}/strings")
-        assert resp.status_code == 403
+async def test_list_strings_unauthenticated_gets_401(client: AsyncClient, xcstrings_project: dict):
+    resp = await client.get(f"/api/projects/{xcstrings_project['id']}/strings")
+    assert resp.status_code == 401
 
 
 async def test_list_strings_filter_should_translate(admin_client: AsyncClient, xcstrings_project: dict):

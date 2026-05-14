@@ -20,21 +20,19 @@ async def test_user_cannot_create_project(client: AsyncClient):
     assert resp.status_code == 403
 
 
-async def test_admin_can_add_member(admin_client: AsyncClient):
-    # create a regular user first
-    reg = await admin_client.post("/api/auth/register", json={"username": "new_member", "password": "securepass1"})
-    # admin_client is already authed as admin
-    proj = await admin_client.post("/api/projects", json={"name": "Membership Test", "source_language": "en"})
-    project_id = proj.json()["id"]
+async def test_admin_can_grant_language_role(admin_client: AsyncClient):
+    await admin_client.post("/api/auth/register", json={"username": "lang_role_member", "password": "securepass1"})
+    proj = (await admin_client.post("/api/projects", json={"name": "Membership Test", "source_language": "en"})).json()
+    await admin_client.post(f"/api/projects/{proj['id']}/languages", json={"language": "de"})
 
-    # get user id
-    users_resp = await admin_client.get("/api/users?limit=200")
-    users = users_resp.json()
-    member_user = next(u for u in users if u["username"] == "new_member")
+    users = (await admin_client.get("/api/users?limit=200")).json()
+    member_user = next(u for u in users if u["username"] == "lang_role_member")
 
-    resp = await admin_client.post(f"/api/projects/{project_id}/members", json={
-        "user_id": member_user["id"],
-        "project_role": "translator",
-    })
+    resp = await admin_client.put(
+        f"/api/projects/{proj['id']}/members/{member_user['id']}/language-roles/de",
+        json={"role": "translator"},
+    )
     assert resp.status_code == 201
-    assert resp.json()["project_role"] == "translator"
+    assert resp.json()["user_id"] == member_user["id"]
+    assert resp.json()["language"] == "de"
+    assert resp.json()["role"] == "translator"

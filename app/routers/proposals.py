@@ -5,11 +5,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.project_access import require_reviewer, require_translator_plus
+from app.dependencies.auth import get_current_active_user
+from app.dependencies.project_access import require_any_language_reviewer, require_reviewer, require_translator_plus
 from app.models.localization import Localization
-from app.models.project_member import ProjectMember
 from app.models.string_key import StringKey
 from app.models.translation_proposal import ProposalStatus, TranslationProposal
+from app.models.user import User
 from app.schemas.proposal import ProposalCreate, ProposalResponse, ProposalReview
 from app.schemas.string_key import LocalizationResponse
 from app.services import proposal_service
@@ -35,7 +36,7 @@ async def list_project_proposals(
     proposal_status: ProposalStatus | None = None,
     offset: int = 0,
     limit: int = 50,
-    member: ProjectMember = Depends(require_reviewer),
+    _: User = Depends(require_any_language_reviewer),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -63,7 +64,7 @@ async def list_proposals(
     proposal_status: ProposalStatus | None = None,
     offset: int = 0,
     limit: int = 50,
-    member: ProjectMember = Depends(require_translator_plus),
+    _: User = Depends(require_translator_plus),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -88,12 +89,12 @@ async def create_proposal(
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
     body: ProposalCreate,
-    member: ProjectMember = Depends(require_translator_plus),
+    user: User = Depends(require_translator_plus),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
     try:
-        result = await proposal_service.create_proposal(db, loc_id, body.proposed_value, member.user_id)
+        result = await proposal_service.create_proposal(db, loc_id, body.proposed_value, user.id)
     except ValueError:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "DUPLICATE_PROPOSAL", "message": "An identical proposal or translation already exists"})
     if isinstance(result, Localization):
@@ -108,11 +109,11 @@ async def accept_proposal(
     loc_id: uuid.UUID,
     proposal_id: uuid.UUID,
     body: ProposalReview = ProposalReview(),
-    member: ProjectMember = Depends(require_reviewer),
+    user: User = Depends(require_reviewer),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
-    proposal = await proposal_service.accept_proposal(db, proposal_id, member.user_id, body.reviewer_note)
+    proposal = await proposal_service.accept_proposal(db, proposal_id, user.id, body.reviewer_note)
     if proposal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found or not pending"})
     return proposal
@@ -125,11 +126,11 @@ async def reject_proposal(
     loc_id: uuid.UUID,
     proposal_id: uuid.UUID,
     body: ProposalReview = ProposalReview(),
-    member: ProjectMember = Depends(require_reviewer),
+    user: User = Depends(require_reviewer),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
-    proposal = await proposal_service.reject_proposal(db, proposal_id, member.user_id, body.reviewer_note)
+    proposal = await proposal_service.reject_proposal(db, proposal_id, user.id, body.reviewer_note)
     if proposal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found or not pending"})
     return proposal

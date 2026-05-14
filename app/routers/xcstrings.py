@@ -13,7 +13,7 @@ from app.dependencies.project_access import require_guest_plus
 from app.models.localization import Localization
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
-from app.models.project_member import ProjectMember
+from app.models.user import User
 from app.models.string_key import StringKey
 from app.models.user import User
 from app.services.localization_service import fill_missing_localizations
@@ -124,7 +124,7 @@ async def export_xcstrings(
     project_id: uuid.UUID,
     languages: str | None = Query(default=None, description="Comma-separated language codes"),
     state: str | None = Query(default=None),
-    _: ProjectMember = Depends(require_guest_plus),
+    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)

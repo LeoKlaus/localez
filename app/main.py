@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.models import project_language  # noqa: F401 — ensure model is registered with Base
+from app.models import project_language  # noqa: F401 — ensure models are registered with Base
 from app.routers import auth, members, projects, proposals, strings, users, xcstrings
 
 app = FastAPI(title="Localez", version="0.1.0")

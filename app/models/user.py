@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.passkey import PasskeyCredential
-from app.models.project_member import ProjectMember
 from app.models.refresh_token import RefreshToken
 
 
@@ -35,8 +34,4 @@ class User(Base):
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )
-    project_memberships: Mapped[list["ProjectMember"]] = relationship(  # noqa: F821
-        back_populates="user",
-        cascade="all, delete-orphan",
-        foreign_keys="[ProjectMember.user_id]",
-    )
+

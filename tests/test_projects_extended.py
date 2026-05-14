@@ -1,5 +1,6 @@
-"""Additional integration tests for /projects and /projects/{id}/members."""
+"""Additional integration tests for /projects."""
 import uuid
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -23,25 +24,19 @@ async def test_list_projects_admin_sees_all(admin_client: AsyncClient):
     assert "ListAll B" in names
 
 
-async def test_list_projects_member_sees_only_own(
+async def test_list_projects_any_user_sees_all(
     admin_client: AsyncClient, member_client, unique_username
 ):
-    username = unique_username("listmember")
-    proj_visible = (await admin_client.post("/api/projects", json={"name": "Visible Project", "source_language": "en"})).json()
-    await admin_client.post("/api/projects", json={"name": "Hidden Project", "source_language": "en"})
+    await admin_client.post("/api/projects", json={"name": "Global Project A", "source_language": "en"})
+    await admin_client.post("/api/projects", json={"name": "Global Project B", "source_language": "en"})
 
+    username = unique_username("listall")
     async with member_client(username) as c:
-        users = (await admin_client.get("/api/users?limit=200")).json()
-        user = next(u for u in users if u["username"] == username)
-        await admin_client.post(f"/api/projects/{proj_visible['id']}/members", json={
-            "user_id": user["id"], "project_role": "guest",
-        })
-
         resp = await c.get("/api/projects")
         assert resp.status_code == 200
         names = [p["name"] for p in resp.json()]
-        assert "Visible Project" in names
-        assert "Hidden Project" not in names
+        assert "Global Project A" in names
+        assert "Global Project B" in names
 
 
 async def test_list_projects_unauthenticated(client: AsyncClient):
@@ -55,25 +50,12 @@ async def test_get_project_as_admin(admin_client: AsyncClient, project: dict):
     assert resp.json()["id"] == project["id"]
 
 
-async def test_get_project_as_member(admin_client: AsyncClient, member_client, unique_username, project: dict):
-    username = unique_username("getmember")
+async def test_get_project_as_any_user(member_client, unique_username, project: dict):
+    username = unique_username("getuser")
     async with member_client(username) as c:
-        users = (await admin_client.get("/api/users?limit=200")).json()
-        user = next(u for u in users if u["username"] == username)
-        await admin_client.post(f"/api/projects/{project['id']}/members", json={
-            "user_id": user["id"], "project_role": "guest",
-        })
-
         resp = await c.get(f"/api/projects/{project['id']}")
         assert resp.status_code == 200
         assert resp.json()["id"] == project["id"]
-
-
-async def test_get_project_non_member_gets_403(member_client, unique_username, project: dict):
-    username = unique_username("nonmember")
-    async with member_client(username) as c:
-        resp = await c.get(f"/api/projects/{project['id']}")
-        assert resp.status_code == 403
 
 
 async def test_get_project_not_found(admin_client: AsyncClient):
@@ -115,82 +97,6 @@ async def test_delete_project_non_admin_gets_403(member_client, unique_username,
     async with member_client(username) as c:
         resp = await c.delete(f"/api/projects/{project['id']}")
         assert resp.status_code == 403
-
-
-# ---------------------------------------------------------------------------
-# Member management
-# ---------------------------------------------------------------------------
-
-async def test_list_members(admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username):
-    username = unique_username("listed_member")
-    await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/api/users?limit=200")).json()
-    user = next(u for u in users if u["username"] == username)
-    await admin_client.post(f"/api/projects/{project['id']}/members", json={
-        "user_id": user["id"], "project_role": "translator",
-    })
-
-    resp = await admin_client.get(f"/api/projects/{project['id']}/members")
-    assert resp.status_code == 200
-    assert "X-Total-Count" in resp.headers
-    member_ids = [m["user_id"] for m in resp.json()]
-    assert str(user["id"]) in member_ids
-
-
-async def test_add_member_duplicate_returns_409(
-    admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username
-):
-    username = unique_username("dup_member")
-    await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/api/users?limit=200")).json()
-    user = next(u for u in users if u["username"] == username)
-
-    payload = {"user_id": user["id"], "project_role": "guest"}
-    await admin_client.post(f"/api/projects/{project['id']}/members", json=payload)
-    resp = await admin_client.post(f"/api/projects/{project['id']}/members", json=payload)
-    assert resp.status_code == 409
-    assert resp.json()["detail"]["code"] == "ALREADY_MEMBER"
-
-
-async def test_update_member_role(admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username):
-    username = unique_username("updaterole")
-    await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/api/users?limit=200")).json()
-    user = next(u for u in users if u["username"] == username)
-    await admin_client.post(f"/api/projects/{project['id']}/members", json={
-        "user_id": user["id"], "project_role": "guest",
-    })
-
-    resp = await admin_client.patch(
-        f"/api/projects/{project['id']}/members/{user['id']}",
-        json={"project_role": "reviewer"},
-    )
-    assert resp.status_code == 200
-    assert resp.json()["project_role"] == "reviewer"
-
-
-async def test_remove_member(admin_client: AsyncClient, project: dict, client: AsyncClient, unique_username):
-    username = unique_username("removemember")
-    await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
-    users = (await admin_client.get("/api/users?limit=200")).json()
-    user = next(u for u in users if u["username"] == username)
-    await admin_client.post(f"/api/projects/{project['id']}/members", json={
-        "user_id": user["id"], "project_role": "guest",
-    })
-
-    resp = await admin_client.delete(f"/api/projects/{project['id']}/members/{user['id']}")
-    assert resp.status_code == 204
-
-    # user can no longer access the project
-    token = (await client.post("/api/auth/token", data={"username": username, "password": "securepass1"})).json()["access_token"]
-    client.headers["Authorization"] = f"Bearer {token}"
-    get_resp = await client.get(f"/api/projects/{project['id']}")
-    assert get_resp.status_code == 403
-
-
-async def test_remove_nonexistent_member_returns_404(admin_client: AsyncClient, project: dict):
-    resp = await admin_client.delete(f"/api/projects/{project['id']}/members/{uuid.uuid4()}")
-    assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -283,8 +189,6 @@ async def test_stats_after_import(admin_client: AsyncClient, xcstrings_project: 
     body = resp.json()
 
     assert body["total_strings"] > 0
-    lang_codes = [l["language"] for l in body["languages"]]
-    # Example.xcstrings includes at least "de" and "en"
     assert len(body["languages"]) > 0
 
     for lang in body["languages"]:
@@ -298,7 +202,6 @@ async def test_stats_after_import(admin_client: AsyncClient, xcstrings_project: 
 async def test_stats_counts_match_total(admin_client: AsyncClient):
     """Each language's (translated + needs_review + missing) must equal total_strings."""
     proj = (await admin_client.post("/api/projects", json={"name": "StatsCount", "source_language": "en"})).json()
-    from pathlib import Path
     example = Path(__file__).parent.parent / "Example.xcstrings"
     await admin_client.post(
         f"/api/projects/{proj['id']}/import",
@@ -320,11 +223,11 @@ async def test_stats_not_found(admin_client: AsyncClient):
     assert resp.json()["detail"]["code"] == "PROJECT_NOT_FOUND"
 
 
-async def test_stats_requires_project_access(member_client, unique_username, project: dict):
-    username = unique_username("stats_noauth")
+async def test_stats_any_user_can_access(member_client, unique_username, project: dict):
+    username = unique_username("stats_user")
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{project['id']}/stats")
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -377,12 +280,12 @@ async def test_language_localizations_unknown_language(admin_client: AsyncClient
     assert resp.json()["detail"]["code"] == "LANGUAGE_NOT_FOUND"
 
 
-async def test_language_localizations_requires_access(member_client, unique_username, xcstrings_project: dict):
-    username = unique_username("loclang_noauth")
+async def test_language_localizations_any_user_can_access(member_client, unique_username, xcstrings_project: dict):
+    username = unique_username("loclang_user")
     proj_id = xcstrings_project["id"]
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{proj_id}/languages/en/localizations")
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
 
 async def test_language_localizations_pagination(admin_client: AsyncClient, xcstrings_project: dict):
