@@ -383,25 +383,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/projects/{project_id}/members": {
+    "/api/projects/{project_id}/language-roles": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List Members */
-        get: operations["list_members_api_projects__project_id__members_get"];
+        /** List Project Language Roles */
+        get: operations["list_project_language_roles_api_projects__project_id__language_roles_get"];
         put?: never;
-        /** Add Member */
-        post: operations["add_member_api_projects__project_id__members_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/projects/{project_id}/members/{user_id}": {
+    "/api/projects/{project_id}/members/{user_id}/language-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List User Language Roles */
+        get: operations["list_user_language_roles_api_projects__project_id__members__user_id__language_roles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/members/{user_id}/language-roles/{language}": {
         parameters: {
             query?: never;
             header?: never;
@@ -409,14 +425,14 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /** Set Language Role */
+        put: operations["set_language_role_api_projects__project_id__members__user_id__language_roles__language__put"];
         post?: never;
-        /** Remove Member */
-        delete: operations["remove_member_api_projects__project_id__members__user_id__delete"];
+        /** Remove Language Role */
+        delete: operations["remove_language_role_api_projects__project_id__members__user_id__language_roles__language__delete"];
         options?: never;
         head?: never;
-        /** Update Member */
-        patch: operations["update_member_api_projects__project_id__members__user_id__patch"];
+        patch?: never;
         trace?: never;
     };
     "/api/projects/{project_id}/strings": {
@@ -643,6 +659,38 @@ export interface components {
             /** Language */
             language: string;
         };
+        /**
+         * LanguageRole
+         * @enum {string}
+         */
+        LanguageRole: "translator" | "reviewer";
+        /** LanguageRoleAdd */
+        LanguageRoleAdd: {
+            role: components["schemas"]["LanguageRole"];
+        };
+        /** LanguageRoleResponse */
+        LanguageRoleResponse: {
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Language */
+            language: string;
+            role: components["schemas"]["LanguageRole"];
+            /** Granted By */
+            granted_by: string | null;
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
+        };
         /** LanguageStats */
         LanguageStats: {
             /** Language */
@@ -732,45 +780,6 @@ export interface components {
             /** Passkeys Configured */
             passkeys_configured: boolean;
         };
-        /** MemberAdd */
-        MemberAdd: {
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            project_role: components["schemas"]["ProjectRole"];
-        };
-        /** MemberResponse */
-        MemberResponse: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Project Id
-             * Format: uuid
-             */
-            project_id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            project_role: components["schemas"]["ProjectRole"];
-            /** Granted By */
-            granted_by: string | null;
-            /**
-             * Granted At
-             * Format: date-time
-             */
-            granted_at: string;
-        };
-        /** MemberUpdate */
-        MemberUpdate: {
-            project_role: components["schemas"]["ProjectRole"];
-        };
         /** PasskeyAuthBeginResponse */
         PasskeyAuthBeginResponse: {
             /** Options */
@@ -840,11 +849,6 @@ export interface components {
              */
             languages: string[];
         };
-        /**
-         * ProjectRole
-         * @enum {string}
-         */
-        ProjectRole: "guest" | "translator" | "reviewer";
         /** ProjectStats */
         ProjectStats: {
             /** Total Strings */
@@ -1911,7 +1915,7 @@ export interface operations {
             };
         };
     };
-    list_members_api_projects__project_id__members_get: {
+    list_project_language_roles_api_projects__project_id__language_roles_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1931,7 +1935,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberResponse"][];
+                    "application/json": components["schemas"]["LanguageRoleResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -1945,42 +1949,7 @@ export interface operations {
             };
         };
     };
-    add_member_api_projects__project_id__members_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MemberAdd"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MemberResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_member_api_projects__project_id__members__user_id__delete: {
+    list_user_language_roles_api_projects__project_id__members__user_id__language_roles_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1993,11 +1962,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LanguageRoleResponse"][];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -2010,30 +1981,62 @@ export interface operations {
             };
         };
     };
-    update_member_api_projects__project_id__members__user_id__patch: {
+    set_language_role_api_projects__project_id__members__user_id__language_roles__language__put: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 project_id: string;
                 user_id: string;
+                language: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MemberUpdate"];
+                "application/json": components["schemas"]["LanguageRoleAdd"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberResponse"];
+                    "application/json": components["schemas"]["LanguageRoleResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_language_role_api_projects__project_id__members__user_id__language_roles__language__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                user_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2353,7 +2356,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProposalResponse"];
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
