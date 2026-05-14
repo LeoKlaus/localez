@@ -707,6 +707,8 @@ export interface components {
             string_key_id: string;
             /** Key */
             key: string;
+            /** Comment */
+            comment: string | null;
         };
         /** MeResponse */
         MeResponse: {

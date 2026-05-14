@@ -97,6 +97,39 @@
 		return [...map.values()];
 	});
 
+	// Inline proposal submission
+	let drafts = $state<Record<string, string>>({});
+	let submitting = $state<Record<string, boolean>>({});
+	let submitError = $state<Record<string, string>>({});
+
+	$effect(() => {
+		for (const loc of langStrings.data?.items ?? []) {
+			if (!(loc.id in drafts)) drafts[loc.id] = loc.value ?? '';
+		}
+	});
+
+	async function submitProposal(loc: LocalizationWithKey) {
+		const draft = drafts[loc.id] ?? '';
+		if (draft === (loc.value ?? '') || !draft.trim()) return;
+		submitting[loc.id] = true;
+		submitError[loc.id] = '';
+		try {
+			const { error } = await client.POST(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
+				{
+					params: { path: { project_id: projectId, key_id: loc.string_key_id, loc_id: loc.id } },
+					body: { proposed_value: draft }
+				}
+			);
+			if (error) throw error;
+		} catch {
+			submitError[loc.id] = 'Failed to submit.';
+			drafts[loc.id] = loc.value ?? '';
+		} finally {
+			submitting[loc.id] = false;
+		}
+	}
+
 	const stateLabel: Record<string, string> = {
 		'': 'All states',
 		new: 'New',
@@ -151,6 +184,7 @@
 					<Table.Row>
 						<Table.Head class="w-64">Key</Table.Head>
 						<Table.Head>Translation</Table.Head>
+						<Table.Head class="w-48">Comment</Table.Head>
 						<Table.Head class="w-32">State</Table.Head>
 					</Table.Row>
 				</Table.Header>
@@ -164,37 +198,50 @@
 										{loc.key}
 									</a>
 								</Table.Cell>
-								<Table.Cell class="text-sm">
-									{#if loc.value}
-										<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block hover:underline">{loc.value}</a>
-									{:else}
-										<span class="italic text-muted-foreground">No value</span>
-									{/if}
+								<Table.Cell>
+									<input
+										class="w-full rounded bg-transparent px-1 py-0.5 text-sm outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+										value={drafts[loc.id] ?? ''}
+										placeholder="Enter translation…"
+										disabled={submitting[loc.id]}
+										oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+										onblur={() => submitProposal(loc)}
+										onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+									/>
 								</Table.Cell>
+								<Table.Cell class="text-sm text-muted-foreground">{loc.comment ?? '—'}</Table.Cell>
 								<Table.Cell>
 									<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
 								</Table.Cell>
 							</Table.Row>
 						{:else}
 							<Table.Row class="bg-muted/30 hover:bg-muted/50">
-								<Table.Cell colspan={3}>
+								<Table.Cell>
 									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="font-mono text-xs font-medium hover:underline">
 										{group.key}
 									</a>
 								</Table.Cell>
+								<Table.Cell></Table.Cell>
+								<Table.Cell class="text-sm text-muted-foreground">{group.entries[0].comment ?? '—'}</Table.Cell>
+								<Table.Cell></Table.Cell>
 							</Table.Row>
 							{#each group.entries as loc}
 								<Table.Row class="hover:bg-muted/50">
 									<Table.Cell class="pl-8">
 										<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
 									</Table.Cell>
-									<Table.Cell class="text-sm">
-										{#if loc.value}
-											<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block hover:underline">{loc.value}</a>
-										{:else}
-											<span class="italic text-muted-foreground">No value</span>
-										{/if}
+									<Table.Cell>
+										<input
+											class="w-full rounded bg-transparent px-1 py-0.5 text-sm outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+											value={drafts[loc.id] ?? ''}
+											placeholder="Enter translation…"
+											disabled={submitting[loc.id]}
+											oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+											onblur={() => submitProposal(loc)}
+											onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+										/>
 									</Table.Cell>
+									<Table.Cell></Table.Cell>
 									<Table.Cell>
 										<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
 									</Table.Cell>
@@ -204,7 +251,7 @@
 					{/each}
 					{#if grouped().length === 0}
 						<Table.Row>
-							<Table.Cell colspan={3} class="py-12 text-center text-muted-foreground">
+							<Table.Cell colspan={4} class="py-12 text-center text-muted-foreground">
 								No translations found.
 							</Table.Cell>
 						</Table.Row>
