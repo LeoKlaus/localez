@@ -13,6 +13,8 @@
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
 	type LocalizationState = components['schemas']['LocalizationState'];
+	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
+	type ProposalResponse = components['schemas']['ProposalResponse'];
 
 	const LIMIT = 50;
 	let projectId = $derived($page.params.id as string);
@@ -22,7 +24,6 @@
 	let stateFilter = $state<LocalizationState | ''>('');
 	let offset = $state(0);
 
-	// When language is set, use the language localizations endpoint
 	const langStrings = createQuery(() => ({
 		queryKey: ['lang-strings', projectId, language, { stateFilter, offset }],
 		enabled: !!language,
@@ -32,11 +33,7 @@
 				{
 					params: {
 						path: { project_id: projectId, language },
-						query: {
-							state: (stateFilter as LocalizationState) || undefined,
-							offset,
-							limit: LIMIT
-						}
+						query: { state: (stateFilter as LocalizationState) || undefined, offset, limit: LIMIT }
 					}
 				}
 			);
@@ -46,7 +43,6 @@
 		}
 	}));
 
-	// When no language is set, use the strings list endpoint
 	const strings = createQuery(() => ({
 		queryKey: ['strings', projectId, { q, stateFilter, offset }],
 		enabled: !language,
@@ -68,25 +64,28 @@
 		}
 	}));
 
-	function resetPagination() {
-		offset = 0;
-	}
+	const pendingProposals = createQuery(() => ({
+		queryKey: ['proposals-pending', projectId],
+		enabled: !!language,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/proposals', {
+				params: { path: { project_id: projectId }, query: { proposal_status: 'pending', limit: 1000 } }
+			});
+			if (error) throw error;
+			return data ?? [];
+		}
+	}));
+
+	function resetPagination() { offset = 0; }
 
 	let isPending = $derived(language ? langStrings.isPending : strings.isPending);
 	let isError = $derived(language ? langStrings.isError : strings.isError);
 	let total = $derived(language ? (langStrings.data?.total ?? 0) : (strings.data?.total ?? 0));
 	let hasMore = $derived(offset + LIMIT < total);
 
-	const stateColors: Record<LocalizationState, string> = {
-		new: 'bg-muted text-muted-foreground',
-		needs_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-		translated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-	};
-
-	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
 	type Group = { string_key_id: string; key: string; entries: LocalizationWithKey[] };
 
-	let grouped = $derived((): Group[] => {
+	let grouped = $derived.by((): Group[] => {
 		const map = new Map<string, Group>();
 		for (const loc of langStrings.data?.items ?? []) {
 			if (!map.has(loc.string_key_id)) {
@@ -97,7 +96,15 @@
 		return [...map.values()];
 	});
 
-	// Inline proposal submission
+	let proposalsByLocId = $derived.by((): Map<string, ProposalResponse[]> => {
+		const map = new Map<string, ProposalResponse[]>();
+		for (const p of pendingProposals.data ?? []) {
+			if (!map.has(p.localization_id)) map.set(p.localization_id, []);
+			map.get(p.localization_id)!.push(p);
+		}
+		return map;
+	});
+
 	let drafts = $state<Record<string, string>>({});
 	let submitting = $state<Record<string, boolean>>({});
 	let submitError = $state<Record<string, string>>({});
@@ -130,6 +137,12 @@
 		}
 	}
 
+	const stateColors: Record<LocalizationState, string> = {
+		new: 'bg-muted text-muted-foreground',
+		needs_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+		translated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+	};
+
 	const stateLabel: Record<string, string> = {
 		'': 'All states',
 		new: 'New',
@@ -137,6 +150,30 @@
 		translated: 'Translated'
 	};
 </script>
+
+{#snippet translationCell(loc: LocalizationWithKey)}
+	<Table.Cell>
+		<input
+			class="w-full rounded bg-transparent px-1 py-0.5 text-sm outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+			value={drafts[loc.id] ?? ''}
+			placeholder="Enter translation…"
+			disabled={submitting[loc.id]}
+			oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+			onblur={() => submitProposal(loc)}
+			onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+		/>
+		{#each proposalsByLocId.get(loc.id) ?? [] as proposal}
+			<button
+				type="button"
+				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
+				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = proposal.proposed_value; }}
+			>
+				<span class="shrink-0 text-muted-foreground/50">↳</span>
+				<span class="truncate">{proposal.proposed_value}</span>
+			</button>
+		{/each}
+	</Table.Cell>
+{/snippet}
 
 <div class="p-6">
 	<div class="mb-4">
@@ -158,10 +195,7 @@
 		<Select.Root
 			type="single"
 			value={stateFilter}
-			onValueChange={(v) => {
-				stateFilter = (v ?? '') as LocalizationState | '';
-				resetPagination();
-			}}
+			onValueChange={(v) => { stateFilter = (v ?? '') as LocalizationState | ''; resetPagination(); }}
 		>
 			<Select.Trigger class="w-36">{stateLabel[stateFilter] ?? 'All states'}</Select.Trigger>
 			<Select.Content>
@@ -189,7 +223,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each grouped() as group}
+					{#each grouped as group}
 						{#if group.entries.length === 1 && group.entries[0].variation_type === 'none'}
 							{@const loc = group.entries[0]}
 							<Table.Row class="hover:bg-muted/50">
@@ -198,17 +232,7 @@
 										{loc.key}
 									</a>
 								</Table.Cell>
-								<Table.Cell>
-									<input
-										class="w-full rounded bg-transparent px-1 py-0.5 text-sm outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
-										value={drafts[loc.id] ?? ''}
-										placeholder="Enter translation…"
-										disabled={submitting[loc.id]}
-										oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-										onblur={() => submitProposal(loc)}
-										onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
-									/>
-								</Table.Cell>
+								{@render translationCell(loc)}
 								<Table.Cell class="text-sm text-muted-foreground">{loc.comment ?? '—'}</Table.Cell>
 								<Table.Cell>
 									<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
@@ -230,17 +254,7 @@
 									<Table.Cell class="pl-8">
 										<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
 									</Table.Cell>
-									<Table.Cell>
-										<input
-											class="w-full rounded bg-transparent px-1 py-0.5 text-sm outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
-											value={drafts[loc.id] ?? ''}
-											placeholder="Enter translation…"
-											disabled={submitting[loc.id]}
-											oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-											onblur={() => submitProposal(loc)}
-											onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
-										/>
-									</Table.Cell>
+									{@render translationCell(loc)}
 									<Table.Cell></Table.Cell>
 									<Table.Cell>
 										<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
@@ -249,7 +263,7 @@
 							{/each}
 						{/if}
 					{/each}
-					{#if grouped().length === 0}
+					{#if grouped.length === 0}
 						<Table.Row>
 							<Table.Cell colspan={4} class="py-12 text-center text-muted-foreground">
 								No translations found.
@@ -274,27 +288,18 @@
 						<Table.Row class={str.should_translate ? 'cursor-pointer hover:bg-muted/50' : 'opacity-50'}>
 							<Table.Cell>
 								{#if str.should_translate}
-									<a
-										href="/projects/{projectId}/strings/{str.id}"
-										class="block font-mono text-xs font-medium hover:underline"
-									>
+									<a href="/projects/{projectId}/strings/{str.id}" class="block font-mono text-xs font-medium hover:underline">
 										{str.key}
 									</a>
 								{:else}
 									<div class="flex items-center gap-2">
 										<span class="font-mono text-xs font-medium">{str.key}</span>
-										<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-											do not translate
-										</span>
+										<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">do not translate</span>
 									</div>
 								{/if}
 							</Table.Cell>
-							<Table.Cell class="max-w-xs truncate text-sm text-muted-foreground">
-								{str.comment ?? '—'}
-							</Table.Cell>
-							<Table.Cell class="text-xs text-muted-foreground">
-								{new Date(str.updated_at).toLocaleDateString()}
-							</Table.Cell>
+							<Table.Cell class="max-w-xs truncate text-sm text-muted-foreground">{str.comment ?? '—'}</Table.Cell>
+							<Table.Cell class="text-xs text-muted-foreground">{new Date(str.updated_at).toLocaleDateString()}</Table.Cell>
 						</Table.Row>
 					{/each}
 					{#if (strings.data?.items.length ?? 0) === 0}
@@ -318,12 +323,7 @@
 			{/if}
 		</span>
 		<div class="flex gap-2">
-			<Button
-				variant="outline"
-				size="sm"
-				disabled={offset === 0}
-				onclick={() => (offset = Math.max(0, offset - LIMIT))}
-			>
+			<Button variant="outline" size="sm" disabled={offset === 0} onclick={() => (offset = Math.max(0, offset - LIMIT))}>
 				<ChevronLeft size={14} />
 			</Button>
 			<Button variant="outline" size="sm" disabled={!hasMore} onclick={() => (offset += LIMIT)}>
