@@ -21,6 +21,8 @@
 	const qc = useQueryClient();
 	let projectId = $derived($page.params.id as string);
 	let keyId = $derived($page.params.keyId as string);
+	let backLanguage = $derived($page.url.searchParams.get('language') ?? '');
+	let backHref = $derived(`/projects/${projectId}/strings${backLanguage ? `?language=${backLanguage}` : ''}`);
 
 	const stringDetail = createQuery(() => ({
 		queryKey: ['string', projectId, keyId],
@@ -75,7 +77,7 @@
 
 <div class="p-6">
 	<div class="mb-4">
-		<a href="/projects/{projectId}/strings" class="text-sm text-muted-foreground hover:underline">
+		<a href={backHref} class="text-sm text-muted-foreground hover:underline">
 			← Back to strings
 		</a>
 	</div>

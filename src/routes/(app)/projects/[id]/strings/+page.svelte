@@ -266,7 +266,7 @@
 							{@const loc = group.entries[0]}
 							<Table.Row class="hover:bg-muted/50">
 								<Table.Cell>
-									<a href="/projects/{projectId}/strings/{loc.string_key_id}" class="block font-mono text-xs font-medium hover:underline">
+									<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block font-mono text-xs font-medium hover:underline">
 										{loc.key}
 									</a>
 								</Table.Cell>
