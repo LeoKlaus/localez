@@ -16,6 +16,19 @@ async def create_proposal(
 ) -> TranslationProposal | Localization:
     loc = await db.get(Localization, localization_id)
 
+    if loc is not None and loc.value == proposed_value:
+        raise ValueError("DUPLICATE_PROPOSAL")
+
+    existing = await db.scalar(
+        select(TranslationProposal).where(
+            TranslationProposal.localization_id == localization_id,
+            TranslationProposal.proposed_value == proposed_value,
+            TranslationProposal.status == ProposalStatus.pending,
+        )
+    )
+    if existing is not None:
+        raise ValueError("DUPLICATE_PROPOSAL")
+
     if loc is not None and loc.state == LocalizationState.new:
         loc.value = proposed_value
         loc.state = LocalizationState.needs_review

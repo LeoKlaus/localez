@@ -92,7 +92,10 @@ async def create_proposal(
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
-    result = await proposal_service.create_proposal(db, loc_id, body.proposed_value, member.user_id)
+    try:
+        result = await proposal_service.create_proposal(db, loc_id, body.proposed_value, member.user_id)
+    except ValueError:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "DUPLICATE_PROPOSAL", "message": "An identical proposal or translation already exists"})
     if isinstance(result, Localization):
         return LocalizationResponse.model_validate(result)
     return ProposalResponse.model_validate(result)

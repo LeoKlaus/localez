@@ -417,6 +417,50 @@ async def test_auto_applied_value_not_saved_as_proposal(
         assert loc["value"] == "Braucht Review"
 
 
+async def test_duplicate_pending_proposal_returns_409(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    tr_name = unique_username("tr_dup")
+    async with member_client(tr_name) as tr:
+        user_id = await _get_user_id(admin_client, tr_name)
+        await _add_member(admin_client, pid, user_id, "translator")
+
+        key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
+        await tr.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Duplikat"},
+        )
+        resp = await tr.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Duplikat"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["detail"]["code"] == "DUPLICATE_PROPOSAL"
+
+
+async def test_proposal_matching_current_translation_returns_409(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    tr_name = unique_username("tr_matchval")
+    async with member_client(tr_name) as tr:
+        user_id = await _get_user_id(admin_client, tr_name)
+        await _add_member(admin_client, pid, user_id, "translator")
+
+        strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+        key = next(s for s in strings if s["key"] == "Reviewed")
+        locs = (await admin_client.get(f"/api/projects/{pid}/strings/{key['id']}/localizations")).json()
+        translated_loc = next(l for l in locs if l["state"] == "translated")
+
+        resp = await tr.post(
+            f"/api/projects/{pid}/strings/{key['id']}/localizations/{translated_loc['id']}/proposals",
+            json={"proposed_value": translated_loc["value"]},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["detail"]["code"] == "DUPLICATE_PROPOSAL"
+
+
 async def test_proposal_on_existing_translation_stays_pending(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
