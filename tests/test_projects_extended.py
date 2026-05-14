@@ -162,11 +162,9 @@ async def test_remove_nonexistent_language_returns_404(admin_client: AsyncClient
     assert resp.json()["detail"]["code"] == "LANGUAGE_NOT_FOUND"
 
 
-async def test_add_language_requires_admin(member_client, unique_username):
-    username = unique_username("lang_norole")
-    async with member_client(username) as c:
-        resp = await c.post(f"/api/projects/{uuid.uuid4()}/languages", json={"language": "de"})
-        assert resp.status_code == 403
+async def test_add_language_requires_auth(client: AsyncClient):
+    resp = await client.post(f"/api/projects/{uuid.uuid4()}/languages", json={"language": "de"})
+    assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------

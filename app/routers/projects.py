@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
@@ -104,7 +104,7 @@ async def delete_project(
 async def add_language(
     project_id: uuid.UUID,
     body: LanguageAdd,
-    _: User = Depends(require_admin),
+    _: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
