@@ -221,11 +221,7 @@
 							{/if}
 						</div>
 
-						<span class="w-52 text-right text-xs text-muted-foreground">
-							{pct(lang.translated, total)}% done
-							· {pct(lang.needs_review, total)}% in review
-							· {pct(lang.missing, total)}% missing
-						</span>
+						<span class="text-right text-xs text-muted-foreground">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
 					</a>
 				{/each}
 			</div>
