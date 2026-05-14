@@ -18,9 +18,9 @@ async def test_list_strings_as_any_user(member_client, unique_username, xcstring
         assert "X-Total-Count" in resp.headers
 
 
-async def test_list_strings_unauthenticated_gets_401(client: AsyncClient, xcstrings_project: dict):
+async def test_list_strings_unauthenticated(client: AsyncClient, xcstrings_project: dict):
     resp = await client.get(f"/api/projects/{xcstrings_project['id']}/strings")
-    assert resp.status_code == 401
+    assert resp.status_code == 200
 
 
 async def test_list_strings_filter_should_translate(admin_client: AsyncClient, xcstrings_project: dict):

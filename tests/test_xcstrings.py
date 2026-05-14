@@ -184,11 +184,11 @@ async def test_export_content_disposition_header(admin_client: AsyncClient, xcst
     assert ".xcstrings" in resp.headers["Content-Disposition"]
 
 
-async def test_export_any_user_can_access(member_client, unique_username, xcstrings_project: dict):
+async def test_export_non_admin_gets_403(member_client, unique_username, xcstrings_project: dict):
     username = unique_username("export_user")
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{xcstrings_project['id']}/export")
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
 
 async def test_export_unauthenticated_gets_401(client: AsyncClient, xcstrings_project: dict):

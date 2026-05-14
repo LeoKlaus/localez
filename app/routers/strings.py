@@ -5,9 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.project_access import require_guest_plus
 from app.models.localization import Localization, LocalizationState
-from app.models.user import User
 from app.models.string_key import StringKey
 from app.schemas.string_key import LocalizationResponse, StringKeyDetail, StringKeyResponse
 
@@ -25,7 +23,6 @@ async def list_strings(
     q: str | None = None,
     offset: int = 0,
     limit: int = 50,
-    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -57,7 +54,6 @@ async def list_strings(
 async def get_string(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
-    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
 ):
     sk = await db.get(StringKey, key_id)
@@ -87,7 +83,6 @@ async def list_localizations(
     state: LocalizationState | None = None,
     offset: int = 0,
     limit: int = 50,
-    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -120,7 +115,6 @@ async def get_localization(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
-    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
 ):
     sk = await db.get(StringKey, key_id)

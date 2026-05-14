@@ -41,7 +41,7 @@ async def test_list_projects_any_user_sees_all(
 
 async def test_list_projects_unauthenticated(client: AsyncClient):
     resp = await client.get("/api/projects")
-    assert resp.status_code == 401
+    assert resp.status_code == 200
 
 
 async def test_get_project_as_admin(admin_client: AsyncClient, project: dict):

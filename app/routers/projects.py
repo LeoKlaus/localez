@@ -6,8 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.dependencies.auth import get_current_active_user, require_admin
-from app.dependencies.project_access import require_guest_plus
+from app.dependencies.auth import require_admin
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
@@ -33,7 +32,6 @@ async def _get_project(project_id: uuid.UUID, db: AsyncSession) -> Project | Non
 async def list_projects(
     offset: int = 0,
     limit: int = 50,
-    user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -64,7 +62,6 @@ async def create_project(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: uuid.UUID,
-    user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
@@ -151,7 +148,6 @@ async def list_language_localizations(
     state: str | None = None,
     offset: int = 0,
     limit: int = 50,
-    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -196,7 +192,6 @@ async def list_language_localizations(
 @router.get("/{project_id}/stats", response_model=ProjectStats)
 async def get_project_stats(
     project_id: uuid.UUID,
-    _: User = Depends(require_guest_plus),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)
