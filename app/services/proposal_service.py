@@ -13,7 +13,16 @@ async def create_proposal(
     localization_id: uuid.UUID,
     proposed_value: str,
     proposed_by: uuid.UUID,
-) -> TranslationProposal:
+) -> TranslationProposal | Localization:
+    loc = await db.get(Localization, localization_id)
+
+    if loc is not None and loc.state == LocalizationState.new:
+        loc.value = proposed_value
+        loc.state = LocalizationState.needs_review
+        await db.flush()
+        await db.refresh(loc)
+        return loc
+
     proposal = TranslationProposal(
         localization_id=localization_id,
         proposed_value=proposed_value,

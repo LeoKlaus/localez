@@ -11,6 +11,7 @@ from app.models.project_member import ProjectMember
 from app.models.string_key import StringKey
 from app.models.translation_proposal import ProposalStatus, TranslationProposal
 from app.schemas.proposal import ProposalCreate, ProposalResponse, ProposalReview
+from app.schemas.string_key import LocalizationResponse
 from app.services import proposal_service
 
 router = APIRouter()
@@ -81,7 +82,7 @@ async def list_proposals(
     return proposals
 
 
-@router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals", status_code=status.HTTP_201_CREATED)
 async def create_proposal(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
@@ -91,8 +92,10 @@ async def create_proposal(
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
-    proposal = await proposal_service.create_proposal(db, loc_id, body.proposed_value, member.user_id)
-    return proposal
+    result = await proposal_service.create_proposal(db, loc_id, body.proposed_value, member.user_id)
+    if isinstance(result, Localization):
+        return LocalizationResponse.model_validate(result)
+    return ProposalResponse.model_validate(result)
 
 
 @router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept", response_model=ProposalResponse)

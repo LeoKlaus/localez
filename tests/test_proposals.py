@@ -349,6 +349,97 @@ async def test_reject_does_not_update_canonical_value(
             assert loc_resp.json()["value"] == original_value
 
 
+# ---------------------------------------------------------------------------
+# Auto-accept on new localization
+# ---------------------------------------------------------------------------
+
+async def _first_new_localization(admin_client, xcstrings_project):
+    """Return (key_id, loc_id) for a localization with state='new'."""
+    pid = xcstrings_project["id"]
+    strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+    for sk in strings:
+        locs = (await admin_client.get(f"/api/projects/{pid}/strings/{sk['id']}/localizations")).json()
+        for loc in locs:
+            if loc["state"] == "new":
+                return sk["id"], loc["id"]
+    return None, None
+
+
+async def test_proposal_on_new_localization_applies_directly(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    tr_name = unique_username("tr_auto")
+    async with member_client(tr_name) as tr:
+        user_id = await _get_user_id(admin_client, tr_name)
+        await _add_member(admin_client, pid, user_id, "translator")
+
+        key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
+        assert loc_id is not None, "No 'new' localization found in xcstrings_project"
+
+        resp = await tr.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Auto übersetzt"},
+        )
+        assert resp.status_code == 201
+        # Returns the updated localization, not a proposal
+        data = resp.json()
+        assert data["value"] == "Auto übersetzt"
+        assert data["state"] == "needs_review"
+        assert "proposed_value" not in data
+
+
+async def test_auto_applied_value_not_saved_as_proposal(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    tr_name = unique_username("tr_noprop")
+    async with member_client(tr_name) as tr:
+        user_id = await _get_user_id(admin_client, tr_name)
+        await _add_member(admin_client, pid, user_id, "translator")
+
+        key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
+        assert loc_id is not None
+
+        await tr.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Braucht Review"},
+        )
+
+        # No proposal record should exist
+        proposals = (await admin_client.get(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals"
+        )).json()
+        assert proposals == []
+
+        loc = (await admin_client.get(f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}")).json()
+        assert loc["state"] == "needs_review"
+        assert loc["value"] == "Braucht Review"
+
+
+async def test_proposal_on_existing_translation_stays_pending(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    tr_name = unique_username("tr_pending")
+    async with member_client(tr_name) as tr:
+        user_id = await _get_user_id(admin_client, tr_name)
+        await _add_member(admin_client, pid, user_id, "translator")
+
+        # Use the Reviewed key which already has a translated value
+        strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+        key = next(s for s in strings if s["key"] == "Reviewed")
+        locs = (await admin_client.get(f"/api/projects/{pid}/strings/{key['id']}/localizations")).json()
+        translated_loc = next(l for l in locs if l["state"] == "translated")
+
+        resp = await tr.post(
+            f"/api/projects/{pid}/strings/{key['id']}/localizations/{translated_loc['id']}/proposals",
+            json={"proposed_value": "Neuer Vorschlag"},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["status"] == "pending"
+
+
 async def test_accept_already_accepted_proposal_returns_404(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
