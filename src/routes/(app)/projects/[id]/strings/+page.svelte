@@ -2,7 +2,6 @@
 	import { page } from '$app/stores';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Input } from '$lib/components/ui/input';
 	import * as Select from '$lib/components/ui/select';
 	import * as Table from '$lib/components/ui/table';
@@ -121,28 +120,31 @@
 					<Table.Row>
 						<Table.Head class="max-w-xs">Key</Table.Head>
 						<Table.Head>Comment</Table.Head>
-						<Table.Head class="w-28">Translate</Table.Head>
 						<Table.Head class="w-28">Updated</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
 					{#each strings.data ?? [] as str}
-						<Table.Row class="cursor-pointer hover:bg-muted/50">
+						<Table.Row class={str.should_translate ? 'cursor-pointer hover:bg-muted/50' : 'opacity-50'}>
 							<Table.Cell>
-								<a
-									href="/projects/{projectId}/strings/{str.id}"
-									class="block font-mono text-xs font-medium hover:underline"
-								>
-									{str.key}
-								</a>
+								{#if str.should_translate}
+									<a
+										href="/projects/{projectId}/strings/{str.id}"
+										class="block font-mono text-xs font-medium hover:underline"
+									>
+										{str.key}
+									</a>
+								{:else}
+									<div class="flex items-center gap-2">
+										<span class="font-mono text-xs font-medium">{str.key}</span>
+										<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+											do not translate
+										</span>
+									</div>
+								{/if}
 							</Table.Cell>
 							<Table.Cell class="max-w-xs truncate text-sm text-muted-foreground">
 								{str.comment ?? '—'}
-							</Table.Cell>
-							<Table.Cell>
-								<Badge variant={str.should_translate ? 'default' : 'secondary'}>
-									{str.should_translate ? 'Yes' : 'No'}
-								</Badge>
 							</Table.Cell>
 							<Table.Cell class="text-xs text-muted-foreground">
 								{new Date(str.updated_at).toLocaleDateString()}
@@ -151,7 +153,7 @@
 					{/each}
 					{#if (strings.data?.length ?? 0) === 0}
 						<Table.Row>
-							<Table.Cell colspan={4} class="py-12 text-center text-muted-foreground">
+							<Table.Cell colspan={3} class="py-12 text-center text-muted-foreground">
 								No strings match your filters.
 							</Table.Cell>
 						</Table.Row>
