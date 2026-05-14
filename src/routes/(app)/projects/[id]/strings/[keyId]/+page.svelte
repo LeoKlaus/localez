@@ -6,7 +6,6 @@
 	import { formatDate } from '$lib/utils';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Separator } from '$lib/components/ui/separator';
@@ -41,10 +40,36 @@
 		translated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
 	};
 
+	// Placeholder helpers
+	const PLACEHOLDER_RE = /%(?:\d+\$)?(?:@|lld|ld|d|f|s)/;
+
+	type Segment = { type: 'text' | 'placeholder'; value: string };
+
+	function parseSegments(text: string): Segment[] {
+		const parts = text.split(new RegExp(`(${PLACEHOLDER_RE.source})`));
+		return parts
+			.map((value, i) => ({ type: (i % 2 === 1 ? 'placeholder' : 'text') as Segment['type'], value }))
+			.filter((s) => s.value !== '');
+	}
+
+	function extractPlaceholders(text: string): string[] {
+		return [...new Set(text.match(new RegExp(PLACEHOLDER_RE.source, 'g')) ?? [])];
+	}
+
+	function placeholderLabel(ph: string): string {
+		if (ph.endsWith('@') || ph.endsWith('s')) return 'string';
+		if (ph.endsWith('f')) return 'decimal';
+		return 'number';
+	}
+
+	let placeholders = $derived(extractPlaceholders(stringDetail.data?.key ?? ''));
+
+	// Proposal dialog
 	let proposalDialogOpen = $state(false);
 	let selectedLocId = $state('');
 	let proposedValue = $state('');
 	let proposalError = $state('');
+	let mirrorEl = $state<HTMLDivElement | undefined>();
 
 	const createProposal = createMutation(() => ({
 		mutationFn: async () => {
@@ -71,6 +96,7 @@
 
 	function openProposalDialog(locId: string) {
 		selectedLocId = locId;
+		proposedValue = '';
 		proposalDialogOpen = true;
 	}
 </script>
@@ -131,12 +157,43 @@
 			{#if proposalError}
 				<p class="text-sm text-destructive">{proposalError}</p>
 			{/if}
-			<Textarea
-				bind:value={proposedValue}
-				placeholder="Enter your translation…"
-				rows={4}
-				required
-			/>
+
+			<!-- Overlay textarea -->
+			<div class="relative">
+				<div
+					aria-hidden="true"
+					bind:this={mirrorEl}
+					class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words rounded-md px-3 py-2 text-sm"
+				>{#each parseSegments(proposedValue) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+				<textarea
+					class="relative min-h-[6rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					style="caret-color: hsl(var(--foreground)); resize: none;"
+					placeholder="Enter your translation…"
+					rows={4}
+					required
+					value={proposedValue}
+					oninput={(e) => { proposedValue = e.currentTarget.value; }}
+					onscroll={(e) => { if (mirrorEl) mirrorEl.scrollTop = e.currentTarget.scrollTop; }}
+				></textarea>
+			</div>
+
+			{#if placeholders.length > 0}
+				<div class="flex flex-wrap items-center gap-1">
+					<span class="text-xs text-muted-foreground">Placeholders:</span>
+					{#each placeholders as ph}
+						<span class="flex items-center gap-0.5">
+							<button
+								type="button"
+								class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
+								onmousedown={(e) => { e.preventDefault(); proposedValue += ph; }}
+								title="Click to insert into translation"
+							>{ph}</button>
+							<span class="text-xs text-muted-foreground">{placeholderLabel(ph)}</span>
+						</span>
+					{/each}
+				</div>
+			{/if}
+
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (proposalDialogOpen = false)}>Cancel</Button>
 				<Button type="submit" disabled={createProposal.isPending}>Submit</Button>
