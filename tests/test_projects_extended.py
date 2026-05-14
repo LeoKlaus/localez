@@ -325,3 +325,72 @@ async def test_stats_requires_project_access(member_client, unique_username, pro
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{project['id']}/stats")
         assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Language localizations
+# ---------------------------------------------------------------------------
+
+async def test_language_localizations_after_import(admin_client: AsyncClient, xcstrings_project: dict):
+    proj_id = xcstrings_project["id"]
+    proj = (await admin_client.get(f"/api/projects/{proj_id}")).json()
+    lang = proj["languages"][0]
+
+    resp = await admin_client.get(f"/api/projects/{proj_id}/languages/{lang}/localizations")
+    assert resp.status_code == 200
+    assert "X-Total-Count" in resp.headers
+
+    items = resp.json()
+    assert len(items) > 0
+    for item in items:
+        assert item["language"] == lang
+        assert "key" in item
+        assert "string_key_id" in item
+        assert "state" in item
+        assert "value" in item or item.get("value") is None
+
+
+async def test_language_localizations_state_filter(admin_client: AsyncClient, xcstrings_project: dict):
+    proj_id = xcstrings_project["id"]
+    proj = (await admin_client.get(f"/api/projects/{proj_id}")).json()
+    lang = proj["languages"][0]
+
+    resp = await admin_client.get(f"/api/projects/{proj_id}/languages/{lang}/localizations?state=translated")
+    assert resp.status_code == 200
+    for item in resp.json():
+        assert item["state"] == "translated"
+
+
+async def test_language_localizations_invalid_state(admin_client: AsyncClient, xcstrings_project: dict):
+    proj_id = xcstrings_project["id"]
+    proj = (await admin_client.get(f"/api/projects/{proj_id}")).json()
+    lang = proj["languages"][0]
+
+    resp = await admin_client.get(f"/api/projects/{proj_id}/languages/{lang}/localizations?state=bogus")
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["code"] == "INVALID_STATE"
+
+
+async def test_language_localizations_unknown_language(admin_client: AsyncClient, xcstrings_project: dict):
+    resp = await admin_client.get(f"/api/projects/{xcstrings_project['id']}/languages/zz/localizations")
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "LANGUAGE_NOT_FOUND"
+
+
+async def test_language_localizations_requires_access(member_client, unique_username, xcstrings_project: dict):
+    username = unique_username("loclang_noauth")
+    proj_id = xcstrings_project["id"]
+    async with member_client(username) as c:
+        resp = await c.get(f"/api/projects/{proj_id}/languages/en/localizations")
+        assert resp.status_code == 403
+
+
+async def test_language_localizations_pagination(admin_client: AsyncClient, xcstrings_project: dict):
+    proj_id = xcstrings_project["id"]
+    proj = (await admin_client.get(f"/api/projects/{proj_id}")).json()
+    lang = proj["languages"][0]
+
+    total = int((await admin_client.get(f"/api/projects/{proj_id}/languages/{lang}/localizations")).headers["X-Total-Count"])
+    page = (await admin_client.get(f"/api/projects/{proj_id}/languages/{lang}/localizations?limit=2&offset=0")).json()
+    assert len(page) <= 2
+    assert int((await admin_client.get(f"/api/projects/{proj_id}/languages/{lang}/localizations?limit=2&offset=0")).headers["X-Total-Count"]) == total

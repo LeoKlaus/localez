@@ -15,6 +15,7 @@ from app.models.project_member import ProjectMember
 from app.models.string_key import StringKey
 from app.models.user import GlobalRole, User
 from app.schemas.project import LanguageAdd, LanguageStats, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
+from app.schemas.string_key import LocalizationWithKeyResponse
 from app.services.localization_service import fill_missing_localizations
 
 router = APIRouter()
@@ -156,6 +157,54 @@ async def remove_language(
     if pl is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
     await db.delete(pl)
+
+
+@router.get("/{project_id}/languages/{language}/localizations", response_model=list[LocalizationWithKeyResponse])
+async def list_language_localizations(
+    project_id: uuid.UUID,
+    language: str,
+    state: str | None = None,
+    offset: int = 0,
+    limit: int = 50,
+    _: ProjectMember = Depends(require_guest_plus),
+    db: AsyncSession = Depends(get_db),
+    response: Response = None,
+):
+    result = await db.execute(
+        select(ProjectLanguage).where(
+            ProjectLanguage.project_id == project_id,
+            ProjectLanguage.language == language,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
+
+    limit = min(limit, MAX_LIMIT)
+    query = (
+        select(Localization, StringKey.key)
+        .join(StringKey, StringKey.id == Localization.string_key_id)
+        .where(StringKey.project_id == project_id, Localization.language == language)
+    )
+
+    if state is not None:
+        from app.models.localization import LocalizationState
+        try:
+            query = query.where(Localization.state == LocalizationState(state))
+        except ValueError:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_STATE", "message": f"Invalid state: {state}"})
+
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
+    rows = await db.execute(query.offset(offset).limit(limit))
+
+    items = []
+    for loc, key in rows:
+        data = {c.name: getattr(loc, c.name) for c in loc.__table__.columns}
+        data["key"] = key
+        items.append(LocalizationWithKeyResponse.model_validate(data))
+
+    if response:
+        response.headers["X-Total-Count"] = str(total)
+    return items
 
 
 @router.get("/{project_id}/stats", response_model=ProjectStats)

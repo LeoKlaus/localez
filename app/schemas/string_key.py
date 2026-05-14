@@ -24,6 +24,11 @@ class LocalizationResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LocalizationWithKeyResponse(LocalizationResponse):
+    string_key_id: uuid.UUID
+    key: str
+
+
 class StringKeyResponse(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID
