@@ -10,6 +10,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import Plus from 'lucide-svelte/icons/plus';
 	import FolderOpen from 'lucide-svelte/icons/folder-open';
+	import { auth } from '$lib/stores/auth.svelte';
 
 	const qc = useQueryClient();
 
@@ -56,10 +57,12 @@
 <div class="p-6">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Projects</h1>
-		<Button onclick={() => (createOpen = true)}>
-			<Plus size={16} class="mr-2" />
-			New project
-		</Button>
+		{#if auth.isAdmin}
+			<Button onclick={() => (createOpen = true)}>
+				<Plus size={16} class="mr-2" />
+				New project
+			</Button>
+		{/if}
 	</div>
 
 	{#if projects.isPending}
