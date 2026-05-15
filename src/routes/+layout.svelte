@@ -15,11 +15,36 @@
 		}
 	});
 
+	const COOKIE_KEY = 'lz_cookie_notice';
+	let cookieNoticeDismissed = $state(true);
+
 	onMount(() => {
 		auth.init();
+		cookieNoticeDismissed = localStorage.getItem(COOKIE_KEY) === '1';
 	});
+
+	function dismissCookieNotice() {
+		localStorage.setItem(COOKIE_KEY, '1');
+		cookieNoticeDismissed = true;
+	}
 </script>
 
 <QueryClientProvider client={queryClient}>
 	{@render children()}
+	{#if !cookieNoticeDismissed}
+		<div class="fixed bottom-0 left-0 right-0 z-50 border-t bg-card px-4 py-3 shadow-lg md:bottom-0">
+			<div class="mx-auto flex max-w-3xl items-center gap-4">
+				<p class="flex-1 text-sm text-muted-foreground">
+					This site uses cookies and local storage for authentication.
+					<a href="/legal/privacy" class="underline hover:text-foreground">Privacy policy</a>
+				</p>
+				<button
+					onclick={dismissCookieNotice}
+					class="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+				>
+					Got it
+				</button>
+			</div>
+		</div>
+	{/if}
 </QueryClientProvider>
