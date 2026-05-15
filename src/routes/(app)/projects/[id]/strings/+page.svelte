@@ -178,10 +178,10 @@
 </script>
 
 <!-- Shared translation input: mirror overlay + textarea + placeholder chips + proposals -->
-{#snippet translationInput(loc: LocalizationWithKey)}
+{#snippet translationInput(loc: LocalizationWithKey, bordered = false)}
 	{@const placeholders = extractPlaceholders(loc.key)}
 	{#if auth.isAuthenticated}
-		<div class="relative">
+		<div class="relative {bordered ? 'rounded-md border' : ''}">
 			<div
 				aria-hidden="true"
 				class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
@@ -291,12 +291,14 @@
 									</p>
 								{/if}
 								{#if loc.comment}
-									<p class="mt-1 break-words text-xs text-muted-foreground">{loc.comment}</p>
+									<p class="mt-1 break-words text-xs text-muted-foreground">
+										<span class="font-medium">Comment:</span> {loc.comment}
+									</p>
 								{/if}
 							</div>
 							<span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
 						</div>
-						{@render translationInput(loc)}
+						{@render translationInput(loc, true)}
 					</div>
 				{:else}
 					{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
@@ -311,7 +313,9 @@
 								</p>
 							{/if}
 							{#if group.entries[0].comment}
-								<p class="mt-1 break-words text-xs text-muted-foreground">{group.entries[0].comment}</p>
+								<p class="mt-1 break-words text-xs text-muted-foreground">
+									<span class="font-medium">Comment:</span> {group.entries[0].comment}
+								</p>
 							{/if}
 						</div>
 						{#each group.entries as loc}
@@ -320,7 +324,7 @@
 									<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
 									<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
 								</div>
-								{@render translationInput(loc)}
+								{@render translationInput(loc, true)}
 							</div>
 						{/each}
 					</div>
