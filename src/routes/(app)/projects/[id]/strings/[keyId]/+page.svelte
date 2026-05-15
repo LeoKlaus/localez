@@ -1,0 +1,336 @@
+<script lang="ts">
+	import { page } from '$app/stores';
+	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+	import { client } from '$lib/api/client';
+	import { auth } from '$lib/stores/auth.svelte';
+	import { formatDate } from '$lib/utils';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
+	import * as Card from '$lib/components/ui/card';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import { Separator } from '$lib/components/ui/separator';
+	import type { components } from '$lib/api/schema.d.ts';
+	import Check from 'lucide-svelte/icons/check';
+	import X from 'lucide-svelte/icons/x';
+	import Plus from 'lucide-svelte/icons/plus';
+
+	type LocalizationState = components['schemas']['LocalizationState'];
+	type LocalizationResponse = components['schemas']['LocalizationResponse'];
+
+	const qc = useQueryClient();
+	let projectId = $derived($page.params.id as string);
+	let keyId = $derived($page.params.keyId as string);
+	let backLanguage = $derived($page.url.searchParams.get('language') ?? '');
+	let backHref = $derived(`/projects/${projectId}/strings${backLanguage ? `?language=${backLanguage}` : ''}`);
+
+	const stringDetail = createQuery(() => ({
+		queryKey: ['string', projectId, keyId],
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/strings/{key_id}', {
+				params: { path: { project_id: projectId, key_id: keyId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	const stateColors: Record<LocalizationState, string> = {
+		new: 'bg-muted text-muted-foreground',
+		needs_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+		translated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+	};
+
+	// Placeholder helpers
+	const PLACEHOLDER_RE = /%(?:\d+\$)?(?:@|lld|ld|d|f|s)/;
+
+	type Segment = { type: 'text' | 'placeholder'; value: string };
+
+	function parseSegments(text: string): Segment[] {
+		const parts = text.split(new RegExp(`(${PLACEHOLDER_RE.source})`));
+		return parts
+			.map((value, i) => ({ type: (i % 2 === 1 ? 'placeholder' : 'text') as Segment['type'], value }))
+			.filter((s) => s.value !== '');
+	}
+
+	function extractPlaceholders(text: string): string[] {
+		return [...new Set(text.match(new RegExp(PLACEHOLDER_RE.source, 'g')) ?? [])];
+	}
+
+	function placeholderLabel(ph: string): string {
+		if (ph.endsWith('@') || ph.endsWith('s')) return 'string';
+		if (ph.endsWith('f')) return 'decimal';
+		return 'number';
+	}
+
+	let placeholders = $derived(extractPlaceholders(stringDetail.data?.key ?? ''));
+
+	// Proposal dialog
+	let proposalDialogOpen = $state(false);
+	let selectedLocId = $state('');
+	let proposedValue = $state('');
+	let proposalError = $state('');
+	let mirrorEl = $state<HTMLDivElement | undefined>();
+
+	const createProposal = createMutation(() => ({
+		mutationFn: async () => {
+			const { data, error } = await client.POST(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
+				{
+					params: { path: { project_id: projectId, key_id: keyId, loc_id: selectedLocId } },
+					body: { proposed_value: proposedValue }
+				}
+			);
+			if (error) throw error;
+			return data;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['proposals', projectId, keyId, selectedLocId] });
+			proposalDialogOpen = false;
+			proposedValue = '';
+			proposalError = '';
+		},
+		onError: () => {
+			proposalError = 'Failed to submit proposal.';
+		}
+	}));
+
+	function openProposalDialog(locId: string) {
+		selectedLocId = locId;
+		proposedValue = '';
+		proposalDialogOpen = true;
+	}
+</script>
+
+<div class="p-6">
+	<div class="mb-4">
+		<a href={backHref} class="text-sm text-muted-foreground hover:underline">
+			← Back to strings
+		</a>
+	</div>
+
+	{#if stringDetail.isPending}
+		<div class="h-64 animate-pulse rounded-lg bg-muted"></div>
+	{:else if stringDetail.isError}
+		<p class="text-destructive">Failed to load string.</p>
+	{:else if stringDetail.data}
+		{@const str = stringDetail.data}
+		<div class="mb-6">
+			<h1 class="whitespace-pre-wrap break-all font-mono text-xl font-bold">{str.key}</h1>
+			{#if str.comment}
+				<p class="mt-1 text-sm text-muted-foreground">{str.comment}</p>
+			{/if}
+			<div class="mt-2 flex gap-2">
+				<Badge variant={str.should_translate ? 'default' : 'secondary'}>
+					{str.should_translate ? 'To translate' : 'Do not translate'}
+				</Badge>
+			</div>
+		</div>
+
+		<Separator class="mb-6" />
+
+		<h2 class="mb-4 text-lg font-semibold">Localizations</h2>
+
+		{#if str.localizations.length === 0}
+			<p class="text-muted-foreground">No localizations yet.</p>
+		{:else}
+			<div class="space-y-4">
+				{#each str.localizations as loc}
+					{@render localizationCard(loc)}
+				{/each}
+			</div>
+		{/if}
+	{/if}
+</div>
+
+<Dialog.Root bind:open={proposalDialogOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Submit translation proposal</Dialog.Title>
+		</Dialog.Header>
+		<form
+			onsubmit={(e) => {
+				e.preventDefault();
+				createProposal.mutate();
+			}}
+			class="space-y-4"
+		>
+			{#if proposalError}
+				<p class="text-sm text-destructive">{proposalError}</p>
+			{/if}
+
+			<!-- Overlay textarea -->
+			<div class="relative">
+				<div
+					aria-hidden="true"
+					bind:this={mirrorEl}
+					class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words rounded-md px-3 py-2 text-sm"
+				>{#each parseSegments(proposedValue) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+				<textarea
+					class="relative min-h-[6rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					style="caret-color: hsl(var(--foreground)); resize: none;"
+					placeholder="Enter your translation…"
+					rows={4}
+					required
+					value={proposedValue}
+					oninput={(e) => { proposedValue = e.currentTarget.value; }}
+					onscroll={(e) => { if (mirrorEl) mirrorEl.scrollTop = e.currentTarget.scrollTop; }}
+				></textarea>
+			</div>
+
+			{#if placeholders.length > 0}
+				<div class="flex flex-wrap items-center gap-1">
+					<span class="text-xs text-muted-foreground">Placeholders:</span>
+					{#each placeholders as ph}
+						<span class="flex items-center gap-0.5">
+							<button
+								type="button"
+								class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
+								onmousedown={(e) => { e.preventDefault(); proposedValue += ph; }}
+								title="Click to insert into translation"
+							>{ph}</button>
+							<span class="text-xs text-muted-foreground">{placeholderLabel(ph)}</span>
+						</span>
+					{/each}
+				</div>
+			{/if}
+
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (proposalDialogOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={createProposal.isPending}>Submit</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+{#snippet localizationCard(loc: LocalizationResponse)}
+	{@const proposals = createQuery(() => ({
+		queryKey: ['proposals', projectId, keyId, loc.id],
+		queryFn: async () => {
+			const { data, error } = await client.GET(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
+				{
+					params: {
+						path: { project_id: projectId, key_id: keyId, loc_id: loc.id },
+						query: { limit: 20 }
+					}
+				}
+			);
+			if (error) throw error;
+			return data;
+		}
+	}))}
+
+	{@const acceptProposal = createMutation(() => ({
+		mutationFn: async (proposalId: string) => {
+			const { error } = await client.POST(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept',
+				{
+					params: {
+						path: {
+							project_id: projectId,
+							key_id: keyId,
+							loc_id: loc.id,
+							proposal_id: proposalId
+						}
+					}
+				}
+			);
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['proposals', projectId, keyId, loc.id] });
+			qc.invalidateQueries({ queryKey: ['string', projectId, keyId] });
+		}
+	}))}
+
+	{@const rejectProposal = createMutation(() => ({
+		mutationFn: async (proposalId: string) => {
+			const { error } = await client.DELETE(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}',
+				{
+					params: {
+						path: {
+							project_id: projectId,
+							key_id: keyId,
+							loc_id: loc.id,
+							proposal_id: proposalId
+						}
+					}
+				}
+			);
+			if (error) throw error;
+		},
+		onSuccess: () => qc.invalidateQueries({ queryKey: ['proposals', projectId, keyId, loc.id] })
+	}))}
+
+	<Card.Root>
+		<Card.Header class="pb-3">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<span class="font-semibold">{loc.language}</span>
+					{#if loc.variation_type !== 'none'}
+						<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
+					{/if}
+					<span class={`rounded-full px-2 py-0.5 text-xs font-medium ${stateColors[loc.state]}`}>
+						{loc.state.replace('_', ' ')}
+					</span>
+				</div>
+				{#if auth.isAuthenticated}
+					<Button variant="outline" size="sm" onclick={() => openProposalDialog(loc.id)}>
+						<Plus size={12} class="mr-1" /> Propose
+					</Button>
+				{/if}
+			</div>
+		</Card.Header>
+		<Card.Content class="space-y-3">
+			{#if loc.value}
+				<div class="rounded-md border bg-muted/50 px-3 py-2 font-mono text-sm">{loc.value}</div>
+			{:else}
+				<p class="text-sm italic text-muted-foreground">No value yet</p>
+			{/if}
+
+			{#if proposals.data && proposals.data.length > 0}
+				<div class="space-y-2">
+					<p class="text-xs font-semibold uppercase text-muted-foreground">Proposals</p>
+					{#each proposals.data as proposal}
+						<div class="flex items-start justify-between gap-2 rounded-md border p-3 text-sm">
+							<div class="flex-1">
+								<p class="font-mono">{proposal.proposed_value}</p>
+								<p class="mt-1 text-xs text-muted-foreground">
+									{formatDate(proposal.proposed_at)}
+									{#if proposal.reviewer_note}
+										· {proposal.reviewer_note}
+									{/if}
+								</p>
+							</div>
+							<div class="flex items-center gap-1">
+								{#if proposal.status === 'pending'}
+									<Button
+										variant="ghost"
+										size="icon"
+										class="size-7 text-green-600"
+										onclick={() => acceptProposal.mutate(proposal.id)}
+									>
+										<Check size={14} />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="size-7 text-destructive"
+										onclick={() => rejectProposal.mutate(proposal.id)}
+									>
+										<X size={14} />
+									</Button>
+								{:else}
+									<Badge variant={proposal.status === 'accepted' ? 'default' : 'secondary'}>
+										{proposal.status}
+									</Badge>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+{/snippet}
