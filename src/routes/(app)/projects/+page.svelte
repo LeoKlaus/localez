@@ -55,9 +55,7 @@
 		createProject.mutate();
 	}
 
-	function projectInitial(n: string) {
-		return n.trim()[0]?.toUpperCase() ?? '?';
-	}
+
 </script>
 
 <div class="p-6">
@@ -89,9 +87,6 @@
 			{#each projects.data ?? [] as project}
 				<a href="/projects/{project.id}" class="flex">
 					<Card.Root class="flex flex-1 flex-col overflow-hidden transition-shadow hover:shadow-md">
-						{#if project.accent_color}
-							<div class="h-1 w-full" style="background-color: {project.accent_color}"></div>
-						{/if}
 						<Card.Header>
 							<Card.Title class="flex items-center gap-3">
 								{#if project.has_icon}
@@ -100,13 +95,6 @@
 										alt=""
 										class="size-8 rounded-md object-cover"
 									/>
-								{:else if project.accent_color}
-									<div
-										class="flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold text-white"
-										style="background-color: {project.accent_color}"
-									>
-										{projectInitial(project.name)}
-									</div>
 								{/if}
 								<span class="truncate">{project.name}</span>
 								<Badge variant="secondary" class="shrink-0">{project.source_language}</Badge>

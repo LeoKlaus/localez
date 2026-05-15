@@ -49,14 +49,10 @@
 	let editOpen = $state(false);
 	let editName = $state('');
 	let editLang = $state('');
-	let editAccentColor = $state('');
-	let editClearAccentColor = $state(false);
 
 	function openEdit() {
 		editName = project.data?.name ?? '';
 		editLang = project.data?.source_language ?? '';
-		editAccentColor = project.data?.accent_color ?? '';
-		editClearAccentColor = false;
 		editOpen = true;
 	}
 
@@ -64,11 +60,7 @@
 		mutationFn: async () => {
 			const { data, error } = await client.PATCH('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } },
-				body: {
-					name: editName,
-					source_language: editLang,
-					accent_color: editClearAccentColor ? null : (editAccentColor || null)
-				}
+				body: { name: editName, source_language: editLang }
 			});
 			if (error) throw error;
 			return data;
@@ -141,6 +133,47 @@
 	let newLanguage = $state('');
 	let addLangError = $state('');
 
+	// Prefill SSE state
+	let prefillLanguage = $state<string | null>(null);
+	let prefillMessage = $state('');
+
+	async function watchPrefill(language: string) {
+		prefillLanguage = language;
+		prefillMessage = `Generating AI suggestions for ${language}…`;
+		try {
+			const res = await fetch(
+				`${BASE_URL}/api/projects/${projectId}/languages/${language}/prefill/stream`,
+				{ headers: auth.accessToken ? { Authorization: `Bearer ${auth.accessToken}` } : {} }
+			);
+			if (!res.ok || !res.body) return;
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = '';
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() ?? '';
+				for (const line of lines) {
+					if (!line.startsWith('data:')) continue;
+					const payload = JSON.parse(line.slice(5).trim());
+					if (payload.status === 'ready' && payload.filled > 0) {
+						prefillMessage = `${payload.filled} AI suggestion${payload.filled !== 1 ? 's' : ''} generated for ${language}.`;
+						qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
+					} else {
+						prefillMessage = '';
+					}
+					return;
+				}
+			}
+		} catch {
+			// silent — prefill is best-effort
+		} finally {
+			prefillLanguage = null;
+		}
+	}
+
 	const addLanguage = createMutation(() => ({
 		mutationFn: async () => {
 			const { error } = await client.POST('/api/projects/{project_id}/languages', {
@@ -152,9 +185,11 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ['project', projectId] });
 			qc.invalidateQueries({ queryKey: ['stats', projectId] });
+			const lang = newLanguage.trim();
 			addLangOpen = false;
 			newLanguage = '';
 			addLangError = '';
+			watchPrefill(lang);
 		},
 		onError: () => {
 			addLangError = 'Failed to add language.';
@@ -241,13 +276,6 @@
 			<div class="flex items-center gap-4">
 				{#if p.has_icon}
 					<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-16 rounded-xl object-cover shadow-sm" />
-				{:else if p.accent_color}
-					<div
-						class="flex size-16 shrink-0 items-center justify-center rounded-xl text-2xl font-bold text-white shadow-sm"
-						style="background-color: {p.accent_color}"
-					>
-						{p.name.trim()[0]?.toUpperCase() ?? '?'}
-					</div>
 				{/if}
 				<div>
 					<div class="flex items-center gap-2">
@@ -302,6 +330,19 @@
 		{/if}
 
 		<Separator class="mb-6" />
+
+		{#if prefillLanguage}
+			<Alert.Root class="mb-4 border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300">
+				<Alert.Description class="flex items-center gap-2">
+					<span class="inline-block size-3 animate-spin rounded-full border-2 border-violet-400 border-t-transparent"></span>
+					{prefillMessage}
+				</Alert.Description>
+			</Alert.Root>
+		{:else if prefillMessage}
+			<Alert.Root class="mb-4 border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300">
+				<Alert.Description>✦ {prefillMessage}</Alert.Description>
+			</Alert.Root>
+		{/if}
 
 		<div class="mb-4 flex items-center justify-between">
 			<div>
@@ -380,35 +421,6 @@
 			<div class="space-y-2">
 				<Label>Source language</Label>
 				<Input bind:value={editLang} required maxlength={20} />
-			</div>
-			<div class="space-y-2">
-				<Label>Accent color</Label>
-				<div class="flex items-center gap-2">
-					<input
-						type="color"
-						class="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
-						value={editAccentColor || '#6366f1'}
-						oninput={(e) => { editAccentColor = e.currentTarget.value; editClearAccentColor = false; }}
-						disabled={editClearAccentColor}
-					/>
-					<Input
-						class="flex-1 font-mono"
-						placeholder="#6366f1"
-						value={editAccentColor}
-						oninput={(e) => { editAccentColor = e.currentTarget.value; editClearAccentColor = false; }}
-						disabled={editClearAccentColor}
-					/>
-					{#if editAccentColor || project.data?.accent_color}
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onclick={() => { editClearAccentColor = true; editAccentColor = ''; }}
-						>
-							Clear
-						</Button>
-					{/if}
-				</div>
 			</div>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (editOpen = false)}>Cancel</Button>

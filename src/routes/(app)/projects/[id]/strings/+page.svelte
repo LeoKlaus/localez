@@ -234,6 +234,16 @@
 		</div>
 	{/if}
 	{#if auth.isAuthenticated}
+		{#if loc.ai_suggestion && loc.ai_suggestion !== loc.value}
+			<button
+				type="button"
+				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
+				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = loc.ai_suggestion!; }}
+			>
+				<span class="shrink-0 font-medium text-violet-500 dark:text-violet-400">✦ AI</span>
+				<span class="break-words">{loc.ai_suggestion}</span>
+			</button>
+		{/if}
 		{#each proposalsByLocId.get(loc.id) ?? [] as proposal}
 			<button
 				type="button"

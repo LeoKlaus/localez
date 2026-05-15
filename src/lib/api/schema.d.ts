@@ -352,6 +352,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/languages/{language}/prefill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prefill Language */
+        post: operations["prefill_language_api_projects__project_id__languages__language__prefill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/languages/{language}/prefill/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prefill Stream */
+        get: operations["prefill_stream_api_projects__project_id__languages__language__prefill_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/languages/{language}": {
         parameters: {
             query?: never;
@@ -700,6 +734,8 @@ export interface components {
             comment: string | null;
             /** Source Value */
             source_value: string | null;
+            /** Ai Suggestion */
+            ai_suggestion: string | null;
         };
         /** MeResponse */
         MeResponse: {
@@ -761,6 +797,13 @@ export interface components {
             /** Challenge Token */
             challenge_token: string;
         };
+        /** PrefillResponse */
+        PrefillResponse: {
+            /** Filled */
+            filled: number;
+            /** Skipped */
+            skipped: number;
+        };
         /** ProjectCreate */
         ProjectCreate: {
             /** Name */
@@ -786,8 +829,6 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /** Accent Color */
-            accent_color: string | null;
             /** Has Icon */
             has_icon: boolean;
             /**
@@ -809,8 +850,6 @@ export interface components {
             name?: string | null;
             /** Source Language */
             source_language?: string | null;
-            /** Accent Color */
-            accent_color?: string | null;
         };
         /** ProposalCreate */
         ProposalCreate: {
@@ -1865,6 +1904,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prefill_language_api_projects__project_id__languages__language__prefill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrefillResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prefill_stream_api_projects__project_id__languages__language__prefill_stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

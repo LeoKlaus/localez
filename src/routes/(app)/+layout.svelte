@@ -75,13 +75,6 @@
 				<a href="/projects/{p.id}" class="flex min-w-0 items-center gap-2">
 					{#if p.has_icon}
 						<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-7 rounded-md object-cover" />
-					{:else if p.accent_color}
-						<div
-							class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
-							style="background-color: {p.accent_color}"
-						>
-							{p.name.trim()[0]?.toUpperCase() ?? '?'}
-						</div>
 					{/if}
 					<span class="truncate font-bold tracking-tight">{p.name}</span>
 				</a>
@@ -172,13 +165,6 @@
 				<a href="/projects/{p.id}" class="flex items-center gap-2 min-w-0">
 					{#if p.has_icon}
 						<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-7 rounded-md object-cover" />
-					{:else if p.accent_color}
-						<div
-							class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
-							style="background-color: {p.accent_color}"
-						>
-							{p.name.trim()[0]?.toUpperCase() ?? '?'}
-						</div>
 					{/if}
 					<span class="truncate font-bold">{p.name}</span>
 				</a>
