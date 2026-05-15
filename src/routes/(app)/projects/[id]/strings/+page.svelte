@@ -179,27 +179,28 @@
 
 {#snippet translationCell(loc: LocalizationWithKey)}
 	{@const placeholders = extractPlaceholders(loc.key)}
-	<Table.Cell>
+	<Table.Cell class="whitespace-normal">
 		{#if auth.isAuthenticated}
 			<div class="relative">
-				<!-- Mirror layer for placeholder highlighting -->
+				<!-- In-flow mirror determines row height and renders placeholder highlights -->
 				<div
 					aria-hidden="true"
-					class="pointer-events-none absolute inset-0 flex items-center overflow-hidden whitespace-pre px-1 text-sm"
-				>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}</div>
-				<input
-					class="relative w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
-					style="caret-color: hsl(var(--foreground))"
-					value={drafts[loc.id] ?? ''}
+					class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
+				>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+				<!-- Textarea overlaid on mirror, text transparent so mirror shows through -->
+				<textarea
+					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+					style="resize: none; caret-color: hsl(var(--foreground))"
 					placeholder="Enter translation…"
 					disabled={submitting[loc.id]}
+					value={drafts[loc.id] ?? ''}
 					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
 					onblur={() => submitProposal(loc)}
-					onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
-				/>
+					onkeydown={(e) => { if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+				></textarea>
 			</div>
 		{:else}
-			<span class="px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
+			<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
 		{/if}
 		{#if placeholders.length > 0}
 			<div class="mt-1 flex flex-wrap items-center gap-1 pl-1">
@@ -225,7 +226,7 @@
 					onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = proposal.proposed_value; }}
 				>
 					<span class="shrink-0 text-muted-foreground/50">↳</span>
-					<span class="truncate">{proposal.proposed_value}</span>
+					<span class="break-words">{proposal.proposed_value}</span>
 				</button>
 			{/each}
 		{/if}
@@ -270,10 +271,10 @@
 		<p class="text-destructive">Failed to load strings.</p>
 	{:else if language}
 		<div class="rounded-lg border">
-			<Table.Root>
+			<Table.Root class="table-fixed">
 				<Table.Header>
 					<Table.Row>
-						<Table.Head class="w-64">Key</Table.Head>
+						<Table.Head class="w-56">Key</Table.Head>
 						<Table.Head>Translation</Table.Head>
 						<Table.Head class="w-48">Comment</Table.Head>
 						<Table.Head class="w-32">State</Table.Head>
@@ -284,26 +285,26 @@
 						{#if group.entries.length === 1 && group.entries[0].variation_type === 'none'}
 							{@const loc = group.entries[0]}
 							<Table.Row class="hover:bg-muted/50">
-								<Table.Cell>
-									<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block font-mono text-xs font-medium hover:underline">
+								<Table.Cell class="whitespace-normal">
+									<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block break-all font-mono text-xs font-medium hover:underline">
 										{loc.key}
 									</a>
 								</Table.Cell>
 								{@render translationCell(loc)}
-								<Table.Cell class="text-sm text-muted-foreground">{loc.comment ?? '—'}</Table.Cell>
+								<Table.Cell class="whitespace-normal break-words text-sm text-muted-foreground">{loc.comment ?? '—'}</Table.Cell>
 								<Table.Cell>
 									<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
 								</Table.Cell>
 							</Table.Row>
 						{:else}
 							<Table.Row class="bg-muted/30 hover:bg-muted/50">
-								<Table.Cell>
-									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="font-mono text-xs font-medium hover:underline">
+								<Table.Cell class="whitespace-normal">
+									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="break-all font-mono text-xs font-medium hover:underline">
 										{group.key}
 									</a>
 								</Table.Cell>
 								<Table.Cell></Table.Cell>
-								<Table.Cell class="text-sm text-muted-foreground">{group.entries[0].comment ?? '—'}</Table.Cell>
+								<Table.Cell class="whitespace-normal break-words text-sm text-muted-foreground">{group.entries[0].comment ?? '—'}</Table.Cell>
 								<Table.Cell></Table.Cell>
 							</Table.Row>
 							{#each group.entries as loc}
@@ -332,10 +333,10 @@
 		</div>
 	{:else}
 		<div class="rounded-lg border">
-			<Table.Root>
+			<Table.Root class="table-fixed">
 				<Table.Header>
 					<Table.Row>
-						<Table.Head class="max-w-xs">Key</Table.Head>
+						<Table.Head class="w-80">Key</Table.Head>
 						<Table.Head>Comment</Table.Head>
 						<Table.Head class="w-28">Updated</Table.Head>
 					</Table.Row>
@@ -343,19 +344,19 @@
 				<Table.Body>
 					{#each strings.data?.items ?? [] as str}
 						<Table.Row class={str.should_translate ? 'cursor-pointer hover:bg-muted/50' : 'opacity-50'}>
-							<Table.Cell>
+							<Table.Cell class="whitespace-normal">
 								{#if str.should_translate}
-									<a href="/projects/{projectId}/strings/{str.id}" class="block font-mono text-xs font-medium hover:underline">
+									<a href="/projects/{projectId}/strings/{str.id}" class="block break-all font-mono text-xs font-medium hover:underline">
 										{str.key}
 									</a>
 								{:else}
 									<div class="flex items-center gap-2">
-										<span class="font-mono text-xs font-medium">{str.key}</span>
+										<span class="break-all font-mono text-xs font-medium">{str.key}</span>
 										<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">do not translate</span>
 									</div>
 								{/if}
 							</Table.Cell>
-							<Table.Cell class="max-w-xs truncate text-sm text-muted-foreground">{str.comment ?? '—'}</Table.Cell>
+							<Table.Cell class="whitespace-normal break-words text-sm text-muted-foreground">{str.comment ?? '—'}</Table.Cell>
 							<Table.Cell class="text-xs text-muted-foreground">{new Date(str.updated_at).toLocaleDateString()}</Table.Cell>
 						</Table.Row>
 					{/each}
