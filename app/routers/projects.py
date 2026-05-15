@@ -294,6 +294,16 @@ async def remove_language(
     if pl is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
     await db.delete(pl)
+    await db.execute(
+        text("""
+            DELETE FROM localizations
+            WHERE language = :language
+            AND string_key_id IN (
+                SELECT id FROM string_keys WHERE project_id = :project_id
+            )
+        """),
+        {"language": language, "project_id": project_id},
+    )
 
 
 @router.get("/{project_id}/languages/{language}/localizations", response_model=list[LocalizationWithKeyResponse])
