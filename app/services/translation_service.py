@@ -27,7 +27,7 @@ async def translate_with_deepl(source_lang: str, target_lang: str, texts: list[s
             batch = texts[i : i + 50]
             resp = await client.post(
                 f"{settings.deepl_api_base}/translate",
-                headers={"DeepL-Auth-Key": key.get_secret_value()},
+                headers={"Authorization": "DeepL-Auth-Key " + key.get_secret_value()},
                 json={"text": batch, "source_lang": src, "target_lang": tgt},
             )
             if resp.status_code != 200:
@@ -48,28 +48,27 @@ async def translate_with_llm(
     if not key:
         raise RuntimeError("LLM_NOT_CONFIGURED")
 
-    # Include developer comments as context when available
+    # Always send texts as a plain string array; put comments in the system prompt
+    # to avoid the model mirroring an object input format back in its response.
+    payload = json.dumps(texts, ensure_ascii=False)
+
     has_comments = comments and any(c for c in comments)
     if has_comments:
-        items = [
-            {"text": t, "comment": c} if c else {"text": t}
-            for t, c in zip(texts, comments)
-        ]
-        payload = json.dumps(items, ensure_ascii=False)
+        notes = "\n".join(
+            f"  [{i}] {c}" for i, c in enumerate(comments) if c
+        )
         system_prompt = (
             f"You are a professional app localizer. Translate the following JSON array of UI strings "
             f"from '{source_lang}' to '{target_lang}'. "
-            "Each item has a 'text' field to translate and an optional 'comment' field with developer context — "
-            "use the comment to inform the translation but do not translate it. "
-            "Return a JSON array of the same length containing only the translated strings in the same order. "
-            "Return only valid JSON, no explanation."
+            "Return a JSON array of strings of the same length in the same order. "
+            "Return only valid JSON, no explanation.\n\n"
+            f"Developer notes for some strings (use as context, do not translate):\n{notes}"
         )
     else:
-        payload = json.dumps(texts, ensure_ascii=False)
         system_prompt = (
             f"You are a professional app localizer. Translate the following JSON array of UI strings "
             f"from '{source_lang}' to '{target_lang}'. "
-            "Return a JSON array of the same length with translated strings in the same order. "
+            "Return a JSON array of strings of the same length in the same order. "
             "Return only valid JSON, no explanation."
         )
 
