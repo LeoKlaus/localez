@@ -70,7 +70,24 @@
 	<!-- Sidebar (desktop) -->
 	<aside class="hidden w-56 flex-shrink-0 flex-col border-r bg-card md:flex md:sticky md:top-0 md:h-screen">
 		<div class="flex h-14 items-center border-b px-4">
-			<span class="font-bold tracking-tight">Localez</span>
+			{#if activeProjectId && activeProject.data}
+				{@const p = activeProject.data}
+				<a href="/projects/{p.id}" class="flex min-w-0 items-center gap-2">
+					{#if p.has_icon}
+						<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-7 rounded-md object-cover" />
+					{:else if p.accent_color}
+						<div
+							class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
+							style="background-color: {p.accent_color}"
+						>
+							{p.name.trim()[0]?.toUpperCase() ?? '?'}
+						</div>
+					{/if}
+					<span class="truncate font-bold tracking-tight">{p.name}</span>
+				</a>
+			{:else}
+				<span class="font-bold tracking-tight">Localez</span>
+			{/if}
 		</div>
 		<nav class="flex flex-1 flex-col gap-1 p-2">
 			{#each navItems as item}
