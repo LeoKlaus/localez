@@ -4,6 +4,7 @@ type MeResponse = components['schemas']['MeResponse'];
 
 const ACCESS_TOKEN_KEY = 'lz_access';
 const REFRESH_TOKEN_KEY = 'lz_refresh';
+const USER_KEY = 'lz_user';
 
 function createAuth() {
 	let accessToken = $state<string | null>(null);
@@ -11,8 +12,12 @@ function createAuth() {
 
 	function init() {
 		if (typeof localStorage === 'undefined') return;
-		const stored = localStorage.getItem(ACCESS_TOKEN_KEY);
-		if (stored) accessToken = stored;
+		const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+		if (storedToken) accessToken = storedToken;
+		const storedUser = localStorage.getItem(USER_KEY);
+		if (storedUser) {
+			try { user = JSON.parse(storedUser); } catch { /* ignore */ }
+		}
 	}
 
 	function setTokens(access: string, refresh: string) {
@@ -26,6 +31,7 @@ function createAuth() {
 		user = null;
 		localStorage.removeItem(ACCESS_TOKEN_KEY);
 		localStorage.removeItem(REFRESH_TOKEN_KEY);
+		localStorage.removeItem(USER_KEY);
 	}
 
 	return {
@@ -35,7 +41,11 @@ function createAuth() {
 			return localStorage.getItem(REFRESH_TOKEN_KEY);
 		},
 		get user() { return user; },
-		set user(u: MeResponse | null) { user = u; },
+		set user(u: MeResponse | null) {
+			user = u;
+			if (u) localStorage.setItem(USER_KEY, JSON.stringify(u));
+			else localStorage.removeItem(USER_KEY);
+		},
 		get isAuthenticated() { return !!accessToken; },
 		get isAdmin() { return user?.global_role === 'admin'; },
 		get totpEnabled() { return user?.totp_enabled ?? false; },
