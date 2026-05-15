@@ -257,7 +257,7 @@
 			<div class="divide-y rounded-lg border">
 				{#each stats.data!.languages as lang}
 					{@const total = lang.translated + lang.needs_review + lang.missing}
-					<div class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50">
+					<div class="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/50 md:py-3">
 						<a
 							href="/projects/{p.id}/strings?language={lang.language}"
 							class="flex flex-1 items-center gap-4"
@@ -271,16 +271,18 @@
 								{/if}
 							</div>
 
-							<span class="text-right text-xs text-muted-foreground">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
+							<span class="hidden text-right text-xs text-muted-foreground sm:inline">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
+							<span class="text-right text-xs text-muted-foreground sm:hidden">{pct(lang.translated, total)}%</span>
 						</a>
-						{#if auth.isAuthenticated}
+						{#if auth.isAdmin}
 							<Button
 								variant="ghost"
 								size="icon"
-								class="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+								class="size-9 shrink-0 text-muted-foreground hover:text-destructive md:size-7"
 								onclick={() => deleteLanguage.mutate(lang.language)}
 							>
-								<Trash2 size={14} />
+								<Trash2 size={16} class="md:hidden" />
+								<Trash2 size={14} class="hidden md:block" />
 							</Button>
 						{/if}
 					</div>
