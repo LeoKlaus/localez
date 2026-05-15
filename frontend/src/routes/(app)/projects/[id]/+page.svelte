@@ -19,6 +19,7 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import Download from 'lucide-svelte/icons/download';
 	import Upload from 'lucide-svelte/icons/upload';
+	import ClipboardCheck from 'lucide-svelte/icons/clipboard-check';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
@@ -260,6 +261,9 @@
 			</div>
 			{#if auth.isAdmin}
 				<div class="flex flex-wrap gap-2">
+					<Button variant="outline" size="sm" href="/projects/{p.id}/review">
+						<ClipboardCheck size={14} class="mr-1" /> Review
+					</Button>
 					<Button variant="outline" size="sm" onclick={openEdit}>
 						<Pencil size={14} class="mr-1" /> Edit
 					</Button>
