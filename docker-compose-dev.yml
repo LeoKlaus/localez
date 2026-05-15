@@ -22,5 +22,15 @@ services:
     ports:
       - "8000:8000"
 
+  frontend:
+    build: frontend/.
+    pull_policy: build
+    volumes:
+      - ./legal/:/app/static/legal/
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
 #volumes:
 #  postgres_data:
