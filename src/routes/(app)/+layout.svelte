@@ -129,6 +129,10 @@
 		</nav>
 
 		<div class="border-t p-2">
+			<div class="mb-2 flex gap-3 px-3 text-xs text-muted-foreground">
+				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
+			</div>
 			{#if auth.isAuthenticated}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger
@@ -175,6 +179,10 @@
 
 		<!-- Mobile bottom tab bar -->
 		<nav class="fixed bottom-0 left-0 right-0 z-30 border-t bg-card md:hidden">
+			<div class="flex justify-center gap-4 border-b px-4 py-1 text-xs text-muted-foreground">
+				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
+			</div>
 			<div class="flex">
 				{#each navItems as item}
 					<a
@@ -232,7 +240,7 @@
 			</div>
 		</nav>
 
-		<main class="flex-1 overflow-auto pb-16 md:pb-0">
+		<main class="flex-1 overflow-auto pb-24 md:pb-0">
 			{@render children()}
 		</main>
 	</div>

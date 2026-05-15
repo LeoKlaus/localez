@@ -40,10 +40,12 @@
 	},
 	"dependencies": {
 		"@simplewebauthn/browser": "^13.3.0",
+		"@tailwindcss/typography": "^0.5.19",
 		"@tanstack/svelte-query": "^6.1.29",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"lucide-svelte": "^1.0.1",
+		"marked": "^18.0.3",
 		"openapi-fetch": "^0.17.0",
 		"otpauth": "^9.5.1",
 		"qrcode": "^1.5.4",

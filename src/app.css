@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin "@tailwindcss/typography";
 
 /* Map CSS custom properties to Tailwind v4 color tokens */
 @theme inline {
