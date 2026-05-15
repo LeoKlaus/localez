@@ -163,10 +163,10 @@
 
 	<div class="flex flex-1 flex-col">
 		<!-- Mobile header -->
-		<header class="flex h-14 items-center border-b px-4 md:hidden">
+		<header class="flex h-14 items-center justify-between border-b px-4 md:hidden">
 			{#if activeProjectId && activeProject.data}
 				{@const p = activeProject.data}
-				<a href="/projects/{p.id}" class="flex items-center gap-2 min-w-0">
+				<a href="/projects/{p.id}" class="flex min-w-0 items-center gap-2">
 					{#if p.has_icon}
 						<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-7 rounded-md object-cover" />
 					{/if}
@@ -175,14 +175,14 @@
 			{:else}
 				<span class="font-bold">Localez</span>
 			{/if}
+			<div class="flex gap-3 text-xs text-muted-foreground">
+				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
+			</div>
 		</header>
 
 		<!-- Mobile bottom tab bar -->
 		<nav class="fixed bottom-0 left-0 right-0 z-30 border-t bg-card md:hidden">
-			<div class="flex justify-center gap-4 border-b px-4 py-1 text-xs text-muted-foreground">
-				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
-				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
-			</div>
 			<div class="flex">
 				{#each navItems as item}
 					<a
@@ -240,7 +240,7 @@
 			</div>
 		</nav>
 
-		<main class="flex-1 overflow-auto pb-24 md:pb-0">
+		<main class="flex-1 overflow-auto pb-16 md:pb-0">
 			{@render children()}
 		</main>
 	</div>
