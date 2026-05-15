@@ -2,6 +2,23 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+
+function requireLegalFiles(): import('vite').Plugin {
+	return {
+		name: 'require-legal-files',
+		buildStart() {
+			const privacy = resolve('static/legal/privacy.md');
+			if (!existsSync(privacy)) {
+				throw new Error(
+					'[localez] Missing required file: static/legal/privacy.md\n' +
+					'Create this file with your privacy policy before starting the server.'
+				);
+			}
+		}
+	};
+}
 
 export default defineConfig({
 	server: {
@@ -10,6 +27,7 @@ export default defineConfig({
 		}
 	},
 	plugins: [
+		requireLegalFiles(),
 		tailwindcss(),
 		sveltekit(),
 		SvelteKitPWA({
