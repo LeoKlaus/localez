@@ -27,6 +27,14 @@ async def get_me(user: User = Depends(get_current_active_user), db: AsyncSession
     )
 
 
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.delete(user)
+
+
 @router.patch("/me", response_model=UserResponse)
 async def update_password(
     body: UpdatePasswordRequest,
