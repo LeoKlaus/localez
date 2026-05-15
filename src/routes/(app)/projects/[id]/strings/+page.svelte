@@ -194,7 +194,24 @@
 				value={drafts[loc.id] ?? ''}
 				oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
 				onblur={() => submitProposal(loc)}
-				onkeydown={(e) => { if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+				onkeydown={(e) => {
+					if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); return; }
+					if (e.key === 'Enter') {
+						if (e.shiftKey || e.altKey) {
+							e.preventDefault();
+							const el = e.currentTarget;
+							const start = el.selectionStart ?? 0;
+							const end = el.selectionEnd ?? 0;
+							const val = drafts[loc.id] ?? '';
+							drafts[loc.id] = val.slice(0, start) + '\n' + val.slice(end);
+							// restore cursor after Svelte re-renders
+							requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 1; });
+						} else {
+							e.preventDefault();
+							e.currentTarget.blur();
+						}
+					}
+				}}
 			></textarea>
 		</div>
 	{:else}
