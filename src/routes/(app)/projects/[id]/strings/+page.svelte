@@ -289,6 +289,9 @@
 									<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block break-all font-mono text-xs font-medium hover:underline">
 										{loc.key}
 									</a>
+									{#if loc.source_value && loc.source_value !== loc.key}
+										<p class="mt-0.5 break-words text-xs text-muted-foreground">{loc.source_value}</p>
+									{/if}
 								</Table.Cell>
 								{@render translationCell(loc)}
 								<Table.Cell class="whitespace-normal break-words text-sm text-muted-foreground">{loc.comment ?? '—'}</Table.Cell>
@@ -302,6 +305,10 @@
 									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="break-all font-mono text-xs font-medium hover:underline">
 										{group.key}
 									</a>
+									{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
+									{#if anySource}
+										<p class="mt-0.5 break-words text-xs text-muted-foreground">{anySource}</p>
+									{/if}
 								</Table.Cell>
 								<Table.Cell></Table.Cell>
 								<Table.Cell class="whitespace-normal break-words text-sm text-muted-foreground">{group.entries[0].comment ?? '—'}</Table.Cell>

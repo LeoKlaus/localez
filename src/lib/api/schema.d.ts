@@ -673,6 +673,8 @@ export interface components {
             key: string;
             /** Comment */
             comment: string | null;
+            /** Source Value */
+            source_value: string | null;
         };
         /** MeResponse */
         MeResponse: {
