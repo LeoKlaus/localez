@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -17,6 +18,8 @@
 	type LocalizationState = components['schemas']['LocalizationState'];
 	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
 	type ProposalResponse = components['schemas']['ProposalResponse'];
+
+	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
 	const qc = useQueryClient();
 	const LIMIT = 50;
@@ -80,6 +83,14 @@
 	}));
 
 	function resetPagination() { offset = 0; }
+
+	onMount(() => {
+		if (language) {
+			prefillStore.watch(projectId, language, BASE_URL, auth.accessToken, () => {
+				qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
+			});
+		}
+	});
 
 	let isPending = $derived(language ? langStrings.isPending : strings.isPending);
 	let isError = $derived(language ? langStrings.isError : strings.isError);

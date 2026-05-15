@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { prefillStore } from '$lib/stores/prefill.svelte';
 	import { client } from '$lib/api/client';
@@ -134,45 +135,17 @@
 	let newLanguage = $state('');
 	let addLangError = $state('');
 
-	async function watchPrefill(language: string) {
-		prefillStore.set(projectId, language, { running: true, message: `Generating AI suggestions for ${language}…` });
-		try {
-			const res = await fetch(
-				`${BASE_URL}/api/projects/${projectId}/languages/${language}/prefill/stream`,
-				{ headers: auth.accessToken ? { Authorization: `Bearer ${auth.accessToken}` } : {} }
-			);
-			if (!res.ok || !res.body) return;
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
-			let buffer = '';
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop() ?? '';
-				for (const line of lines) {
-					if (!line.startsWith('data:')) continue;
-					const payload = JSON.parse(line.slice(5).trim());
-					if (payload.status === 'ready' && payload.filled > 0) {
-						prefillStore.set(projectId, language, {
-							running: false,
-							message: `${payload.filled} AI suggestion${payload.filled !== 1 ? 's' : ''} generated for ${language}.`
-						});
-						qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
-					} else {
-						prefillStore.clear(projectId, language);
-					}
-					return;
-				}
-			}
-		} catch {
-			// silent — prefill is best-effort
-		} finally {
-			const entry = prefillStore.get(projectId, language);
-			if (entry?.running) prefillStore.clear(projectId, language);
-		}
+	function watchPrefill(language: string) {
+		prefillStore.watch(projectId, language, BASE_URL, auth.accessToken, () => {
+			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
+		});
 	}
+
+	onMount(() => {
+		for (const lang of prefillStore.pendingLanguages(projectId)) {
+			watchPrefill(lang);
+		}
+	});
 
 	const addLanguage = createMutation(() => ({
 		mutationFn: async () => {
