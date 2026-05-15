@@ -177,63 +177,66 @@
 	};
 </script>
 
-{#snippet translationCell(loc: LocalizationWithKey)}
+<!-- Shared translation input: mirror overlay + textarea + placeholder chips + proposals -->
+{#snippet translationInput(loc: LocalizationWithKey)}
 	{@const placeholders = extractPlaceholders(loc.key)}
-	<Table.Cell class="whitespace-normal">
-		{#if auth.isAuthenticated}
-			<div class="relative">
-				<!-- In-flow mirror determines row height and renders placeholder highlights -->
-				<div
-					aria-hidden="true"
-					class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
-				>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
-				<!-- Textarea overlaid on mirror, text transparent so mirror shows through -->
-				<textarea
-					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
-					style="resize: none; caret-color: hsl(var(--foreground))"
-					placeholder="Enter translation…"
-					disabled={submitting[loc.id]}
-					value={drafts[loc.id] ?? ''}
-					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-					onblur={() => submitProposal(loc)}
-					onkeydown={(e) => { if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
-				></textarea>
-			</div>
-		{:else}
-			<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
-		{/if}
-		{#if placeholders.length > 0}
-			<div class="mt-1 flex flex-wrap items-center gap-1 pl-1">
-				<span class="text-xs text-muted-foreground">Placeholders:</span>
-				{#each placeholders as ph}
-					<span class="flex items-center gap-0.5">
-						<button
-							type="button"
-							class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
-							onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = (drafts[loc.id] ?? '') + ph; }}
-							title="Click to insert into translation"
-						>{ph}</button>
-						<span class="text-xs text-muted-foreground">{placeholderLabel(ph)}</span>
-					</span>
-				{/each}
-			</div>
-		{/if}
-		{#if auth.isAuthenticated}
-			{#each proposalsByLocId.get(loc.id) ?? [] as proposal}
-				<button
-					type="button"
-					class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
-					onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = proposal.proposed_value; }}
-				>
-					<span class="shrink-0 text-muted-foreground/50">↳</span>
-					<span class="break-words">{proposal.proposed_value}</span>
-				</button>
+	{#if auth.isAuthenticated}
+		<div class="relative">
+			<div
+				aria-hidden="true"
+				class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
+			>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+			<textarea
+				class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+				style="resize: none; caret-color: hsl(var(--foreground))"
+				placeholder="Enter translation…"
+				disabled={submitting[loc.id]}
+				value={drafts[loc.id] ?? ''}
+				oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+				onblur={() => submitProposal(loc)}
+				onkeydown={(e) => { if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); } }}
+			></textarea>
+		</div>
+	{:else}
+		<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
+	{/if}
+	{#if placeholders.length > 0}
+		<div class="mt-1 flex flex-wrap items-center gap-1 pl-1">
+			<span class="text-xs text-muted-foreground">Placeholders:</span>
+			{#each placeholders as ph}
+				<span class="flex items-center gap-0.5">
+					<button
+						type="button"
+						class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
+						onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = (drafts[loc.id] ?? '') + ph; }}
+						title="Click to insert into translation"
+					>{ph}</button>
+					<span class="text-xs text-muted-foreground">{placeholderLabel(ph)}</span>
+				</span>
 			{/each}
-		{/if}
+		</div>
+	{/if}
+	{#if auth.isAuthenticated}
+		{#each proposalsByLocId.get(loc.id) ?? [] as proposal}
+			<button
+				type="button"
+				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
+				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = proposal.proposed_value; }}
+			>
+				<span class="shrink-0 text-muted-foreground/50">↳</span>
+				<span class="break-words">{proposal.proposed_value}</span>
+			</button>
+		{/each}
+	{/if}
+{/snippet}
+
+{#snippet translationCell(loc: LocalizationWithKey)}
+	<Table.Cell class="whitespace-normal">
+		{@render translationInput(loc)}
 	</Table.Cell>
 {/snippet}
 
-<div class="p-6">
+<div class="p-4 md:p-6">
 	<div class="mb-4">
 		<a href="/projects/{projectId}" class="text-sm text-muted-foreground hover:underline">
 			← Back to project
@@ -270,7 +273,66 @@
 	{:else if isError}
 		<p class="text-destructive">Failed to load strings.</p>
 	{:else if language}
-		<div class="rounded-lg border">
+
+		<!-- Mobile cards -->
+		<div class="space-y-3 md:hidden">
+			{#each grouped as group}
+				{#if group.entries.length === 1 && group.entries[0].variation_type === 'none'}
+					{@const loc = group.entries[0]}
+					<div class="rounded-lg border p-4 space-y-3">
+						<div class="flex items-start justify-between gap-2">
+							<div class="min-w-0 flex-1">
+								<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block break-all font-mono text-xs font-medium hover:underline">
+									{loc.key}
+								</a>
+								{#if loc.source_value && loc.source_value !== loc.key}
+									<p class="mt-0.5 break-words text-xs text-muted-foreground">
+										<span class="font-medium">Source:</span> {loc.source_value}
+									</p>
+								{/if}
+								{#if loc.comment}
+									<p class="mt-1 break-words text-xs text-muted-foreground">{loc.comment}</p>
+								{/if}
+							</div>
+							<span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
+						</div>
+						{@render translationInput(loc)}
+					</div>
+				{:else}
+					{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
+					<div class="rounded-lg border">
+						<div class="border-b bg-muted/30 px-4 py-3">
+							<a href="/projects/{projectId}/strings/{group.string_key_id}" class="block break-all font-mono text-xs font-medium hover:underline">
+								{group.key}
+							</a>
+							{#if anySource}
+								<p class="mt-0.5 break-words text-xs text-muted-foreground">
+									<span class="font-medium">Source:</span> {anySource}
+								</p>
+							{/if}
+							{#if group.entries[0].comment}
+								<p class="mt-1 break-words text-xs text-muted-foreground">{group.entries[0].comment}</p>
+							{/if}
+						</div>
+						{#each group.entries as loc}
+							<div class="space-y-2 border-b px-4 py-3 last:border-b-0">
+								<div class="flex items-center justify-between gap-2">
+									<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
+									<span class="rounded-full px-2 py-0.5 text-xs font-medium {stateColors[loc.state]}">{loc.state.replace('_', ' ')}</span>
+								</div>
+								{@render translationInput(loc)}
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{/each}
+			{#if grouped.length === 0}
+				<p class="py-12 text-center text-muted-foreground">No translations found.</p>
+			{/if}
+		</div>
+
+		<!-- Desktop table -->
+		<div class="hidden rounded-lg border md:block">
 			<Table.Root class="table-fixed">
 				<Table.Header>
 					<Table.Row>
@@ -342,8 +404,36 @@
 				</Table.Body>
 			</Table.Root>
 		</div>
+
 	{:else}
-		<div class="rounded-lg border">
+
+		<!-- Mobile cards -->
+		<div class="space-y-2 md:hidden">
+			{#each strings.data?.items ?? [] as str}
+				{#if str.should_translate}
+					<a href="/projects/{projectId}/strings/{str.id}" class="block rounded-lg border p-4 hover:bg-muted/50">
+						<span class="block break-all font-mono text-xs font-medium">{str.key}</span>
+						{#if str.comment}
+							<p class="mt-1 break-words text-xs text-muted-foreground">{str.comment}</p>
+						{/if}
+						<p class="mt-1 text-xs text-muted-foreground">{new Date(str.updated_at).toLocaleDateString()}</p>
+					</a>
+				{:else}
+					<div class="rounded-lg border p-4 opacity-50">
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="break-all font-mono text-xs font-medium">{str.key}</span>
+							<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">do not translate</span>
+						</div>
+					</div>
+				{/if}
+			{/each}
+			{#if (strings.data?.items.length ?? 0) === 0}
+				<p class="py-12 text-center text-muted-foreground">No strings match your filters.</p>
+			{/if}
+		</div>
+
+		<!-- Desktop table -->
+		<div class="hidden rounded-lg border md:block">
 			<Table.Root class="table-fixed">
 				<Table.Header>
 					<Table.Row>
@@ -381,6 +471,7 @@
 				</Table.Body>
 			</Table.Root>
 		</div>
+
 	{/if}
 
 	<div class="mt-4 flex items-center justify-between text-sm text-muted-foreground">
