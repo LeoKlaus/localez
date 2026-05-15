@@ -290,7 +290,9 @@
 										{loc.key}
 									</a>
 									{#if loc.source_value && loc.source_value !== loc.key}
-										<p class="mt-0.5 break-words text-xs text-muted-foreground">{loc.source_value}</p>
+										<p class="mt-0.5 break-words text-xs text-muted-foreground">
+											<span class="font-medium">Source:</span> {loc.source_value}
+										</p>
 									{/if}
 								</Table.Cell>
 								{@render translationCell(loc)}
@@ -307,7 +309,9 @@
 									</a>
 									{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
 									{#if anySource}
-										<p class="mt-0.5 break-words text-xs text-muted-foreground">{anySource}</p>
+										<p class="mt-0.5 break-words text-xs text-muted-foreground">
+											<span class="font-medium">Source:</span> {anySource}
+										</p>
 									{/if}
 								</Table.Cell>
 								<Table.Cell></Table.Cell>
