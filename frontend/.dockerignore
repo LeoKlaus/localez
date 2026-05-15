@@ -3,3 +3,5 @@ build
 .svelte-kit
 .env
 *.local
+static/legal/privacy.md
+static/legal/imprint.md

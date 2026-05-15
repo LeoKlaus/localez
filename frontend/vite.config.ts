@@ -8,12 +8,14 @@ import { resolve } from 'path';
 function requireLegalFiles(): import('vite').Plugin {
 	return {
 		name: 'require-legal-files',
-		buildStart() {
+		// configureServer only runs in dev — production builds always succeed.
+		// The container entrypoint handles the runtime check.
+		configureServer() {
 			const privacy = resolve('static/legal/privacy.md');
 			if (!existsSync(privacy)) {
 				throw new Error(
 					'[localez] Missing required file: static/legal/privacy.md\n' +
-					'Create this file with your privacy policy before starting the server.'
+					'Create this file with your privacy policy before starting the dev server.'
 				);
 			}
 		}

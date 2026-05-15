@@ -26,7 +26,7 @@ services:
     build: frontend/.
     pull_policy: build
     volumes:
-      - ./legal/:/app/static/legal/
+      - ./legal:/usr/share/nginx/html/legal
     depends_on:
       - api
     ports:
