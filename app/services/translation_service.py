@@ -38,19 +38,40 @@ async def translate_with_deepl(source_lang: str, target_lang: str, texts: list[s
     return results
 
 
-async def translate_with_llm(source_lang: str, target_lang: str, texts: list[str]) -> list[str]:
+async def translate_with_llm(
+    source_lang: str,
+    target_lang: str,
+    texts: list[str],
+    comments: list[str | None] | None = None,
+) -> list[str]:
     key = settings.llm_api_key
     if not key:
         raise RuntimeError("LLM_NOT_CONFIGURED")
 
-    # Send texts as a JSON array; ask LLM to return a same-length JSON array
-    payload = json.dumps(texts, ensure_ascii=False)
-    system_prompt = (
-        f"You are a professional app localizer. Translate the following JSON array of UI strings "
-        f"from '{source_lang}' to '{target_lang}'. "
-        "Return a JSON array of the same length with translated strings in the same order. "
-        "Return only valid JSON, no explanation."
-    )
+    # Include developer comments as context when available
+    has_comments = comments and any(c for c in comments)
+    if has_comments:
+        items = [
+            {"text": t, "comment": c} if c else {"text": t}
+            for t, c in zip(texts, comments)
+        ]
+        payload = json.dumps(items, ensure_ascii=False)
+        system_prompt = (
+            f"You are a professional app localizer. Translate the following JSON array of UI strings "
+            f"from '{source_lang}' to '{target_lang}'. "
+            "Each item has a 'text' field to translate and an optional 'comment' field with developer context — "
+            "use the comment to inform the translation but do not translate it. "
+            "Return a JSON array of the same length containing only the translated strings in the same order. "
+            "Return only valid JSON, no explanation."
+        )
+    else:
+        payload = json.dumps(texts, ensure_ascii=False)
+        system_prompt = (
+            f"You are a professional app localizer. Translate the following JSON array of UI strings "
+            f"from '{source_lang}' to '{target_lang}'. "
+            "Return a JSON array of the same length with translated strings in the same order. "
+            "Return only valid JSON, no explanation."
+        )
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
@@ -83,10 +104,16 @@ async def translate_with_llm(source_lang: str, target_lang: str, texts: list[str
     return [str(t) for t in translated]
 
 
-async def prefill(source_lang: str, target_lang: str, texts: list[str], provider: str) -> list[str]:
+async def prefill(
+    source_lang: str,
+    target_lang: str,
+    texts: list[str],
+    provider: str,
+    comments: list[str | None] | None = None,
+) -> list[str]:
     if provider == "deepl":
         return await translate_with_deepl(source_lang, target_lang, texts)
     elif provider == "llm":
-        return await translate_with_llm(source_lang, target_lang, texts)
+        return await translate_with_llm(source_lang, target_lang, texts, comments)
     else:
         raise ValueError(f"Unknown provider: {provider}")

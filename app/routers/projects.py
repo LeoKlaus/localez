@@ -62,7 +62,7 @@ async def _run_prefill(
 
     SourceLoc = aliased(Localization)
     rows = (await db.execute(
-        select(Localization, SourceLoc.value.label("source_value"))
+        select(Localization, SourceLoc.value.label("source_value"), StringKey.comment)
         .join(StringKey, StringKey.id == Localization.string_key_id)
         .outerjoin(SourceLoc, (
             (SourceLoc.string_key_id == Localization.string_key_id) &
@@ -78,17 +78,18 @@ async def _run_prefill(
         )
     )).all()
 
-    to_translate = [(loc, src) for loc, src in rows if src]
+    to_translate = [(loc, src, comment) for loc, src, comment in rows if src]
     skipped = len(rows) - len(to_translate)
 
     if not to_translate:
         return 0, skipped
 
-    source_texts = [src for _, src in to_translate]
-    locs = [loc for loc, _ in to_translate]
+    source_texts = [src for _, src, _ in to_translate]
+    comments = [comment for _, _, comment in to_translate]
+    locs = [loc for loc, _, _ in to_translate]
 
     try:
-        translations = await translation_service.prefill(source_lang, target_lang, source_texts, provider)
+        translations = await translation_service.prefill(source_lang, target_lang, source_texts, provider, comments)
     except Exception as exc:
         if raise_on_error:
             raise HTTPException(

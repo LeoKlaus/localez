@@ -1,4 +1,4 @@
-from pydantic import SecretStr
+from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,12 +15,20 @@ class Settings(BaseSettings):
     webauthn_rp_name: str = "Localez"
     webauthn_origin: str = "http://localhost:8000"
     recovery_word_list_path: str = "app/core/wordlist.txt"
-    prefill_provider: str | None = None
     deepl_api_key: SecretStr | None = None
     deepl_api_base: str = "https://api-free.deepl.com/v2"
     llm_api_key: SecretStr | None = None
     llm_api_base: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
+
+    @computed_field
+    @property
+    def prefill_provider(self) -> str | None:
+        if self.llm_api_key:
+            return "llm"
+        if self.deepl_api_key:
+            return "deepl"
+        return None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
