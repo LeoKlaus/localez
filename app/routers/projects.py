@@ -3,14 +3,14 @@ import uuid
 
 import io
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import Response as FastAPIResponse
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
 from app.config import settings
-from app.database import get_db
+from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
@@ -223,10 +223,18 @@ async def get_icon(
     return FastAPIResponse(content=project.icon, media_type="image/png")
 
 
+async def _run_prefill_background(
+    project_id: uuid.UUID, target_lang: str, source_lang: str, user_id: uuid.UUID
+) -> None:
+    async with create_db_session() as db:
+        await _run_prefill(project_id, target_lang, source_lang, user_id, db)
+
+
 @router.post("/{project_id}/languages", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def add_language(
     project_id: uuid.UUID,
     body: LanguageAdd,
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -240,8 +248,8 @@ async def add_language(
     db.add(ProjectLanguage(project_id=project_id, language=body.language))
     await db.flush()
     await fill_missing_localizations(project_id, db)
-    await _run_prefill(project_id, body.language, project.source_language, user.id, db)
-    db.expire(project)
+    await db.commit()
+    background_tasks.add_task(_run_prefill_background, project_id, body.language, project.source_language, user.id)
     project = await _get_project(project_id, db)
     return project
 
