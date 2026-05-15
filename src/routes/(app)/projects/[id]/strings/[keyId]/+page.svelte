@@ -245,8 +245,8 @@
 
 	{@const rejectProposal = createMutation(() => ({
 		mutationFn: async (proposalId: string) => {
-			const { error } = await client.POST(
-				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject',
+			const { error } = await client.DELETE(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}',
 				{
 					params: {
 						path: {

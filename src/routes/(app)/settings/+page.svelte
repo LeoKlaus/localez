@@ -105,6 +105,27 @@
 		}
 	}
 
+	// ── Delete account ──────────────────────────────────────────────────────
+	let deleteAccountOpen = $state(false);
+	let deleteAccountLoading = $state(false);
+	let deleteAccountError = $state('');
+
+	async function handleDeleteAccount() {
+		deleteAccountError = '';
+		deleteAccountLoading = true;
+		try {
+			const { error } = await client.DELETE('/api/users/me');
+			if (error) {
+				deleteAccountError = 'Failed to delete account.';
+				return;
+			}
+			auth.clear();
+			goto('/login');
+		} finally {
+			deleteAccountLoading = false;
+		}
+	}
+
 	// ── TOTP setup ───────────────────────────────────────────────────────────
 	let totpOpen = $state(false);
 	let totpQrDataUrl = $state('');
@@ -329,8 +350,46 @@
 				{/if}
 			</Card.Content>
 		</Card.Root>
+
+		<!-- Delete account -->
+		<Card.Root class="border-destructive/50">
+			<Card.Header>
+				<Card.Title class="text-destructive">Delete account</Card.Title>
+				<Card.Description>
+					Permanently delete your account. This cannot be undone.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				{#if deleteAccountError}
+					<Alert.Root variant="destructive" class="mb-4">
+						<Alert.Description>{deleteAccountError}</Alert.Description>
+					</Alert.Root>
+				{/if}
+				<Button variant="destructive" onclick={() => (deleteAccountOpen = true)}>
+					Delete account
+				</Button>
+			</Card.Content>
+		</Card.Root>
 	</div>
 </div>
+
+<!-- Delete account dialog -->
+<Dialog.Root bind:open={deleteAccountOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Delete account?</Dialog.Title>
+			<Dialog.Description>
+				This will permanently delete your account and all associated data. This cannot be undone.
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (deleteAccountOpen = false)}>Cancel</Button>
+			<Button variant="destructive" onclick={handleDeleteAccount} disabled={deleteAccountLoading}>
+				{deleteAccountLoading ? 'Deleting…' : 'Delete account'}
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <!-- TOTP setup dialog -->
 <Dialog.Root bind:open={totpOpen}>

@@ -168,7 +168,8 @@ export interface paths {
         get: operations["get_me_api_users_me_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Me */
+        delete: operations["delete_me_api_users_me_delete"];
         options?: never;
         head?: never;
         /** Update Password */
@@ -537,7 +538,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject": {
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -546,9 +547,9 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        post?: never;
         /** Reject Proposal */
-        post: operations["reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__reject_post"];
-        delete?: never;
+        delete: operations["reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1296,6 +1297,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
                 };
+            };
+        };
+    };
+    delete_me_api_users_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2192,7 +2211,7 @@ export interface operations {
             };
         };
     };
-    reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__reject_post: {
+    reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -2204,20 +2223,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ProposalReview"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["ProposalResponse"];
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
