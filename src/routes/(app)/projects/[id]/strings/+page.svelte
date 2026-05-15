@@ -299,7 +299,7 @@
 					<div class="rounded-lg border p-4 space-y-3">
 						<div class="flex items-start justify-between gap-2">
 							<div class="min-w-0 flex-1">
-								<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block break-all font-mono text-xs font-medium hover:underline">
+								<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block whitespace-pre-wrap break-all font-mono text-xs font-medium hover:underline">
 									{loc.key}
 								</a>
 								{#if loc.source_value && loc.source_value !== loc.key}
@@ -321,7 +321,7 @@
 					{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
 					<div class="rounded-lg border">
 						<div class="border-b bg-muted/30 px-4 py-3">
-							<a href="/projects/{projectId}/strings/{group.string_key_id}" class="block break-all font-mono text-xs font-medium hover:underline">
+							<a href="/projects/{projectId}/strings/{group.string_key_id}" class="block whitespace-pre-wrap break-all font-mono text-xs font-medium hover:underline">
 								{group.key}
 							</a>
 							{#if anySource}
@@ -369,7 +369,7 @@
 							{@const loc = group.entries[0]}
 							<Table.Row class="hover:bg-muted/50">
 								<Table.Cell class="whitespace-normal">
-									<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block break-all font-mono text-xs font-medium hover:underline">
+									<a href="/projects/{projectId}/strings/{loc.string_key_id}?language={language}" class="block whitespace-pre-wrap break-all font-mono text-xs font-medium hover:underline">
 										{loc.key}
 									</a>
 									{#if loc.source_value && loc.source_value !== loc.key}
@@ -387,7 +387,7 @@
 						{:else}
 							<Table.Row class="bg-muted/30 hover:bg-muted/50">
 								<Table.Cell class="whitespace-normal">
-									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="break-all font-mono text-xs font-medium hover:underline">
+									<a href="/projects/{projectId}/strings/{group.string_key_id}" class="whitespace-pre-wrap break-all font-mono text-xs font-medium hover:underline">
 										{group.key}
 									</a>
 									{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
@@ -442,7 +442,7 @@
 				{:else}
 					<div class="rounded-lg border p-4 opacity-50">
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="break-all font-mono text-xs font-medium">{str.key}</span>
+							<span class="whitespace-pre-wrap break-all font-mono text-xs font-medium">{str.key}</span>
 							<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">do not translate</span>
 						</div>
 					</div>
@@ -468,12 +468,12 @@
 						<Table.Row class={str.should_translate ? 'cursor-pointer hover:bg-muted/50' : 'opacity-50'}>
 							<Table.Cell class="whitespace-normal">
 								{#if str.should_translate}
-									<a href="/projects/{projectId}/strings/{str.id}" class="block break-all font-mono text-xs font-medium hover:underline">
+									<a href="/projects/{projectId}/strings/{str.id}" class="block whitespace-pre-wrap break-all font-mono text-xs font-medium hover:underline">
 										{str.key}
 									</a>
 								{:else}
 									<div class="flex items-center gap-2">
-										<span class="break-all font-mono text-xs font-medium">{str.key}</span>
+										<span class="whitespace-pre-wrap break-all font-mono text-xs font-medium">{str.key}</span>
 										<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">do not translate</span>
 									</div>
 								{/if}

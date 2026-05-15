@@ -115,7 +115,7 @@
 	{:else if stringDetail.data}
 		{@const str = stringDetail.data}
 		<div class="mb-6">
-			<h1 class="font-mono text-xl font-bold">{str.key}</h1>
+			<h1 class="whitespace-pre-wrap break-all font-mono text-xl font-bold">{str.key}</h1>
 			{#if str.comment}
 				<p class="mt-1 text-sm text-muted-foreground">{str.comment}</p>
 			{/if}
