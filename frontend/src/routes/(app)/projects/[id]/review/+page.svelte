@@ -14,6 +14,10 @@
 	import Check from 'lucide-svelte/icons/check';
 	import X from 'lucide-svelte/icons/x';
 
+	function pct(n: number, total: number) {
+		return total === 0 ? 0 : Math.round((n / total) * 100);
+	}
+
 	type ProposalResponse = components['schemas']['ProposalResponse'];
 
 	let projectId = $derived($page.params.id as string);
@@ -176,16 +180,29 @@
 					<p>All caught up — no strings are pending review.</p>
 				</div>
 			{:else}
-				<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				<div class="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
+					<span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm bg-green-500"></span>Translated</span>
+					<span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm bg-yellow-400"></span>Needs review</span>
+					<span class="flex items-center gap-1.5"><span class="inline-block h-2 w-2 rounded-sm bg-muted-foreground/25"></span>Missing</span>
+				</div>
+				<div class="divide-y rounded-lg border">
 					{#each reviewable as lang}
+						{@const total = lang.translated + lang.needs_review + lang.missing}
 						<button
 							onclick={() => selectLanguage(lang.language)}
-							class="rounded-lg border bg-card p-4 text-left transition-shadow hover:shadow-md"
+							class="flex w-full items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/50 md:py-3"
 						>
-							<div class="font-mono text-base font-semibold">{lang.language}</div>
-							<div class="mt-1 text-sm text-yellow-600 dark:text-yellow-400">
-								{lang.needs_review} pending review
+							<span class="w-12 font-mono text-sm font-medium">{lang.language}</span>
+
+							<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
+								{#if total > 0}
+									<div class="h-full bg-green-500 transition-all" style="width: {pct(lang.translated, total)}%"></div>
+									<div class="h-full bg-yellow-400 transition-all" style="width: {pct(lang.needs_review, total)}%"></div>
+								{/if}
 							</div>
+
+							<span class="hidden text-right text-xs text-muted-foreground sm:inline">{lang.needs_review} pending review</span>
+							<span class="text-right text-xs text-yellow-600 dark:text-yellow-400 sm:hidden">{lang.needs_review}</span>
 						</button>
 					{/each}
 				</div>
