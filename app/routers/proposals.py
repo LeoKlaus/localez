@@ -11,7 +11,7 @@ from app.models.localization import Localization
 from app.models.string_key import StringKey
 from app.models.translation_proposal import ProposalStatus, TranslationProposal
 from app.models.user import User
-from app.schemas.proposal import ProposalCreate, ProposalResponse, ProposalReview
+from app.schemas.proposal import ProposalCreate, ProposalResponse, ProposalReview  # ProposalReview used by accept only
 from app.schemas.string_key import LocalizationResponse
 from app.services import proposal_service
 
@@ -119,18 +119,16 @@ async def accept_proposal(
     return proposal
 
 
-@router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/reject", response_model=ProposalResponse)
+@router.delete("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def reject_proposal(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
     proposal_id: uuid.UUID,
-    body: ProposalReview = ProposalReview(),
-    user: User = Depends(require_reviewer),
+    _: User = Depends(require_reviewer),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
-    proposal = await proposal_service.reject_proposal(db, proposal_id, user.id, body.reviewer_note)
-    if proposal is None:
+    found = await proposal_service.reject_proposal(db, proposal_id)
+    if not found:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found or not pending"})
-    return proposal

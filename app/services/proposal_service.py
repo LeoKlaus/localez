@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.localization import Localization, LocalizationState
@@ -68,15 +68,13 @@ async def accept_proposal(
         loc.value = proposal.proposed_value
         loc.state = LocalizationState.translated
 
-    # reject all other pending proposals for this localization
+    # delete all other pending proposals for this localization
     await db.execute(
-        update(TranslationProposal)
-        .where(
+        delete(TranslationProposal).where(
             TranslationProposal.localization_id == proposal.localization_id,
             TranslationProposal.id != proposal_id,
             TranslationProposal.status == ProposalStatus.pending,
         )
-        .values(status=ProposalStatus.rejected, reviewed_by=reviewed_by, reviewed_at=now)
     )
 
     return proposal
@@ -85,15 +83,9 @@ async def accept_proposal(
 async def reject_proposal(
     db: AsyncSession,
     proposal_id: uuid.UUID,
-    reviewed_by: uuid.UUID,
-    reviewer_note: str | None = None,
-) -> TranslationProposal | None:
+) -> bool:
     proposal = await db.get(TranslationProposal, proposal_id)
     if proposal is None or proposal.status != ProposalStatus.pending:
-        return None
-
-    proposal.status = ProposalStatus.rejected
-    proposal.reviewed_by = reviewed_by
-    proposal.reviewed_at = datetime.now(UTC)
-    proposal.reviewer_note = reviewer_note
-    return proposal
+        return False
+    await db.delete(proposal)
+    return True

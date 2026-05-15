@@ -187,9 +187,9 @@ async def test_accept_rejects_other_pending_proposals_atomically(
     proposals = (await admin_client.get(
         f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals"
     )).json()
-    status_by_id = {p["id"]: p["status"] for p in proposals}
-    assert status_by_id[prop1["id"]] == "accepted"
-    assert status_by_id[prop2["id"]] == "rejected"
+    proposal_ids = {p["id"] for p in proposals}
+    assert prop1["id"] in proposal_ids
+    assert prop2["id"] not in proposal_ids  # deleted on accept
 
 
 async def test_non_admin_cannot_accept_proposal(
@@ -226,14 +226,10 @@ async def test_admin_can_reject_proposal(
             json={"proposed_value": "Abgelehnt"},
         )).json()
 
-    resp = await admin_client.post(
-        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals/{prop['id']}/reject",
-        json={"reviewer_note": "Not accurate"},
+    resp = await admin_client.delete(
+        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals/{prop['id']}"
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "rejected"
-    assert data["reviewer_note"] == "Not accurate"
+    assert resp.status_code == 204
 
 
 async def test_reject_does_not_update_canonical_value(
@@ -249,8 +245,8 @@ async def test_reject_does_not_update_canonical_value(
             json={"proposed_value": "Should not be saved"},
         )).json()
 
-    await admin_client.post(
-        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals/{prop['id']}/reject"
+    await admin_client.delete(
+        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals/{prop['id']}"
     )
 
     loc = (await admin_client.get(
