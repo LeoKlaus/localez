@@ -87,8 +87,8 @@
 	{:else}
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 			{#each projects.data ?? [] as project}
-				<a href="/projects/{project.id}">
-					<Card.Root class="overflow-hidden transition-shadow hover:shadow-md">
+				<a href="/projects/{project.id}" class="flex">
+					<Card.Root class="flex flex-1 flex-col overflow-hidden transition-shadow hover:shadow-md">
 						{#if project.accent_color}
 							<div class="h-1 w-full" style="background-color: {project.accent_color}"></div>
 						{/if}

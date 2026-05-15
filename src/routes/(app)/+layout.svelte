@@ -4,6 +4,7 @@
 	import { auth } from '$lib/stores/auth.svelte';
 	import { client } from '$lib/api/client';
 	import { onMount } from 'svelte';
+	import { createQuery } from '@tanstack/svelte-query';
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -42,7 +43,27 @@
 		goto('/login');
 	}
 
+	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
+
 	let currentPath = $derived($page.url.pathname);
+
+	// Extract project ID when on any /projects/[id]/... route
+	let activeProjectId = $derived.by(() => {
+		const m = currentPath.match(/^\/projects\/([^/]+)/);
+		return m ? m[1] : null;
+	});
+
+	const activeProject = createQuery(() => ({
+		queryKey: ['project', activeProjectId],
+		enabled: !!activeProjectId,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}', {
+				params: { path: { project_id: activeProjectId! } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
 </script>
 
 <div class="flex min-h-svh bg-background">
@@ -127,9 +148,26 @@
 	</aside>
 
 	<div class="flex flex-1 flex-col">
-		<!-- Mobile header (brand only) -->
+		<!-- Mobile header -->
 		<header class="flex h-14 items-center border-b px-4 md:hidden">
-			<span class="font-bold">Localez</span>
+			{#if activeProjectId && activeProject.data}
+				{@const p = activeProject.data}
+				<a href="/projects/{p.id}" class="flex items-center gap-2 min-w-0">
+					{#if p.has_icon}
+						<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-7 rounded-md object-cover" />
+					{:else if p.accent_color}
+						<div
+							class="flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
+							style="background-color: {p.accent_color}"
+						>
+							{p.name.trim()[0]?.toUpperCase() ?? '?'}
+						</div>
+					{/if}
+					<span class="truncate font-bold">{p.name}</span>
+				</a>
+			{:else}
+				<span class="font-bold">Localez</span>
+			{/if}
 		</header>
 
 		<!-- Mobile bottom tab bar -->
