@@ -58,3 +58,8 @@ class ProjectStats(BaseModel):
 
 class LanguageAdd(BaseModel):
     language: LanguageCode
+
+
+class PrefillResponse(BaseModel):
+    filled: int
+    skipped: int

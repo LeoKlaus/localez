@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     webauthn_rp_name: str = "Localez"
     webauthn_origin: str = "http://localhost:8000"
     recovery_word_list_path: str = "app/core/wordlist.txt"
+    prefill_provider: str | None = None
+    deepl_api_key: SecretStr | None = None
+    llm_api_key: SecretStr | None = None
+    llm_api_base: str = "https://api.openai.com/v1"
+    llm_model: str = "gpt-4o-mini"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

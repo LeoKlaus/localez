@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 import io
@@ -8,6 +9,7 @@ from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.localization import Localization, LocalizationState
@@ -15,9 +17,13 @@ from app.models.project import Project
 from app.models.project_language import ProjectLanguage
 from app.models.string_key import StringKey
 from app.models.user import User
-from app.schemas.project import LanguageAdd, LanguageStats, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
+from app.schemas.project import LanguageAdd, LanguageStats, PrefillResponse, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
 from app.schemas.string_key import LocalizationWithKeyResponse
 from app.services.localization_service import fill_missing_localizations
+from app.services import proposal_service
+from app.services import translation_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -29,6 +35,78 @@ async def _get_project(project_id: uuid.UUID, db: AsyncSession) -> Project | Non
         select(Project).where(Project.id == project_id).options(selectinload(Project.languages))
     )
     return result.scalar_one_or_none()
+
+
+async def _run_prefill(
+    project_id: uuid.UUID,
+    target_lang: str,
+    source_lang: str,
+    user_id: uuid.UUID,
+    db: AsyncSession,
+    *,
+    raise_on_error: bool = False,
+) -> tuple[int, int]:
+    """Translate all state=new localizations for target_lang using the configured provider.
+
+    Returns (filled, skipped). If raise_on_error is False (auto-prefill path), exceptions
+    from the provider are logged and swallowed so language creation is unaffected.
+    """
+    provider = settings.prefill_provider
+    if not provider:
+        if raise_on_error:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail={"code": "PROVIDER_NOT_CONFIGURED", "message": "No prefill_provider configured"},
+            )
+        return 0, 0
+
+    SourceLoc = aliased(Localization)
+    rows = (await db.execute(
+        select(Localization, SourceLoc.value.label("source_value"))
+        .join(StringKey, StringKey.id == Localization.string_key_id)
+        .outerjoin(SourceLoc, (
+            (SourceLoc.string_key_id == Localization.string_key_id) &
+            (SourceLoc.language == source_lang) &
+            (SourceLoc.variation_type == Localization.variation_type) &
+            (SourceLoc.variation_key == Localization.variation_key)
+        ))
+        .where(
+            StringKey.project_id == project_id,
+            StringKey.should_translate == True,
+            Localization.language == target_lang,
+            Localization.state == LocalizationState.new,
+        )
+    )).all()
+
+    to_translate = [(loc, src) for loc, src in rows if src]
+    skipped = len(rows) - len(to_translate)
+
+    if not to_translate:
+        return 0, skipped
+
+    source_texts = [src for _, src in to_translate]
+    locs = [loc for loc, _ in to_translate]
+
+    try:
+        translations = await translation_service.prefill(source_lang, target_lang, source_texts, provider)
+    except Exception as exc:
+        if raise_on_error:
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                detail={"code": "TRANSLATION_PROVIDER_ERROR", "message": str(exc)},
+            ) from exc
+        logger.error("Auto-prefill failed for project=%s lang=%s: %s", project_id, target_lang, exc)
+        return 0, skipped
+
+    filled = 0
+    for loc, value in zip(locs, translations):
+        try:
+            await proposal_service.create_proposal(db, loc.id, value, user_id)
+            filled += 1
+        except ValueError:
+            pass
+
+    return filled, skipped
 
 
 @router.get("", response_model=list[ProjectResponse])
@@ -153,7 +231,7 @@ async def get_icon(
 async def add_language(
     project_id: uuid.UUID,
     body: LanguageAdd,
-    _: User = Depends(get_current_active_user),
+    user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
@@ -166,9 +244,36 @@ async def add_language(
     db.add(ProjectLanguage(project_id=project_id, language=body.language))
     await db.flush()
     await fill_missing_localizations(project_id, db)
+    await _run_prefill(project_id, body.language, project.source_language, user.id, db)
     db.expire(project)
     project = await _get_project(project_id, db)
     return project
+
+
+@router.post("/{project_id}/languages/{language}/prefill", response_model=PrefillResponse)
+async def prefill_language(
+    project_id: uuid.UUID,
+    language: str,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ProjectLanguage).where(
+            ProjectLanguage.project_id == project_id,
+            ProjectLanguage.language == language,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
+
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    filled, skipped = await _run_prefill(
+        project_id, language, project.source_language, user.id, db, raise_on_error=True
+    )
+    return PrefillResponse(filled=filled, skipped=skipped)
 
 
 @router.delete("/{project_id}/languages/{language}", status_code=status.HTTP_204_NO_CONTENT)
