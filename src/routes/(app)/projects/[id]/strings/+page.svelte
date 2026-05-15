@@ -292,7 +292,7 @@
 	{:else if language}
 
 		<!-- Mobile cards -->
-		<div class="space-y-3 md:hidden">
+		<div class="space-y-3 xl:hidden">
 			{#each grouped as group}
 				{#if group.entries.length === 1 && group.entries[0].variation_type === 'none'}
 					{@const loc = group.entries[0]}
@@ -353,7 +353,7 @@
 		</div>
 
 		<!-- Desktop table -->
-		<div class="hidden rounded-lg border md:block">
+		<div class="hidden rounded-lg border xl:block">
 			<Table.Root class="table-fixed">
 				<Table.Header>
 					<Table.Row>
@@ -429,7 +429,7 @@
 	{:else}
 
 		<!-- Mobile cards -->
-		<div class="space-y-2 md:hidden">
+		<div class="space-y-2 xl:hidden">
 			{#each strings.data?.items ?? [] as str}
 				{#if str.should_translate}
 					<a href="/projects/{projectId}/strings/{str.id}" class="block rounded-lg border p-4 hover:bg-muted/50">
@@ -454,7 +454,7 @@
 		</div>
 
 		<!-- Desktop table -->
-		<div class="hidden rounded-lg border md:block">
+		<div class="hidden rounded-lg border xl:block">
 			<Table.Root class="table-fixed">
 				<Table.Header>
 					<Table.Row>
