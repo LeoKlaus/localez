@@ -1,15 +1,17 @@
+import json
 import logging
 import uuid
 
 import io
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
-from fastapi.responses import Response as FastAPIResponse
+from fastapi.responses import Response as FastAPIResponse, StreamingResponse
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
 from app.config import settings
+from app.core import prefill_events
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.localization import Localization, LocalizationState
@@ -226,8 +228,14 @@ async def get_icon(
 async def _run_prefill_background(
     project_id: uuid.UUID, target_lang: str, source_lang: str, user_id: uuid.UUID
 ) -> None:
-    async with create_db_session() as db:
-        await _run_prefill(project_id, target_lang, source_lang, user_id, db)
+    filled, skipped = 0, 0
+    try:
+        async with create_db_session() as db:
+            filled, skipped = await _run_prefill(project_id, target_lang, source_lang, user_id, db)
+    except Exception as exc:
+        logger.error("Prefill background task failed: %s", exc)
+    finally:
+        prefill_events.signal(project_id, target_lang, filled, skipped)
 
 
 @router.post("/{project_id}/languages", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -249,6 +257,7 @@ async def add_language(
     await db.flush()
     await fill_missing_localizations(project_id, db)
     await db.commit()
+    prefill_events.register(project_id, body.language)
     background_tasks.add_task(_run_prefill_background, project_id, body.language, project.source_language, user.id)
     project = await _get_project(project_id, db)
     return project
@@ -278,6 +287,18 @@ async def prefill_language(
         project_id, language, project.source_language, user.id, db, raise_on_error=True
     )
     return PrefillResponse(filled=filled, skipped=skipped)
+
+
+@router.get("/{project_id}/languages/{language}/prefill/stream")
+async def prefill_stream(
+    project_id: uuid.UUID,
+    language: str,
+):
+    async def generate():
+        result = await prefill_events.wait_for_result(project_id, language)
+        yield f"data: {result}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 @router.delete("/{project_id}/languages/{language}", status_code=status.HTTP_204_NO_CONTENT)
