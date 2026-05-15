@@ -49,10 +49,14 @@
 	let editOpen = $state(false);
 	let editName = $state('');
 	let editLang = $state('');
+	let editAccentColor = $state('');
+	let editClearAccentColor = $state(false);
 
 	function openEdit() {
 		editName = project.data?.name ?? '';
 		editLang = project.data?.source_language ?? '';
+		editAccentColor = project.data?.accent_color ?? '';
+		editClearAccentColor = false;
 		editOpen = true;
 	}
 
@@ -60,7 +64,11 @@
 		mutationFn: async () => {
 			const { data, error } = await client.PATCH('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } },
-				body: { name: editName, source_language: editLang }
+				body: {
+					name: editName,
+					source_language: editLang,
+					accent_color: editClearAccentColor ? null : (editAccentColor || null)
+				}
 			});
 			if (error) throw error;
 			return data;
@@ -69,6 +77,46 @@
 			qc.invalidateQueries({ queryKey: ['project', projectId] });
 			qc.invalidateQueries({ queryKey: ['projects'] });
 			editOpen = false;
+		}
+	}));
+
+	// Icon upload / delete
+	let iconInput = $state<HTMLInputElement | undefined>(undefined);
+	let iconLoading = $state(false);
+	let iconError = $state('');
+
+	async function handleIconUpload() {
+		const file = iconInput?.files?.[0];
+		if (!file) return;
+		iconError = '';
+		iconLoading = true;
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			const res = await fetch(`${BASE_URL}/api/projects/${projectId}/icon`, {
+				method: 'PUT',
+				headers: { Authorization: `Bearer ${auth.accessToken}` },
+				body: formData
+			});
+			if (!res.ok) { iconError = 'Icon upload failed.'; return; }
+			qc.invalidateQueries({ queryKey: ['project', projectId] });
+			qc.invalidateQueries({ queryKey: ['projects'] });
+		} finally {
+			iconLoading = false;
+			if (iconInput) iconInput.value = '';
+		}
+	}
+
+	const deleteIcon = createMutation(() => ({
+		mutationFn: async () => {
+			const { error } = await client.DELETE('/api/projects/{project_id}/icon', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['project', projectId] });
+			qc.invalidateQueries({ queryKey: ['projects'] });
 		}
 	}));
 
@@ -190,18 +238,39 @@
 	{:else if project.data}
 		{@const p = project.data}
 		<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-			<div>
-				<div class="flex items-center gap-2">
-					<h1 class="text-2xl font-bold">{p.name}</h1>
-					<Badge variant="secondary">{p.source_language}</Badge>
+			<div class="flex items-center gap-4">
+				{#if p.has_icon}
+					<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-16 rounded-xl object-cover shadow-sm" />
+				{:else if p.accent_color}
+					<div
+						class="flex size-16 shrink-0 items-center justify-center rounded-xl text-2xl font-bold text-white shadow-sm"
+						style="background-color: {p.accent_color}"
+					>
+						{p.name.trim()[0]?.toUpperCase() ?? '?'}
+					</div>
+				{/if}
+				<div>
+					<div class="flex items-center gap-2">
+						<h1 class="text-2xl font-bold">{p.name}</h1>
+						<Badge variant="secondary">{p.source_language}</Badge>
+					</div>
+					<p class="mt-1 text-sm text-muted-foreground">Created {formatDate(p.created_at)}</p>
 				</div>
-				<p class="mt-1 text-sm text-muted-foreground">Created {formatDate(p.created_at)}</p>
 			</div>
 			{#if auth.isAdmin}
 				<div class="flex flex-wrap gap-2">
 					<Button variant="outline" size="sm" onclick={openEdit}>
 						<Pencil size={14} class="mr-1" /> Edit
 					</Button>
+					<Button variant="outline" size="sm" onclick={() => iconInput?.click()} disabled={iconLoading}>
+						<Upload size={14} class="mr-1" /> {iconLoading ? 'Uploading…' : p.has_icon ? 'Replace icon' : 'Upload icon'}
+					</Button>
+					<input bind:this={iconInput} type="file" accept="image/*" class="hidden" onchange={handleIconUpload} />
+					{#if p.has_icon}
+						<Button variant="outline" size="sm" onclick={() => deleteIcon.mutate()} disabled={deleteIcon.isPending}>
+							<Trash2 size={14} class="mr-1" /> Remove icon
+						</Button>
+					{/if}
 					<Button variant="outline" size="sm" onclick={handleExport}>
 						<Download size={14} class="mr-1" /> Export
 					</Button>
@@ -215,6 +284,11 @@
 				</div>
 			{/if}
 		</div>
+		{#if iconError}
+			<Alert.Root class="mb-4 border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
+				<Alert.Description>{iconError}</Alert.Description>
+			</Alert.Root>
+		{/if}
 
 		{#if importSuccess}
 			<Alert.Root class="mb-4 border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
@@ -306,6 +380,35 @@
 			<div class="space-y-2">
 				<Label>Source language</Label>
 				<Input bind:value={editLang} required maxlength={20} />
+			</div>
+			<div class="space-y-2">
+				<Label>Accent color</Label>
+				<div class="flex items-center gap-2">
+					<input
+						type="color"
+						class="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
+						value={editAccentColor || '#6366f1'}
+						oninput={(e) => { editAccentColor = e.currentTarget.value; editClearAccentColor = false; }}
+						disabled={editClearAccentColor}
+					/>
+					<Input
+						class="flex-1 font-mono"
+						placeholder="#6366f1"
+						value={editAccentColor}
+						oninput={(e) => { editAccentColor = e.currentTarget.value; editClearAccentColor = false; }}
+						disabled={editClearAccentColor}
+					/>
+					{#if editAccentColor || project.data?.accent_color}
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onclick={() => { editClearAccentColor = true; editAccentColor = ''; }}
+						>
+							Clear
+						</Button>
+					{/if}
+				</div>
 			</div>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (editOpen = false)}>Cancel</Button>

@@ -316,6 +316,25 @@ export interface paths {
         patch: operations["update_project_api_projects__project_id__patch"];
         trace?: never;
     };
+    "/api/projects/{project_id}/icon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Icon */
+        get: operations["get_icon_api_projects__project_id__icon_get"];
+        /** Upload Icon */
+        put: operations["upload_icon_api_projects__project_id__icon_put"];
+        post?: never;
+        /** Delete Icon */
+        delete: operations["delete_icon_api_projects__project_id__icon_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/languages": {
         parameters: {
             query?: never;
@@ -593,6 +612,11 @@ export interface components {
              */
             client_secret?: string | null;
         };
+        /** Body_upload_icon_api_projects__project_id__icon_put */
+        Body_upload_icon_api_projects__project_id__icon_put: {
+            /** File */
+            file: string;
+        };
         /**
          * GlobalRole
          * @enum {string}
@@ -762,6 +786,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Accent Color */
+            accent_color: string | null;
+            /** Has Icon */
+            has_icon: boolean;
             /**
              * Languages
              * @default []
@@ -781,6 +809,8 @@ export interface components {
             name?: string | null;
             /** Source Language */
             source_language?: string | null;
+            /** Accent Color */
+            accent_color?: string | null;
         };
         /** ProposalCreate */
         ProposalCreate: {
@@ -1708,6 +1738,99 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProjectResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_icon_api_projects__project_id__icon_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_icon_api_projects__project_id__icon_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_icon_api_projects__project_id__icon_put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_icon_api_projects__project_id__icon_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

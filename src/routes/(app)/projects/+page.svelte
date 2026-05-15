@@ -12,6 +12,8 @@
 	import FolderOpen from 'lucide-svelte/icons/folder-open';
 	import { auth } from '$lib/stores/auth.svelte';
 
+	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
+
 	const qc = useQueryClient();
 
 	const projects = createQuery(() => ({
@@ -52,6 +54,10 @@
 		e.preventDefault();
 		createProject.mutate();
 	}
+
+	function projectInitial(n: string) {
+		return n.trim()[0]?.toUpperCase() ?? '?';
+	}
 </script>
 
 <div class="p-6">
@@ -82,11 +88,28 @@
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 			{#each projects.data ?? [] as project}
 				<a href="/projects/{project.id}">
-					<Card.Root class="transition-shadow hover:shadow-md">
+					<Card.Root class="overflow-hidden transition-shadow hover:shadow-md">
+						{#if project.accent_color}
+							<div class="h-1 w-full" style="background-color: {project.accent_color}"></div>
+						{/if}
 						<Card.Header>
-							<Card.Title class="flex items-center justify-between">
-								{project.name}
-								<Badge variant="secondary">{project.source_language}</Badge>
+							<Card.Title class="flex items-center gap-3">
+								{#if project.has_icon}
+									<img
+										src="{BASE_URL}/api/projects/{project.id}/icon"
+										alt=""
+										class="size-8 rounded-md object-cover"
+									/>
+								{:else if project.accent_color}
+									<div
+										class="flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold text-white"
+										style="background-color: {project.accent_color}"
+									>
+										{projectInitial(project.name)}
+									</div>
+								{/if}
+								<span class="truncate">{project.name}</span>
+								<Badge variant="secondary" class="shrink-0">{project.source_language}</Badge>
 							</Card.Title>
 							<Card.Description>Created {formatDate(project.created_at)}</Card.Description>
 						</Card.Header>
