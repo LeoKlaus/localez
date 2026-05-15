@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth.svelte';
+	import { legalStore } from '$lib/stores/legal.svelte';
 	import { client } from '$lib/api/client';
 	import { onMount } from 'svelte';
 	import { createQuery } from '@tanstack/svelte-query';
@@ -129,10 +130,16 @@
 		</nav>
 
 		<div class="border-t p-2">
-			<div class="mb-2 flex gap-3 px-3 text-xs text-muted-foreground">
-				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
-				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
-			</div>
+			{#if legalStore.hasImprint || legalStore.hasPrivacy}
+				<div class="mb-2 flex gap-3 px-3 text-xs text-muted-foreground">
+					{#if legalStore.hasImprint}
+						<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+					{/if}
+					{#if legalStore.hasPrivacy}
+						<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy Policy</a>
+					{/if}
+				</div>
+			{/if}
 			{#if auth.isAuthenticated}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger
@@ -175,10 +182,16 @@
 			{:else}
 				<span class="font-bold">Localez</span>
 			{/if}
-			<div class="flex gap-3 text-xs text-muted-foreground">
-				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
-				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
-			</div>
+			{#if legalStore.hasImprint || legalStore.hasPrivacy}
+				<div class="flex gap-3 text-xs text-muted-foreground">
+					{#if legalStore.hasImprint}
+						<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+					{/if}
+					{#if legalStore.hasPrivacy}
+						<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy Policy</a>
+					{/if}
+				</div>
+			{/if}
 		</header>
 
 		<!-- Mobile bottom tab bar -->

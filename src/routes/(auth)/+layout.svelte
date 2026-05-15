@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { auth } from '$lib/stores/auth.svelte';
+	import { legalStore } from '$lib/stores/legal.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -18,8 +19,14 @@
 		</div>
 		{@render children()}
 	</div>
-	<footer class="mt-8 flex gap-4 text-xs text-muted-foreground">
-		<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
-		<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
-	</footer>
+	{#if legalStore.hasImprint || legalStore.hasPrivacy}
+		<footer class="mt-8 flex gap-4 text-xs text-muted-foreground">
+			{#if legalStore.hasImprint}
+				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+			{/if}
+			{#if legalStore.hasPrivacy}
+				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
+			{/if}
+		</footer>
+	{/if}
 </div>
