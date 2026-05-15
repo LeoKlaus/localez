@@ -122,6 +122,7 @@
 	let drafts = $state<Record<string, string>>({});
 	let submitting = $state<Record<string, boolean>>({});
 	let submitError = $state<Record<string, string>>({});
+	let textareaRefs = $state<Record<string, HTMLTextAreaElement>>({});
 
 	$effect(() => {
 		for (const loc of langStrings.data?.items ?? []) {
@@ -199,6 +200,7 @@
 				class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
 			>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
 			<textarea
+				bind:this={textareaRefs[loc.id]}
 				class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
 				style="resize: none; caret-color: hsl(var(--foreground))"
 				placeholder="Enter translation…"
@@ -250,7 +252,7 @@
 			<button
 				type="button"
 				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
-				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = loc.ai_suggestion!; }}
+				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = loc.ai_suggestion!; requestAnimationFrame(() => textareaRefs[loc.id]?.focus()); }}
 			>
 				<span class="shrink-0 font-medium text-violet-500 dark:text-violet-400">✦ AI</span>
 				<span class="break-words">{loc.ai_suggestion}</span>
