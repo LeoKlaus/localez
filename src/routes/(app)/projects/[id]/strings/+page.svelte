@@ -9,6 +9,7 @@
 	import * as Table from '$lib/components/ui/table';
 	import { Button } from '$lib/components/ui/button';
 	import type { components } from '$lib/api/schema.d.ts';
+	import { prefillStore } from '$lib/stores/prefill.svelte';
 	import Search from 'lucide-svelte/icons/search';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -294,6 +295,20 @@
 			</Select.Content>
 		</Select.Root>
 	</div>
+
+	{#if language}
+		{@const prefill = prefillStore.get(projectId, language)}
+		{#if prefill}
+			<div class="mb-4 flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300">
+				{#if prefill.running}
+					<span class="inline-block size-3 shrink-0 animate-spin rounded-full border-2 border-violet-400 border-t-transparent"></span>
+				{:else}
+					<span>✦</span>
+				{/if}
+				{prefill.message}
+			</div>
+		{/if}
+	{/if}
 
 	{#if isPending}
 		<div class="h-64 animate-pulse rounded-lg bg-muted"></div>

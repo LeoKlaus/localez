@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+	import { prefillStore } from '$lib/stores/prefill.svelte';
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { formatDate } from '$lib/utils';
@@ -133,13 +134,8 @@
 	let newLanguage = $state('');
 	let addLangError = $state('');
 
-	// Prefill SSE state
-	let prefillLanguage = $state<string | null>(null);
-	let prefillMessage = $state('');
-
 	async function watchPrefill(language: string) {
-		prefillLanguage = language;
-		prefillMessage = `Generating AI suggestions for ${language}…`;
+		prefillStore.set(projectId, language, { running: true, message: `Generating AI suggestions for ${language}…` });
 		try {
 			const res = await fetch(
 				`${BASE_URL}/api/projects/${projectId}/languages/${language}/prefill/stream`,
@@ -159,10 +155,13 @@
 					if (!line.startsWith('data:')) continue;
 					const payload = JSON.parse(line.slice(5).trim());
 					if (payload.status === 'ready' && payload.filled > 0) {
-						prefillMessage = `${payload.filled} AI suggestion${payload.filled !== 1 ? 's' : ''} generated for ${language}.`;
+						prefillStore.set(projectId, language, {
+							running: false,
+							message: `${payload.filled} AI suggestion${payload.filled !== 1 ? 's' : ''} generated for ${language}.`
+						});
 						qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
 					} else {
-						prefillMessage = '';
+						prefillStore.clear(projectId, language);
 					}
 					return;
 				}
@@ -170,7 +169,8 @@
 		} catch {
 			// silent — prefill is best-effort
 		} finally {
-			prefillLanguage = null;
+			const entry = prefillStore.get(projectId, language);
+			if (entry?.running) prefillStore.clear(projectId, language);
 		}
 	}
 
@@ -331,18 +331,21 @@
 
 		<Separator class="mb-6" />
 
-		{#if prefillLanguage}
-			<Alert.Root class="mb-4 border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300">
-				<Alert.Description class="flex items-center gap-2">
-					<span class="inline-block size-3 animate-spin rounded-full border-2 border-violet-400 border-t-transparent"></span>
-					{prefillMessage}
-				</Alert.Description>
-			</Alert.Root>
-		{:else if prefillMessage}
-			<Alert.Root class="mb-4 border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300">
-				<Alert.Description>✦ {prefillMessage}</Alert.Description>
-			</Alert.Root>
-		{/if}
+		{#each stats.data?.languages ?? [] as lang}
+			{@const prefill = prefillStore.get(projectId, lang.language)}
+			{#if prefill}
+				<Alert.Root class="mb-2 border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300">
+					<Alert.Description class="flex items-center gap-2">
+						{#if prefill.running}
+							<span class="inline-block size-3 animate-spin rounded-full border-2 border-violet-400 border-t-transparent"></span>
+						{:else}
+							✦
+						{/if}
+						{prefill.message}
+					</Alert.Description>
+				</Alert.Root>
+			{/if}
+		{/each}
 
 		<div class="mb-4 flex items-center justify-between">
 			<div>
