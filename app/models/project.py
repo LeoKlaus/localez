@@ -17,7 +17,6 @@ class Project(Base):
     source_language: Mapped[str] = mapped_column(String(20), nullable=False)
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    accent_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     icon: Mapped[bytes | None] = mapped_column(LargeBinary(), nullable=True)
 
     languages: Mapped[list["ProjectLanguage"]] = relationship(  # noqa: F821

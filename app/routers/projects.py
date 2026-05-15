@@ -88,8 +88,6 @@ async def update_project(
         project.name = body.name
     if body.source_language is not None:
         project.source_language = body.source_language
-    if body.accent_color is not None:
-        project.accent_color = body.accent_color
     return project
 
 
