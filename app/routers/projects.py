@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user, require_admin
@@ -160,15 +160,25 @@ async def list_language_localizations(
     if result.scalar_one_or_none() is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LANGUAGE_NOT_FOUND", "message": f"Language '{language}' not found on this project"})
 
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
     limit = min(limit, MAX_LIMIT)
+    SourceLoc = aliased(Localization)
     query = (
-        select(Localization, StringKey.key, StringKey.comment)
+        select(Localization, StringKey.key, StringKey.comment, SourceLoc.value.label("source_value"))
         .join(StringKey, StringKey.id == Localization.string_key_id)
+        .outerjoin(SourceLoc, (
+            (SourceLoc.string_key_id == Localization.string_key_id) &
+            (SourceLoc.language == project.source_language) &
+            (SourceLoc.variation_type == Localization.variation_type) &
+            (SourceLoc.variation_key == Localization.variation_key)
+        ))
         .where(StringKey.project_id == project_id, StringKey.should_translate == True, Localization.language == language)
     )
 
     if state is not None:
-        from app.models.localization import LocalizationState
         try:
             query = query.where(Localization.state == LocalizationState(state))
         except ValueError:
@@ -178,10 +188,11 @@ async def list_language_localizations(
     rows = await db.execute(query.offset(offset).limit(limit))
 
     items = []
-    for loc, key, comment in rows:
+    for loc, key, comment, source_value in rows:
         data = {c.name: getattr(loc, c.name) for c in loc.__table__.columns}
         data["key"] = key
         data["comment"] = comment
+        data["source_value"] = source_value
         items.append(LocalizationWithKeyResponse.model_validate(data))
 
     if response:
