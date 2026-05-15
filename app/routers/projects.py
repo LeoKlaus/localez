@@ -1,6 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+import io
+
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import Response as FastAPIResponse
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
@@ -85,6 +88,8 @@ async def update_project(
         project.name = body.name
     if body.source_language is not None:
         project.source_language = body.source_language
+    if body.accent_color is not None:
+        project.accent_color = body.accent_color
     return project
 
 
@@ -98,6 +103,52 @@ async def delete_project(
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
     await db.delete(project)
+
+
+@router.put("/{project_id}/icon", status_code=status.HTTP_204_NO_CONTENT)
+async def upload_icon(
+    project_id: uuid.UUID,
+    file: UploadFile = File(...),
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from PIL import Image, UnidentifiedImageError
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    data = await file.read()
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.thumbnail((256, 256), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        project.icon = buf.getvalue()
+    except UnidentifiedImageError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "INVALID_IMAGE", "message": "File is not a valid image"})
+
+
+@router.delete("/{project_id}/icon", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_icon(
+    project_id: uuid.UUID,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+    project.icon = None
+
+
+@router.get("/{project_id}/icon")
+async def get_icon(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None or project.icon is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "ICON_NOT_FOUND", "message": "No icon set for this project"})
+    return FastAPIResponse(content=project.icon, media_type="image/png")
 
 
 @router.post("/{project_id}/languages", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)

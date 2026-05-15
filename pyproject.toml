@@ -19,6 +19,7 @@ dependencies = [
     "webauthn>=2.0.0",
     "python-multipart>=0.0.9",
     "pyotp>=2.9.0",
+    "pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]
