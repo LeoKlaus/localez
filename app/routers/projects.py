@@ -20,7 +20,6 @@ from app.models.user import User
 from app.schemas.project import LanguageAdd, LanguageStats, PrefillResponse, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
 from app.schemas.string_key import LocalizationWithKeyResponse
 from app.services.localization_service import fill_missing_localizations
-from app.services import proposal_service
 from app.services import translation_service
 
 logger = logging.getLogger(__name__)
@@ -99,15 +98,11 @@ async def _run_prefill(
         logger.error("Auto-prefill failed for project=%s lang=%s: %s", project_id, target_lang, exc)
         return 0, skipped
 
-    filled = 0
     for loc, value in zip(locs, translations):
-        try:
-            await proposal_service.create_proposal(db, loc.id, value, user_id)
-            filled += 1
-        except ValueError:
-            pass
+        loc.ai_suggestion = value
+    await db.flush()
 
-    return filled, skipped
+    return len(locs), skipped
 
 
 @router.get("", response_model=list[ProjectResponse])

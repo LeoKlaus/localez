@@ -29,6 +29,7 @@ class LocalizationWithKeyResponse(LocalizationResponse):
     key: str
     comment: str | None
     source_value: str | None
+    ai_suggestion: str | None
 
 
 class StringKeyResponse(BaseModel):
