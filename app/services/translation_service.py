@@ -26,7 +26,7 @@ async def translate_with_deepl(source_lang: str, target_lang: str, texts: list[s
         for i in range(0, len(texts), 50):
             batch = texts[i : i + 50]
             resp = await client.post(
-                "https://api-free.deepl.com/v2/translate",
+                f"{settings.deepl_api_base}/translate",
                 headers={"DeepL-Auth-Key": key.get_secret_value()},
                 json={"text": batch, "source_lang": src, "target_lang": tgt},
             )

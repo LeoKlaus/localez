@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     recovery_word_list_path: str = "app/core/wordlist.txt"
     prefill_provider: str | None = None
     deepl_api_key: SecretStr | None = None
+    deepl_api_base: str = "https://api-free.deepl.com/v2"
     llm_api_key: SecretStr | None = None
     llm_api_base: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
