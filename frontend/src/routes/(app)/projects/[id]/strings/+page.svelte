@@ -121,6 +121,7 @@
 
 	let drafts = $state<Record<string, string>>({});
 	let proposalComments = $state<Record<string, string>>({});
+	let proposingOpen = $state<Record<string, boolean>>({});
 	let submitting = $state<Record<string, boolean>>({});
 	let submitError = $state<Record<string, string>>({});
 	let textareaRefs = $state<Record<string, HTMLTextAreaElement>>({});
@@ -179,6 +180,7 @@
 			qc.invalidateQueries({ queryKey: ['proposals-pending', projectId] });
 			drafts[loc.id] = loc.value ?? '';
 			proposalComments[loc.id] = '';
+			proposingOpen[loc.id] = false;
 		} catch {
 			submitError[loc.id] = 'Failed to submit proposal.';
 		} finally {
@@ -267,38 +269,43 @@
 				></textarea>
 			</div>
 		{:else}
-			<!-- ── Other users: read-only current value + proposal textarea ── -->
-			<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm {bordered ? '' : 'block'}">{loc.value ?? '—'}</span>
-			<div class="relative mt-1.5 {bordered ? 'rounded-md border' : ''}">
-				<div
-					aria-hidden="true"
-					class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
-				>{#each parseSegments(draft) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
-				<textarea
-					bind:this={textareaRefs[loc.id]}
-					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50"
-					style="resize: none; caret-color: hsl(var(--foreground))"
-					placeholder="Propose an alternate translation…"
-					disabled={submitting[loc.id]}
-					value={draft}
-					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-					onkeydown={(e) => {
-						if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; proposalComments[loc.id] = ''; e.currentTarget.blur(); return; }
-						if (e.key === 'Enter' && !e.shiftKey && !e.altKey) { e.preventDefault(); e.currentTarget.blur(); return; }
-						if (e.key === 'Enter' && (e.shiftKey || e.altKey)) {
-							e.preventDefault();
-							const el = e.currentTarget;
-							const start = el.selectionStart ?? 0;
-							const end = el.selectionEnd ?? 0;
-							const val = drafts[loc.id] ?? '';
-							drafts[loc.id] = val.slice(0, start) + '\n' + val.slice(end);
-							requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 1; });
-						}
-					}}
-				></textarea>
-			</div>
-			{#if draftChanged}
-				<div class="mt-1.5 space-y-1">
+			<!-- ── Other users: read-only value + "Propose change" button ── -->
+			<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm">{loc.value ?? '—'}</span>
+			{#if proposingOpen[loc.id]}
+				<div class="mt-1.5 space-y-1.5">
+					<div class="relative">
+						<div
+							aria-hidden="true"
+							class="pointer-events-none whitespace-pre-wrap break-words rounded-md border px-2 py-1.5 text-sm"
+						>{#each parseSegments(drafts[loc.id] ?? (loc.value ?? '')) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+						<textarea
+							bind:this={textareaRefs[loc.id]}
+							class="absolute inset-0 w-full rounded-md border bg-transparent px-2 py-1.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50"
+							style="resize: none; caret-color: hsl(var(--foreground))"
+							placeholder="Proposed translation…"
+							disabled={submitting[loc.id]}
+							value={drafts[loc.id] ?? (loc.value ?? '')}
+							oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+							onkeydown={(e) => {
+								if (e.key === 'Escape') {
+									drafts[loc.id] = loc.value ?? '';
+									proposalComments[loc.id] = '';
+									proposingOpen[loc.id] = false;
+									e.currentTarget.blur();
+									return;
+								}
+								if (e.key === 'Enter' && (e.shiftKey || e.altKey)) {
+									e.preventDefault();
+									const el = e.currentTarget;
+									const start = el.selectionStart ?? 0;
+									const end = el.selectionEnd ?? 0;
+									const val = drafts[loc.id] ?? '';
+									drafts[loc.id] = val.slice(0, start) + '\n' + val.slice(end);
+									requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 1; });
+								}
+							}}
+						></textarea>
+					</div>
 					<textarea
 						class="w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
 						style="resize: none;"
@@ -312,16 +319,30 @@
 						<button
 							type="button"
 							class="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
-							disabled={submitting[loc.id] || !(proposalComments[loc.id] ?? '').trim()}
+							disabled={submitting[loc.id] || !draftChanged || !(proposalComments[loc.id] ?? '').trim()}
 							onclick={() => submitProposal(loc)}
-						>Submit proposal</button>
+						>Submit</button>
 						<button
 							type="button"
 							class="text-xs text-muted-foreground hover:text-foreground"
-							onclick={() => { drafts[loc.id] = loc.value ?? ''; proposalComments[loc.id] = ''; }}
-						>Discard</button>
+							onclick={() => {
+								drafts[loc.id] = loc.value ?? '';
+								proposalComments[loc.id] = '';
+								proposingOpen[loc.id] = false;
+							}}
+						>Cancel</button>
 					</div>
 				</div>
+			{:else}
+				<button
+					type="button"
+					class="mt-1 text-xs text-muted-foreground hover:text-foreground"
+					onclick={() => {
+						drafts[loc.id] = loc.value ?? '';
+						proposingOpen[loc.id] = true;
+						requestAnimationFrame(() => textareaRefs[loc.id]?.focus());
+					}}
+				>+ Propose change</button>
 			{/if}
 		{/if}
 	{:else}
