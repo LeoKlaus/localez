@@ -112,7 +112,9 @@
 
 	let proposalsByLocId = $derived.by((): Map<string, ProposalResponse[]> => {
 		const map = new Map<string, ProposalResponse[]>();
+		const currentUserId = auth.user?.id;
 		for (const p of pendingProposals.data ?? []) {
+			if (p.proposed_by === currentUserId) continue;
 			if (!map.has(p.localization_id)) map.set(p.localization_id, []);
 			map.get(p.localization_id)!.push(p);
 		}
