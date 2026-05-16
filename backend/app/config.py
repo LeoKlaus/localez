@@ -1,7 +1,10 @@
 import os
 
-from pydantic import SecretStr, computed_field
+from pydantic import SecretStr, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_WEAK_SECRET_KEYS = {"change-me-to-a-long-random-string"}
+_WEAK_POSTGRES_PASSWORDS = {"localez", "postgres", "password", "changeme"}
 
 
 class Settings(BaseSettings):
@@ -23,6 +26,30 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     llm_api_base: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
+
+    @field_validator("secret_key", mode="before")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        if os.getenv("TESTING"):
+            return v
+        raw = v.get_secret_value() if isinstance(v, SecretStr) else v
+        if raw in _WEAK_SECRET_KEYS:
+            raise ValueError("SECRET_KEY is set to the example default — replace it with a strong random value")
+        if len(raw) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters")
+        return v
+
+    @field_validator("postgres_password", mode="before")
+    @classmethod
+    def validate_postgres_password(cls, v: str) -> str:
+        if os.getenv("TESTING"):
+            return v
+        raw = v.get_secret_value() if isinstance(v, SecretStr) else v
+        if raw in _WEAK_POSTGRES_PASSWORDS:
+            raise ValueError(f"POSTGRES_PASSWORD '{raw}' is a known weak default — use a strong password")
+        if len(raw) < 12:
+            raise ValueError("POSTGRES_PASSWORD must be at least 12 characters")
+        return v
 
     @computed_field
     @property
