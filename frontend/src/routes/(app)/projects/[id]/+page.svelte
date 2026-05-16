@@ -20,6 +20,9 @@
 	import Download from 'lucide-svelte/icons/download';
 	import Upload from 'lucide-svelte/icons/upload';
 	import ClipboardCheck from 'lucide-svelte/icons/clipboard-check';
+	import Key from 'lucide-svelte/icons/key';
+	import Copy from 'lucide-svelte/icons/copy';
+	import { toast } from 'svelte-sonner';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
@@ -237,6 +240,59 @@
 	function pct(n: number, total: number) {
 		return total === 0 ? 0 : Math.round((n / total) * 100);
 	}
+
+	// Push tokens (admin only)
+	const tokens = createQuery(() => ({
+		queryKey: ['tokens', projectId],
+		enabled: auth.isAdmin,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/tokens', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	let createTokenOpen = $state(false);
+	let newTokenName = $state('');
+	let createdToken = $state<{ name: string; token: string } | null>(null);
+	let createdTokenOpen = $state(false);
+
+	const createToken = createMutation(() => ({
+		mutationFn: async () => {
+			const { data, error } = await client.POST('/api/projects/{project_id}/tokens', {
+				params: { path: { project_id: projectId } },
+				body: { name: newTokenName.trim() }
+			});
+			if (error) throw error;
+			return data;
+		},
+		onSuccess: (data) => {
+			qc.invalidateQueries({ queryKey: ['tokens', projectId] });
+			createTokenOpen = false;
+			createdToken = { name: data!.name, token: data!.token };
+			createdTokenOpen = true;
+			newTokenName = '';
+		}
+	}));
+
+	const revokeToken = createMutation(() => ({
+		mutationFn: async (tokenId: string) => {
+			const { error } = await client.DELETE('/api/projects/{project_id}/tokens/{token_id}', {
+				params: { path: { project_id: projectId, token_id: tokenId } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['tokens', projectId] });
+		}
+	}));
+
+	async function copyToken(token: string) {
+		await navigator.clipboard.writeText(token);
+		toast.success('Token copied to clipboard');
+	}
 </script>
 
 <div class="p-6">
@@ -384,6 +440,54 @@
 				{/each}
 			</div>
 		{/if}
+
+		{#if auth.isAdmin}
+			<Separator class="my-6" />
+
+			<div class="mb-4 flex items-center justify-between">
+				<div>
+					<h2 class="text-lg font-semibold">Push Tokens</h2>
+					<p class="text-sm text-muted-foreground">Allow external tools to push xcstrings updates to this project.</p>
+				</div>
+				<Button size="sm" onclick={() => { createTokenOpen = true; newTokenName = ''; }}>
+					<Key size={14} class="mr-1" /> Create token
+				</Button>
+			</div>
+
+			{#if tokens.isPending}
+				<div class="h-16 animate-pulse rounded-lg bg-muted"></div>
+			{:else if (tokens.data?.length ?? 0) === 0}
+				<p class="text-sm text-muted-foreground">No push tokens yet.</p>
+			{:else}
+				<div class="divide-y rounded-lg border">
+					{#each tokens.data! as token}
+						<div class="flex items-center gap-4 px-4 py-3">
+							<Key size={14} class="shrink-0 text-muted-foreground" />
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium truncate">{token.name}</p>
+								<p class="text-xs text-muted-foreground">
+									Created {formatDate(token.created_at)}
+									{#if token.last_used_at}
+										· Last used {formatDate(token.last_used_at)}
+									{:else}
+										· Never used
+									{/if}
+								</p>
+							</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								class="text-muted-foreground hover:text-destructive"
+								onclick={() => revokeToken.mutate(token.id)}
+								disabled={revokeToken.isPending}
+							>
+								<Trash2 size={14} class="mr-1" /> Revoke
+							</Button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		{/if}
 	{/if}
 </div>
 
@@ -424,6 +528,57 @@
 			<Button variant="destructive" onclick={() => deleteProject.mutate()} disabled={deleteProject.isPending}>
 				{deleteProject.isPending ? 'Deleting…' : 'Delete project'}
 			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Create token dialog -->
+<Dialog.Root bind:open={createTokenOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Create push token</Dialog.Title>
+			<Dialog.Description>Give this token a descriptive name, e.g. the CI system that will use it.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={(e) => { e.preventDefault(); createToken.mutate(); }} class="space-y-4">
+			<div class="space-y-2">
+				<Label>Token name</Label>
+				<Input bind:value={newTokenName} placeholder="GitHub Actions" required maxlength={100} />
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (createTokenOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={!newTokenName.trim() || createToken.isPending}>
+					{createToken.isPending ? 'Creating…' : 'Create'}
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Token created — show raw token once -->
+<Dialog.Root bind:open={createdTokenOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Token created</Dialog.Title>
+			<Dialog.Description>
+				Copy this token now — it won't be shown again.
+			</Dialog.Description>
+		</Dialog.Header>
+		{#if createdToken}
+			<div class="space-y-3">
+				<p class="text-sm font-medium">{createdToken.name}</p>
+				<div class="flex items-center gap-2 rounded-md border bg-muted px-3 py-2">
+					<code class="flex-1 break-all text-xs">{createdToken.token}</code>
+					<Button variant="ghost" size="icon" class="size-7 shrink-0" onclick={() => copyToken(createdToken!.token)}>
+						<Copy size={14} />
+					</Button>
+				</div>
+				<p class="text-xs text-muted-foreground">
+					Pass this token as the <code class="rounded bg-muted px-1">Authorization: Bearer &lt;token&gt;</code> header when calling the push endpoint.
+				</p>
+			</div>
+		{/if}
+		<Dialog.Footer>
+			<Button onclick={() => (createdTokenOpen = false)}>Done</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
