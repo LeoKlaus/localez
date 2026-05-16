@@ -72,7 +72,7 @@
 
 	const pendingProposals = createQuery(() => ({
 		queryKey: ['proposals-pending', projectId],
-		enabled: !!language,
+		enabled: !!language && auth.isAuthenticated,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/proposals', {
 				params: { path: { project_id: projectId }, query: { proposal_status: 'pending', limit: 1000 } }

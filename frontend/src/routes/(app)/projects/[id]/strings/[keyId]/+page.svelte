@@ -338,6 +338,7 @@
 {#snippet localizationCard(loc: LocalizationResponse)}
 	{@const proposals = createQuery(() => ({
 		queryKey: ['proposals', projectId, keyId, loc.id],
+		enabled: auth.isAuthenticated,
 		queryFn: async () => {
 			const { data, error } = await client.GET(
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
