@@ -303,7 +303,7 @@ async def test_auto_applied_value_not_saved_as_proposal(
     assert loc["value"] == "Braucht Review"
 
 
-async def test_duplicate_pending_proposal_returns_409(
+async def test_resubmit_same_value_returns_409(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
@@ -320,6 +320,34 @@ async def test_duplicate_pending_proposal_returns_409(
         )
         assert resp.status_code == 409
         assert resp.json()["detail"]["code"] == "DUPLICATE_PROPOSAL"
+
+
+async def test_resubmit_new_value_overrides_existing_proposal(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    username = unique_username("tr_override")
+    async with member_client(username) as c:
+        key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
+        prop = (await c.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Erster Vorschlag"},
+        )).json()
+
+        resp = await c.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Aktualisierter Vorschlag"},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["id"] == prop["id"]
+        assert data["proposed_value"] == "Aktualisierter Vorschlag"
+
+    proposals = (await admin_client.get(
+        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals"
+    )).json()
+    assert len(proposals) == 1
+    assert proposals[0]["proposed_value"] == "Aktualisierter Vorschlag"
 
 
 async def test_proposal_matching_current_translation_returns_409(

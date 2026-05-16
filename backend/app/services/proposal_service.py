@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,21 +19,27 @@ async def create_proposal(
     if loc is not None and loc.value == proposed_value:
         raise ValueError("DUPLICATE_PROPOSAL")
 
-    existing = await db.scalar(
-        select(TranslationProposal).where(
-            TranslationProposal.localization_id == localization_id,
-            TranslationProposal.proposed_value == proposed_value,
-        )
-    )
-    if existing is not None:
-        raise ValueError("DUPLICATE_PROPOSAL")
-
     if loc is not None and loc.state == LocalizationState.new:
         loc.value = proposed_value
         loc.state = LocalizationState.needs_review
         await db.flush()
         await db.refresh(loc)
         return loc
+
+    existing = await db.scalar(
+        select(TranslationProposal).where(
+            TranslationProposal.localization_id == localization_id,
+            TranslationProposal.proposed_by == proposed_by,
+        )
+    )
+
+    if existing is not None:
+        if existing.proposed_value == proposed_value:
+            raise ValueError("DUPLICATE_PROPOSAL")
+        existing.proposed_value = proposed_value
+        existing.proposed_at = datetime.now(UTC)
+        await db.flush()
+        return existing
 
     proposal = TranslationProposal(
         localization_id=localization_id,
