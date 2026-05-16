@@ -8,7 +8,7 @@ from app.routers import auth, projects, proposals, strings, users, xcstrings
 
 app = FastAPI(title="Localez", version="0.1.0", root_path="/api")
 
-_allowed_hosts = settings.allowed_hosts.split()
+_allowed_hosts = list({*settings.allowed_hosts.split(), "localhost"})
 if _allowed_hosts != ["*"]:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
 
