@@ -175,6 +175,15 @@
 
 		<h2 class="mb-4 text-lg font-semibold">Localizations</h2>
 
+		{#if !auth.isAuthenticated}
+			<div class="mb-4 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+				<a href="/login" class="font-medium text-foreground hover:underline">Sign in</a>
+				or
+				<a href="/register" class="font-medium text-foreground hover:underline">create an account</a>
+				to add or edit translations.
+			</div>
+		{/if}
+
 		{#if str.localizations.length === 0}
 			<p class="text-muted-foreground">No localizations yet.</p>
 		{:else}

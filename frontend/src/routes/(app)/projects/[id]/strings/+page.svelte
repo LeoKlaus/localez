@@ -459,6 +459,15 @@
 		{/if}
 	{/if}
 
+	{#if !auth.isAuthenticated && language}
+		<div class="mb-4 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+			<a href="/login" class="font-medium text-foreground hover:underline">Sign in</a>
+			or
+			<a href="/register" class="font-medium text-foreground hover:underline">create an account</a>
+			to add or edit translations.
+		</div>
+	{/if}
+
 	{#if isPending}
 		<div class="h-64 animate-pulse rounded-lg bg-muted"></div>
 	{:else if isError}
