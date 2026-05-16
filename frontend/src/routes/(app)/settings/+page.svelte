@@ -2,9 +2,6 @@
 	import { auth } from '$lib/stores/auth.svelte';
 	import { client } from '$lib/api/client';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-
-	onMount(() => { if (!auth.isAuthenticated) goto('/login'); });
 	import { startRegistration } from '@simplewebauthn/browser';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';

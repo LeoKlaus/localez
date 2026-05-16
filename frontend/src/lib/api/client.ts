@@ -1,7 +1,7 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 import type { paths } from './schema.d.ts';
 import { auth } from '$lib/stores/auth.svelte';
-import { goto } from '$app/navigation';
+import { toast } from 'svelte-sonner';
 
 const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
@@ -29,8 +29,12 @@ const authMiddleware: Middleware = {
 
 		const refreshToken = auth.refreshToken;
 		if (!refreshToken) {
-			auth.clear();
-			goto('/login');
+			if (auth.isAuthenticated) {
+				auth.clear();
+				toast.error('Session expired', { description: 'Please sign in again to continue.' });
+			} else {
+				toast.error('Sign in required', { description: 'You must be signed in to perform this action.' });
+			}
 			return response;
 		}
 
@@ -55,7 +59,7 @@ const authMiddleware: Middleware = {
 			if (!res.ok) {
 				auth.clear();
 				drainQueue(null);
-				goto('/login');
+				toast.error('Session expired', { description: 'Please sign in again to continue.' });
 				return response;
 			}
 
