@@ -1,9 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.limiter import limiter
 from app.core.security import verify_password, hash_password
 from app.core.totp import generate_totp_secret, get_totp_uri, verify_totp
 from app.database import get_db
@@ -95,7 +96,9 @@ async def totp_setup(user: User = Depends(get_current_active_user)):
 
 
 @router.post("/me/totp/verify", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def totp_verify(
+    request: Request,
     body: TotpVerifyRequest,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),

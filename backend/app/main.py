@@ -1,12 +1,19 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
+from app.core.limiter import limiter
 from app.models import project_language  # noqa: F401 — ensure models are registered with Base
 from app.routers import auth, projects, proposals, strings, users, xcstrings
 
 app = FastAPI(title="Localez", version="0.1.0", root_path="/api")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 _allowed_hosts = list({*settings.allowed_hosts.split(), "localhost"})
 if _allowed_hosts != ["*"]:

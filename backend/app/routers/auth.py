@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, Form, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated, Optional
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.limiter import limiter
 from app.core.passkey import (
     get_authentication_options,
     get_registration_options,
@@ -32,7 +34,8 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.username == body.username))
     if existing.scalar_one_or_none():
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "USERNAME_TAKEN", "message": "Username already taken"})
@@ -42,7 +45,9 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/token", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     totp_code: Annotated[Optional[str], Form()] = None,
     db: AsyncSession = Depends(get_db),
@@ -57,7 +62,8 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("30/minute")
+async def refresh(request: Request, body: RefreshRequest, db: AsyncSession = Depends(get_db)):
     result = await auth_service.rotate_refresh_token(db, body.refresh_token)
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_REFRESH_TOKEN", "message": "Invalid or expired refresh token"})
@@ -71,7 +77,8 @@ async def logout(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/recover", response_model=TokenResponse)
-async def recover(body: RecoverRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def recover(request: Request, body: RecoverRequest, db: AsyncSession = Depends(get_db)):
     result = await auth_service.recover_account(db, body.username, body.recovery_words, body.new_password)
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "RECOVERY_FAILED", "message": "Invalid username or recovery words"})
@@ -80,7 +87,9 @@ async def recover(body: RecoverRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/passkey/register/begin", response_model=PasskeyRegisterBeginResponse)
+@limiter.limit("10/minute")
 async def passkey_register_begin(
+    request: Request,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -99,7 +108,9 @@ async def passkey_register_begin(
 
 
 @router.post("/passkey/register/complete", status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def passkey_register_complete(
+    request: Request,
     body: PasskeyCompleteRequest,
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -122,7 +133,8 @@ async def passkey_register_complete(
 
 
 @router.post("/passkey/authenticate/begin", response_model=PasskeyAuthBeginResponse)
-async def passkey_auth_begin(db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def passkey_auth_begin(request: Request, db: AsyncSession = Depends(get_db)):
     options = get_authentication_options()
     import webauthn, json
     options_dict = json.loads(webauthn.options_to_json(options))
@@ -131,7 +143,8 @@ async def passkey_auth_begin(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/passkey/authenticate/complete", response_model=TokenResponse)
-async def passkey_auth_complete(body: PasskeyAuthCompleteRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def passkey_auth_complete(request: Request, body: PasskeyAuthCompleteRequest, db: AsyncSession = Depends(get_db)):
     try:
         challenge = decode_webauthn_challenge_token(body.challenge_token)
         import base64
