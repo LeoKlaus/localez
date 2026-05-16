@@ -1,3 +1,5 @@
+import os
+
 from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -31,7 +33,11 @@ class Settings(BaseSettings):
             return "deepl"
         return None
 
-    model_config = SettingsConfigDict(env_file="../.env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=None if os.getenv("TESTING") else "../.env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

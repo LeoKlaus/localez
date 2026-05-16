@@ -1,7 +1,14 @@
 import itertools
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Set before any app module is imported so Settings() requires no .env file.
+os.environ["TESTING"] = "1"
+os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
+os.environ.setdefault("POSTGRES_PASSWORD", "test")
+os.environ.setdefault("ALLOWED_HOSTS", "*")
 
 import pytest
 import pytest_asyncio
