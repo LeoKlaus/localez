@@ -48,7 +48,10 @@
 					error = '';
 					return;
 				}
-				error = data.detail ?? data.message ?? 'Login failed. Check your credentials.';
+				const detail = data.detail;
+				error = (typeof detail === 'object' && detail !== null ? detail.message : detail)
+					?? data.message
+					?? 'Login failed. Check your credentials.';
 				return;
 			}
 
