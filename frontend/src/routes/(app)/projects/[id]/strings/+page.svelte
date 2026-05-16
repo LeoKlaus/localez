@@ -112,9 +112,7 @@
 
 	let proposalsByLocId = $derived.by((): Map<string, ProposalResponse[]> => {
 		const map = new Map<string, ProposalResponse[]>();
-		const currentUserId = auth.user?.id;
 		for (const p of pendingProposals.data ?? []) {
-			if (p.proposed_by === currentUserId) continue;
 			if (!map.has(p.localization_id)) map.set(p.localization_id, []);
 			map.get(p.localization_id)!.push(p);
 		}
@@ -341,6 +339,8 @@
 		</div>
 	{/if}
 	{#if auth.isAuthenticated}
+		{@const locProposals = proposalsByLocId.get(loc.id) ?? []}
+		{@const currentUserId = auth.user?.id}
 		{#if loc.ai_suggestion && loc.ai_suggestion !== loc.value}
 			<button
 				type="button"
@@ -351,17 +351,29 @@
 				<span class="break-words">{loc.ai_suggestion}</span>
 			</button>
 		{/if}
-		{#each proposalsByLocId.get(loc.id) ?? [] as proposal}
-			<button
-				type="button"
-				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
-				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = proposal.proposed_value; }}
-				title={proposal.comment ? `Reason: ${proposal.comment}` : undefined}
-			>
-				<span class="shrink-0 text-muted-foreground/50">↳</span>
-				<span class="break-words">{proposal.proposed_value}</span>
-			</button>
-		{/each}
+		{#if locProposals.length > 0}
+			<div class="mt-1.5 space-y-1">
+				<p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+					Suggested alternate {locProposals.length === 1 ? 'translation' : 'translations'}
+				</p>
+				{#each locProposals as proposal}
+					{@const isOwn = proposal.proposed_by === currentUserId}
+					<div class="rounded-md border bg-muted/40 px-2 py-1.5 text-xs">
+						<div class="flex items-center gap-1.5">
+							{#if isOwn}
+								<span class="shrink-0 rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary">You</span>
+							{/if}
+							<p class="break-words font-mono">{proposal.proposed_value}</p>
+						</div>
+						{#if proposal.comment}
+							<p class="mt-0.5 break-words text-muted-foreground">
+								<span class="font-medium">Reason:</span> {proposal.comment}
+							</p>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 	{#if submitError[loc.id]}
 		<p class="mt-0.5 pl-1 text-xs text-destructive">{submitError[loc.id]}</p>
