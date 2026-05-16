@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -29,6 +30,8 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.services import auth_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -124,7 +127,8 @@ async def passkey_register_complete(
         challenge = decode_webauthn_challenge_token(body.challenge_token)
         verified = verify_registration(body.credential, challenge)
     except Exception as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "PASSKEY_REGISTRATION_FAILED", "message": str(e)})
+        logger.warning("Passkey registration failed: %s", e)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "PASSKEY_REGISTRATION_FAILED", "message": "Passkey registration failed"})
 
     db.add(PasskeyCredential(
         user_id=user.id,
@@ -169,7 +173,8 @@ async def passkey_auth_complete(request: Request, body: PasskeyAuthCompleteReque
         )
         cred.sign_count = verified.new_sign_count
     except Exception as e:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "PASSKEY_AUTH_FAILED", "message": str(e)})
+        logger.warning("Passkey authentication failed: %s", e)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "PASSKEY_AUTH_FAILED", "message": "Passkey authentication failed"})
 
     user = await db.get(User, cred.user_id)
     if user is None or not user.is_active:

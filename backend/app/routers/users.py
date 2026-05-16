@@ -106,7 +106,6 @@ async def totp_verify(
     user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    print(body)
     if not verify_totp(body.secret, body.code):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_TOTP_CODE", "message": "Invalid or expired TOTP code"})
     user.totp_secret = body.secret
