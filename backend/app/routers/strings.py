@@ -163,3 +163,34 @@ async def update_localization_state(
     await db.commit()
     await db.refresh(loc)
     return loc
+
+
+@router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/reset", response_model=LocalizationResponse)
+async def reset_localization(
+    project_id: uuid.UUID,
+    key_id: uuid.UUID,
+    loc_id: uuid.UUID,
+    _: User = Depends(require_reviewer),
+    db: AsyncSession = Depends(get_db),
+):
+    sk = await db.get(StringKey, key_id)
+    if sk is None or sk.project_id != project_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "STRING_NOT_FOUND", "message": "String key not found"})
+
+    loc = await db.get(Localization, loc_id)
+    if loc is None or loc.string_key_id != key_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
+
+    loc.value = None
+    loc.state = LocalizationState.new
+
+    await db.execute(
+        delete(TranslationProposal).where(
+            TranslationProposal.localization_id == loc_id,
+            TranslationProposal.status != ProposalStatus.pending,
+        )
+    )
+
+    await db.commit()
+    await db.refresh(loc)
+    return loc
