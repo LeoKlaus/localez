@@ -64,10 +64,52 @@
 
 	let placeholders = $derived(extractPlaceholders(stringDetail.data?.key ?? ''));
 
-	// Proposal dialog
+	// ── Set initial value dialog ──────────────────────────────────────────────
+	let setValueDialogOpen = $state(false);
+	let setValueLocId = $state('');
+	let setValue = $state('');
+	let setValueError = $state('');
+	let setValueMirrorEl = $state<HTMLDivElement | undefined>();
+
+	const setValueMutation = createMutation(() => ({
+		mutationFn: async () => {
+			const { error } = await client.PUT(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/value',
+				{
+					params: { path: { project_id: projectId, key_id: keyId, loc_id: setValueLocId } },
+					body: { value: setValue }
+				}
+			);
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['string', projectId, keyId] });
+			setValueDialogOpen = false;
+			setValue = '';
+			setValueError = '';
+		},
+		onError: (err: unknown) => {
+			const detail = (err as { detail?: { code?: string } })?.detail;
+			if (detail?.code === 'VALUE_ALREADY_SET') {
+				setValueError = 'A translation already exists. Only admins can override it.';
+			} else {
+				setValueError = 'Failed to set translation.';
+			}
+		}
+	}));
+
+	function openSetValueDialog(locId: string) {
+		setValueLocId = locId;
+		setValue = '';
+		setValueError = '';
+		setValueDialogOpen = true;
+	}
+
+	// ── Proposal dialog ───────────────────────────────────────────────────────
 	let proposalDialogOpen = $state(false);
 	let selectedLocId = $state('');
 	let proposedValue = $state('');
+	let proposalComment = $state('');
 	let proposalError = $state('');
 	let mirrorEl = $state<HTMLDivElement | undefined>();
 
@@ -77,7 +119,7 @@
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
 				{
 					params: { path: { project_id: projectId, key_id: keyId, loc_id: selectedLocId } },
-					body: { proposed_value: proposedValue }
+					body: { proposed_value: proposedValue, comment: proposalComment }
 				}
 			);
 			if (error) throw error;
@@ -87,6 +129,7 @@
 			qc.invalidateQueries({ queryKey: ['proposals', projectId, keyId, selectedLocId] });
 			proposalDialogOpen = false;
 			proposedValue = '';
+			proposalComment = '';
 			proposalError = '';
 		},
 		onError: () => {
@@ -97,6 +140,8 @@
 	function openProposalDialog(locId: string) {
 		selectedLocId = locId;
 		proposedValue = '';
+		proposalComment = '';
+		proposalError = '';
 		proposalDialogOpen = true;
 	}
 </script>
@@ -142,10 +187,77 @@
 	{/if}
 </div>
 
+<!-- ── Set initial value dialog ─────────────────────────────────────────────── -->
+<Dialog.Root bind:open={setValueDialogOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Set translation</Dialog.Title>
+			<Dialog.Description>
+				Provide the initial translation. Once set, changes require a proposal with a reason.
+			</Dialog.Description>
+		</Dialog.Header>
+		<form
+			onsubmit={(e) => {
+				e.preventDefault();
+				setValueMutation.mutate();
+			}}
+			class="space-y-4"
+		>
+			{#if setValueError}
+				<p class="text-sm text-destructive">{setValueError}</p>
+			{/if}
+
+			<div class="relative">
+				<div
+					aria-hidden="true"
+					bind:this={setValueMirrorEl}
+					class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words rounded-md px-3 py-2 text-sm"
+				>{#each parseSegments(setValue) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+				<textarea
+					class="relative min-h-[6rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					style="caret-color: hsl(var(--foreground)); resize: none;"
+					placeholder="Enter the translation…"
+					rows={4}
+					required
+					value={setValue}
+					oninput={(e) => { setValue = e.currentTarget.value; }}
+					onscroll={(e) => { if (setValueMirrorEl) setValueMirrorEl.scrollTop = e.currentTarget.scrollTop; }}
+				></textarea>
+			</div>
+
+			{#if placeholders.length > 0}
+				<div class="flex flex-wrap items-center gap-1">
+					<span class="text-xs text-muted-foreground">Placeholders:</span>
+					{#each placeholders as ph}
+						<span class="flex items-center gap-0.5">
+							<button
+								type="button"
+								class="inline rounded bg-blue-100 px-1 font-mono text-xs text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/70"
+								onmousedown={(e) => { e.preventDefault(); setValue += ph; }}
+								title="Click to insert into translation"
+							>{ph}</button>
+							<span class="text-xs text-muted-foreground">{placeholderLabel(ph)}</span>
+						</span>
+					{/each}
+				</div>
+			{/if}
+
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (setValueDialogOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={setValueMutation.isPending}>Set translation</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- ── Proposal dialog ────────────────────────────────────────────────────── -->
 <Dialog.Root bind:open={proposalDialogOpen}>
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title>Submit translation proposal</Dialog.Title>
+			<Dialog.Description>
+				Propose an alternative translation and explain why it should be changed.
+			</Dialog.Description>
 		</Dialog.Header>
 		<form
 			onsubmit={(e) => {
@@ -158,23 +270,27 @@
 				<p class="text-sm text-destructive">{proposalError}</p>
 			{/if}
 
-			<!-- Overlay textarea -->
-			<div class="relative">
-				<div
-					aria-hidden="true"
-					bind:this={mirrorEl}
-					class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words rounded-md px-3 py-2 text-sm"
-				>{#each parseSegments(proposedValue) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
-				<textarea
-					class="relative min-h-[6rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-					style="caret-color: hsl(var(--foreground)); resize: none;"
-					placeholder="Enter your translation…"
-					rows={4}
-					required
-					value={proposedValue}
-					oninput={(e) => { proposedValue = e.currentTarget.value; }}
-					onscroll={(e) => { if (mirrorEl) mirrorEl.scrollTop = e.currentTarget.scrollTop; }}
-				></textarea>
+			<!-- Overlay textarea for the proposed value -->
+			<div>
+				<label for="proposal-value" class="mb-1.5 block text-sm font-medium">Proposed translation</label>
+				<div class="relative">
+					<div
+						aria-hidden="true"
+						bind:this={mirrorEl}
+						class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words rounded-md px-3 py-2 text-sm"
+					>{#each parseSegments(proposedValue) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+					<textarea
+						id="proposal-value"
+						class="relative min-h-[6rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						style="caret-color: hsl(var(--foreground)); resize: none;"
+						placeholder="Enter your translation…"
+						rows={4}
+						required
+						value={proposedValue}
+						oninput={(e) => { proposedValue = e.currentTarget.value; }}
+						onscroll={(e) => { if (mirrorEl) mirrorEl.scrollTop = e.currentTarget.scrollTop; }}
+					></textarea>
+				</div>
 			</div>
 
 			{#if placeholders.length > 0}
@@ -193,6 +309,23 @@
 					{/each}
 				</div>
 			{/if}
+
+			<!-- Reason (comment) -->
+			<div>
+				<label class="mb-1.5 block text-sm font-medium" for="proposal-comment">
+					Reason for change <span class="text-muted-foreground">(in English)</span>
+				</label>
+				<textarea
+					id="proposal-comment"
+					class="min-h-[4rem] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					style="resize: none;"
+					placeholder="Explain why the current translation should be changed…"
+					rows={3}
+					required
+					value={proposalComment}
+					oninput={(e) => { proposalComment = e.currentTarget.value; }}
+				></textarea>
+			</div>
 
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (proposalDialogOpen = false)}>Cancel</Button>
@@ -276,9 +409,17 @@
 					</span>
 				</div>
 				{#if auth.isAuthenticated}
-					<Button variant="outline" size="sm" onclick={() => openProposalDialog(loc.id)}>
-						<Plus size={12} class="mr-1" /> Propose
-					</Button>
+					{#if !loc.value}
+						<!-- No value yet — offer to set the initial translation -->
+						<Button variant="outline" size="sm" onclick={() => openSetValueDialog(loc.id)}>
+							Set translation
+						</Button>
+					{:else}
+						<!-- Value exists — offer a proposal for changes -->
+						<Button variant="outline" size="sm" onclick={() => openProposalDialog(loc.id)}>
+							<Plus size={12} class="mr-1" /> Propose change
+						</Button>
+					{/if}
 				{/if}
 			</div>
 		</Card.Header>
@@ -293,31 +434,36 @@
 				<div class="space-y-2">
 					<p class="text-xs font-semibold uppercase text-muted-foreground">Proposals</p>
 					{#each proposals.data as proposal}
-						<div class="flex items-start justify-between gap-2 rounded-md border p-3 text-sm">
-							<div class="flex-1">
-								<p class="font-mono">{proposal.proposed_value}</p>
-								<p class="mt-1 text-xs text-muted-foreground">{formatDate(proposal.proposed_at)}</p>
-							</div>
-							{#if auth.isAdmin}
-								<div class="flex items-center gap-1">
-									<Button
-										variant="ghost"
-										size="icon"
-										class="size-7 text-green-600"
-										onclick={() => acceptProposal.mutate(proposal.id)}
-									>
-										<Check size={14} />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										class="size-7 text-destructive"
-										onclick={() => rejectProposal.mutate(proposal.id)}
-									>
-										<X size={14} />
-									</Button>
-								</div>
+						<div class="rounded-md border p-3 text-sm">
+							<p class="font-mono">{proposal.proposed_value}</p>
+							{#if proposal.comment}
+								<p class="mt-1.5 text-xs text-muted-foreground">
+									<span class="font-medium">Reason:</span> {proposal.comment}
+								</p>
 							{/if}
+							<div class="mt-2 flex items-center justify-between gap-2">
+								<p class="text-xs text-muted-foreground">{formatDate(proposal.proposed_at)}</p>
+								{#if auth.isAdmin}
+									<div class="flex items-center gap-1">
+										<Button
+											variant="ghost"
+											size="icon"
+											class="size-7 text-green-600"
+											onclick={() => acceptProposal.mutate(proposal.id)}
+										>
+											<Check size={14} />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											class="size-7 text-destructive"
+											onclick={() => rejectProposal.mutate(proposal.id)}
+										>
+											<X size={14} />
+										</Button>
+									</div>
+								{/if}
+							</div>
 						</div>
 					{/each}
 				</div>

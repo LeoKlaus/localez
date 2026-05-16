@@ -14,7 +14,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Register */
-        post: operations["register_api_auth_register_post"];
+        post: operations["register_auth_register_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31,7 +31,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Login */
-        post: operations["login_api_auth_token_post"];
+        post: operations["login_auth_token_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -48,7 +48,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Refresh */
-        post: operations["refresh_api_auth_refresh_post"];
+        post: operations["refresh_auth_refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -65,7 +65,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Logout */
-        post: operations["logout_api_auth_logout_post"];
+        post: operations["logout_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -82,7 +82,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Recover */
-        post: operations["recover_api_auth_recover_post"];
+        post: operations["recover_auth_recover_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -99,7 +99,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Register Begin */
-        post: operations["passkey_register_begin_api_auth_passkey_register_begin_post"];
+        post: operations["passkey_register_begin_auth_passkey_register_begin_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -116,7 +116,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Register Complete */
-        post: operations["passkey_register_complete_api_auth_passkey_register_complete_post"];
+        post: operations["passkey_register_complete_auth_passkey_register_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -133,7 +133,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Auth Begin */
-        post: operations["passkey_auth_begin_api_auth_passkey_authenticate_begin_post"];
+        post: operations["passkey_auth_begin_auth_passkey_authenticate_begin_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -150,7 +150,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Passkey Auth Complete */
-        post: operations["passkey_auth_complete_api_auth_passkey_authenticate_complete_post"];
+        post: operations["passkey_auth_complete_auth_passkey_authenticate_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -165,15 +165,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get Me */
-        get: operations["get_me_api_users_me_get"];
+        get: operations["get_me_users_me_get"];
         put?: never;
         post?: never;
         /** Delete Me */
-        delete: operations["delete_me_api_users_me_delete"];
+        delete: operations["delete_me_users_me_delete"];
         options?: never;
         head?: never;
         /** Update Password */
-        patch: operations["update_password_api_users_me_patch"];
+        patch: operations["update_password_users_me_patch"];
         trace?: never;
     };
     "/api/users": {
@@ -184,7 +184,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Users */
-        get: operations["list_users_api_users_get"];
+        get: operations["list_users_users_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -201,11 +201,11 @@ export interface paths {
             cookie?: never;
         };
         /** Get User */
-        get: operations["get_user_api_users__user_id__get"];
+        get: operations["get_user_users__user_id__get"];
         put?: never;
         post?: never;
         /** Deactivate User */
-        delete: operations["deactivate_user_api_users__user_id__delete"];
+        delete: operations["deactivate_user_users__user_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -225,7 +225,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Update Role */
-        patch: operations["update_role_api_users__user_id__role_patch"];
+        patch: operations["update_role_users__user_id__role_patch"];
         trace?: never;
     };
     "/api/users/me/totp/setup": {
@@ -238,7 +238,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Totp Setup */
-        post: operations["totp_setup_api_users_me_totp_setup_post"];
+        post: operations["totp_setup_users_me_totp_setup_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -255,7 +255,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Totp Verify */
-        post: operations["totp_verify_api_users_me_totp_verify_post"];
+        post: operations["totp_verify_users_me_totp_verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -273,7 +273,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Totp Disable */
-        delete: operations["totp_disable_api_users_me_totp_delete"];
+        delete: operations["totp_disable_users_me_totp_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -287,10 +287,10 @@ export interface paths {
             cookie?: never;
         };
         /** List Projects */
-        get: operations["list_projects_api_projects_get"];
+        get: operations["list_projects_projects_get"];
         put?: never;
         /** Create Project */
-        post: operations["create_project_api_projects_post"];
+        post: operations["create_project_projects_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -305,15 +305,15 @@ export interface paths {
             cookie?: never;
         };
         /** Get Project */
-        get: operations["get_project_api_projects__project_id__get"];
+        get: operations["get_project_projects__project_id__get"];
         put?: never;
         post?: never;
         /** Delete Project */
-        delete: operations["delete_project_api_projects__project_id__delete"];
+        delete: operations["delete_project_projects__project_id__delete"];
         options?: never;
         head?: never;
         /** Update Project */
-        patch: operations["update_project_api_projects__project_id__patch"];
+        patch: operations["update_project_projects__project_id__patch"];
         trace?: never;
     };
     "/api/projects/{project_id}/icon": {
@@ -324,12 +324,12 @@ export interface paths {
             cookie?: never;
         };
         /** Get Icon */
-        get: operations["get_icon_api_projects__project_id__icon_get"];
+        get: operations["get_icon_projects__project_id__icon_get"];
         /** Upload Icon */
-        put: operations["upload_icon_api_projects__project_id__icon_put"];
+        put: operations["upload_icon_projects__project_id__icon_put"];
         post?: never;
         /** Delete Icon */
-        delete: operations["delete_icon_api_projects__project_id__icon_delete"];
+        delete: operations["delete_icon_projects__project_id__icon_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -345,7 +345,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Add Language */
-        post: operations["add_language_api_projects__project_id__languages_post"];
+        post: operations["add_language_projects__project_id__languages_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -362,7 +362,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Prefill Language */
-        post: operations["prefill_language_api_projects__project_id__languages__language__prefill_post"];
+        post: operations["prefill_language_projects__project_id__languages__language__prefill_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -377,7 +377,7 @@ export interface paths {
             cookie?: never;
         };
         /** Prefill Stream */
-        get: operations["prefill_stream_api_projects__project_id__languages__language__prefill_stream_get"];
+        get: operations["prefill_stream_projects__project_id__languages__language__prefill_stream_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -397,7 +397,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Remove Language */
-        delete: operations["remove_language_api_projects__project_id__languages__language__delete"];
+        delete: operations["remove_language_projects__project_id__languages__language__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -411,7 +411,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Language Localizations */
-        get: operations["list_language_localizations_api_projects__project_id__languages__language__localizations_get"];
+        get: operations["list_language_localizations_projects__project_id__languages__language__localizations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -428,7 +428,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Project Stats */
-        get: operations["get_project_stats_api_projects__project_id__stats_get"];
+        get: operations["get_project_stats_projects__project_id__stats_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -445,7 +445,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Strings */
-        get: operations["list_strings_api_projects__project_id__strings_get"];
+        get: operations["list_strings_projects__project_id__strings_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -462,7 +462,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get String */
-        get: operations["get_string_api_projects__project_id__strings__key_id__get"];
+        get: operations["get_string_projects__project_id__strings__key_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -479,7 +479,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Localizations */
-        get: operations["list_localizations_api_projects__project_id__strings__key_id__localizations_get"];
+        get: operations["list_localizations_projects__project_id__strings__key_id__localizations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -496,8 +496,25 @@ export interface paths {
             cookie?: never;
         };
         /** Get Localization */
-        get: operations["get_localization_api_projects__project_id__strings__key_id__localizations__loc_id__get"];
+        get: operations["get_localization_projects__project_id__strings__key_id__localizations__loc_id__get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Localization Value */
+        put: operations["set_localization_value_projects__project_id__strings__key_id__localizations__loc_id__value_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -519,7 +536,7 @@ export interface paths {
         options?: never;
         head?: never;
         /** Update Localization State */
-        patch: operations["update_localization_state_api_projects__project_id__strings__key_id__localizations__loc_id__state_patch"];
+        patch: operations["update_localization_state_projects__project_id__strings__key_id__localizations__loc_id__state_patch"];
         trace?: never;
     };
     "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/reset": {
@@ -532,7 +549,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Reset Localization */
-        post: operations["reset_localization_api_projects__project_id__strings__key_id__localizations__loc_id__reset_post"];
+        post: operations["reset_localization_projects__project_id__strings__key_id__localizations__loc_id__reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -549,7 +566,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Import Xcstrings */
-        post: operations["import_xcstrings_api_projects__project_id__import_post"];
+        post: operations["import_xcstrings_projects__project_id__import_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -564,7 +581,7 @@ export interface paths {
             cookie?: never;
         };
         /** Export Xcstrings */
-        get: operations["export_xcstrings_api_projects__project_id__export_get"];
+        get: operations["export_xcstrings_projects__project_id__export_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -581,7 +598,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Project Proposals */
-        get: operations["list_project_proposals_api_projects__project_id__proposals_get"];
+        get: operations["list_project_proposals_projects__project_id__proposals_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -598,10 +615,10 @@ export interface paths {
             cookie?: never;
         };
         /** List Proposals */
-        get: operations["list_proposals_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_get"];
+        get: operations["list_proposals_projects__project_id__strings__key_id__localizations__loc_id__proposals_get"];
         put?: never;
         /** Create Proposal */
-        post: operations["create_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_post"];
+        post: operations["create_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -618,7 +635,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Accept Proposal */
-        post: operations["accept_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post"];
+        post: operations["accept_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -636,7 +653,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Reject Proposal */
-        delete: operations["reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__delete"];
+        delete: operations["reject_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -646,16 +663,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Body_import_xcstrings_api_projects__project_id__import_post */
-        Body_import_xcstrings_api_projects__project_id__import_post: {
+        /** Body_import_xcstrings_projects__project_id__import_post */
+        Body_import_xcstrings_projects__project_id__import_post: {
             /**
              * File
              * @description xcstrings file to import
              */
             file: string;
         };
-        /** Body_login_api_auth_token_post */
-        Body_login_api_auth_token_post: {
+        /** Body_login_auth_token_post */
+        Body_login_auth_token_post: {
             /** Totp Code */
             totp_code?: string | null;
             /** Grant Type */
@@ -680,8 +697,8 @@ export interface components {
              */
             client_secret?: string | null;
         };
-        /** Body_upload_icon_api_projects__project_id__icon_put */
-        Body_upload_icon_api_projects__project_id__icon_put: {
+        /** Body_upload_icon_projects__project_id__icon_put */
+        Body_upload_icon_projects__project_id__icon_put: {
             /** File */
             file: string;
         };
@@ -740,6 +757,11 @@ export interface components {
         /** LocalizationStateUpdate */
         LocalizationStateUpdate: {
             state: components["schemas"]["LocalizationState"];
+        };
+        /** LocalizationValueSet */
+        LocalizationValueSet: {
+            /** Value */
+            value: string;
         };
         /** LocalizationWithKeyResponse */
         LocalizationWithKeyResponse: {
@@ -893,6 +915,8 @@ export interface components {
         ProposalCreate: {
             /** Proposed Value */
             proposed_value: string;
+            /** Comment */
+            comment: string;
         };
         /** ProposalResponse */
         ProposalResponse: {
@@ -915,6 +939,8 @@ export interface components {
              * Format: date-time
              */
             proposed_at: string;
+            /** Comment */
+            comment: string;
         };
         /** RecoverRequest */
         RecoverRequest: {
@@ -1101,7 +1127,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    register_api_auth_register_post: {
+    register_auth_register_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1134,7 +1160,7 @@ export interface operations {
             };
         };
     };
-    login_api_auth_token_post: {
+    login_auth_token_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1143,7 +1169,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/x-www-form-urlencoded": components["schemas"]["Body_login_api_auth_token_post"];
+                "application/x-www-form-urlencoded": components["schemas"]["Body_login_auth_token_post"];
             };
         };
         responses: {
@@ -1167,7 +1193,7 @@ export interface operations {
             };
         };
     };
-    refresh_api_auth_refresh_post: {
+    refresh_auth_refresh_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1200,7 +1226,7 @@ export interface operations {
             };
         };
     };
-    logout_api_auth_logout_post: {
+    logout_auth_logout_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1231,7 +1257,7 @@ export interface operations {
             };
         };
     };
-    recover_api_auth_recover_post: {
+    recover_auth_recover_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1264,7 +1290,7 @@ export interface operations {
             };
         };
     };
-    passkey_register_begin_api_auth_passkey_register_begin_post: {
+    passkey_register_begin_auth_passkey_register_begin_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1284,7 +1310,7 @@ export interface operations {
             };
         };
     };
-    passkey_register_complete_api_auth_passkey_register_complete_post: {
+    passkey_register_complete_auth_passkey_register_complete_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1317,7 +1343,7 @@ export interface operations {
             };
         };
     };
-    passkey_auth_begin_api_auth_passkey_authenticate_begin_post: {
+    passkey_auth_begin_auth_passkey_authenticate_begin_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1337,7 +1363,7 @@ export interface operations {
             };
         };
     };
-    passkey_auth_complete_api_auth_passkey_authenticate_complete_post: {
+    passkey_auth_complete_auth_passkey_authenticate_complete_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1370,7 +1396,7 @@ export interface operations {
             };
         };
     };
-    get_me_api_users_me_get: {
+    get_me_users_me_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1390,7 +1416,7 @@ export interface operations {
             };
         };
     };
-    delete_me_api_users_me_delete: {
+    delete_me_users_me_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1408,7 +1434,7 @@ export interface operations {
             };
         };
     };
-    update_password_api_users_me_patch: {
+    update_password_users_me_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1441,7 +1467,7 @@ export interface operations {
             };
         };
     };
-    list_users_api_users_get: {
+    list_users_users_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1473,7 +1499,7 @@ export interface operations {
             };
         };
     };
-    get_user_api_users__user_id__get: {
+    get_user_users__user_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1504,7 +1530,7 @@ export interface operations {
             };
         };
     };
-    deactivate_user_api_users__user_id__delete: {
+    deactivate_user_users__user_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1533,7 +1559,7 @@ export interface operations {
             };
         };
     };
-    update_role_api_users__user_id__role_patch: {
+    update_role_users__user_id__role_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1568,7 +1594,7 @@ export interface operations {
             };
         };
     };
-    totp_setup_api_users_me_totp_setup_post: {
+    totp_setup_users_me_totp_setup_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1588,7 +1614,7 @@ export interface operations {
             };
         };
     };
-    totp_verify_api_users_me_totp_verify_post: {
+    totp_verify_users_me_totp_verify_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1619,7 +1645,7 @@ export interface operations {
             };
         };
     };
-    totp_disable_api_users_me_totp_delete: {
+    totp_disable_users_me_totp_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1650,7 +1676,7 @@ export interface operations {
             };
         };
     };
-    list_projects_api_projects_get: {
+    list_projects_projects_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -1682,7 +1708,7 @@ export interface operations {
             };
         };
     };
-    create_project_api_projects_post: {
+    create_project_projects_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1715,7 +1741,7 @@ export interface operations {
             };
         };
     };
-    get_project_api_projects__project_id__get: {
+    get_project_projects__project_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1746,7 +1772,7 @@ export interface operations {
             };
         };
     };
-    delete_project_api_projects__project_id__delete: {
+    delete_project_projects__project_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1775,7 +1801,7 @@ export interface operations {
             };
         };
     };
-    update_project_api_projects__project_id__patch: {
+    update_project_projects__project_id__patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -1810,7 +1836,7 @@ export interface operations {
             };
         };
     };
-    get_icon_api_projects__project_id__icon_get: {
+    get_icon_projects__project_id__icon_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1841,7 +1867,7 @@ export interface operations {
             };
         };
     };
-    upload_icon_api_projects__project_id__icon_put: {
+    upload_icon_projects__project_id__icon_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -1852,7 +1878,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_upload_icon_api_projects__project_id__icon_put"];
+                "multipart/form-data": components["schemas"]["Body_upload_icon_projects__project_id__icon_put"];
             };
         };
         responses: {
@@ -1874,7 +1900,7 @@ export interface operations {
             };
         };
     };
-    delete_icon_api_projects__project_id__icon_delete: {
+    delete_icon_projects__project_id__icon_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1903,7 +1929,7 @@ export interface operations {
             };
         };
     };
-    add_language_api_projects__project_id__languages_post: {
+    add_language_projects__project_id__languages_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1938,7 +1964,7 @@ export interface operations {
             };
         };
     };
-    prefill_language_api_projects__project_id__languages__language__prefill_post: {
+    prefill_language_projects__project_id__languages__language__prefill_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1970,7 +1996,7 @@ export interface operations {
             };
         };
     };
-    prefill_stream_api_projects__project_id__languages__language__prefill_stream_get: {
+    prefill_stream_projects__project_id__languages__language__prefill_stream_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2002,7 +2028,7 @@ export interface operations {
             };
         };
     };
-    remove_language_api_projects__project_id__languages__language__delete: {
+    remove_language_projects__project_id__languages__language__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -2032,7 +2058,7 @@ export interface operations {
             };
         };
     };
-    list_language_localizations_api_projects__project_id__languages__language__localizations_get: {
+    list_language_localizations_projects__project_id__languages__language__localizations_get: {
         parameters: {
             query?: {
                 state?: string | null;
@@ -2068,7 +2094,7 @@ export interface operations {
             };
         };
     };
-    get_project_stats_api_projects__project_id__stats_get: {
+    get_project_stats_projects__project_id__stats_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2099,7 +2125,7 @@ export interface operations {
             };
         };
     };
-    list_strings_api_projects__project_id__strings_get: {
+    list_strings_projects__project_id__strings_get: {
         parameters: {
             query?: {
                 language?: string | null;
@@ -2137,7 +2163,7 @@ export interface operations {
             };
         };
     };
-    get_string_api_projects__project_id__strings__key_id__get: {
+    get_string_projects__project_id__strings__key_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2169,7 +2195,7 @@ export interface operations {
             };
         };
     };
-    list_localizations_api_projects__project_id__strings__key_id__localizations_get: {
+    list_localizations_projects__project_id__strings__key_id__localizations_get: {
         parameters: {
             query?: {
                 language?: string | null;
@@ -2206,7 +2232,7 @@ export interface operations {
             };
         };
     };
-    get_localization_api_projects__project_id__strings__key_id__localizations__loc_id__get: {
+    get_localization_projects__project_id__strings__key_id__localizations__loc_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2239,7 +2265,44 @@ export interface operations {
             };
         };
     };
-    update_localization_state_api_projects__project_id__strings__key_id__localizations__loc_id__state_patch: {
+    set_localization_value_projects__project_id__strings__key_id__localizations__loc_id__value_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                key_id: string;
+                loc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocalizationValueSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalizationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_localization_state_projects__project_id__strings__key_id__localizations__loc_id__state_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -2276,7 +2339,7 @@ export interface operations {
             };
         };
     };
-    reset_localization_api_projects__project_id__strings__key_id__localizations__loc_id__reset_post: {
+    reset_localization_projects__project_id__strings__key_id__localizations__loc_id__reset_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2309,7 +2372,7 @@ export interface operations {
             };
         };
     };
-    import_xcstrings_api_projects__project_id__import_post: {
+    import_xcstrings_projects__project_id__import_post: {
         parameters: {
             query?: {
                 conflict?: string;
@@ -2322,7 +2385,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_import_xcstrings_api_projects__project_id__import_post"];
+                "multipart/form-data": components["schemas"]["Body_import_xcstrings_projects__project_id__import_post"];
             };
         };
         responses: {
@@ -2346,7 +2409,7 @@ export interface operations {
             };
         };
     };
-    export_xcstrings_api_projects__project_id__export_get: {
+    export_xcstrings_projects__project_id__export_get: {
         parameters: {
             query?: {
                 /** @description Comma-separated language codes */
@@ -2381,7 +2444,7 @@ export interface operations {
             };
         };
     };
-    list_project_proposals_api_projects__project_id__proposals_get: {
+    list_project_proposals_projects__project_id__proposals_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -2415,7 +2478,7 @@ export interface operations {
             };
         };
     };
-    list_proposals_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_get: {
+    list_proposals_projects__project_id__strings__key_id__localizations__loc_id__proposals_get: {
         parameters: {
             query?: {
                 offset?: number;
@@ -2451,7 +2514,7 @@ export interface operations {
             };
         };
     };
-    create_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_post: {
+    create_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2488,7 +2551,7 @@ export interface operations {
             };
         };
     };
-    accept_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post: {
+    accept_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__accept_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2522,7 +2585,7 @@ export interface operations {
             };
         };
     };
-    reject_proposal_api_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__delete: {
+    reject_proposal_projects__project_id__strings__key_id__localizations__loc_id__proposals__proposal_id__delete: {
         parameters: {
             query?: never;
             header?: never;

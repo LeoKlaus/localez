@@ -122,6 +122,7 @@
 	});
 
 	let drafts = $state<Record<string, string>>({});
+	let proposalComments = $state<Record<string, string>>({});
 	let submitting = $state<Record<string, boolean>>({});
 	let submitError = $state<Record<string, string>>({});
 	let textareaRefs = $state<Record<string, HTMLTextAreaElement>>({});
@@ -132,9 +133,35 @@
 		}
 	});
 
+	/** Set the initial value (loc has no value yet). Any authenticated user can do this. */
+	async function setInitialValue(loc: LocalizationWithKey) {
+		const draft = drafts[loc.id] ?? '';
+		if (loc.value !== null || !draft.trim()) return;
+		submitting[loc.id] = true;
+		submitError[loc.id] = '';
+		try {
+			const { error } = await client.PUT(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/value',
+				{
+					params: { path: { project_id: projectId, key_id: loc.string_key_id, loc_id: loc.id } },
+					body: { value: draft }
+				}
+			);
+			if (error) throw error;
+			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
+		} catch {
+			submitError[loc.id] = 'Failed to set translation.';
+			drafts[loc.id] = '';
+		} finally {
+			submitting[loc.id] = false;
+		}
+	}
+
+	/** Submit a proposal for an existing value. Requires a comment explaining the change. */
 	async function submitProposal(loc: LocalizationWithKey) {
 		const draft = drafts[loc.id] ?? '';
-		if (draft === (loc.value ?? '') || !draft.trim()) return;
+		const comment = proposalComments[loc.id] ?? '';
+		if (draft === (loc.value ?? '') || !draft.trim() || !comment.trim()) return;
 		submitting[loc.id] = true;
 		submitError[loc.id] = '';
 		try {
@@ -142,15 +169,16 @@
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',
 				{
 					params: { path: { project_id: projectId, key_id: loc.string_key_id, loc_id: loc.id } },
-					body: { proposed_value: draft }
+					body: { proposed_value: draft, comment }
 				}
 			);
 			if (error) throw error;
 			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
 			qc.invalidateQueries({ queryKey: ['proposals-pending', projectId] });
-		} catch {
-			submitError[loc.id] = 'Failed to submit.';
 			drafts[loc.id] = loc.value ?? '';
+			proposalComments[loc.id] = '';
+		} catch {
+			submitError[loc.id] = 'Failed to submit proposal.';
 		} finally {
 			submitting[loc.id] = false;
 		}
@@ -195,44 +223,107 @@
 <!-- Shared translation input: mirror overlay + textarea + placeholder chips + proposals -->
 {#snippet translationInput(loc: LocalizationWithKey, bordered = false)}
 	{@const placeholders = extractPlaceholders(loc.key)}
+	{@const draft = drafts[loc.id] ?? ''}
+	{@const hasValue = loc.value !== null}
+	{@const draftChanged = draft !== (loc.value ?? '') && draft.trim() !== ''}
+
 	{#if auth.isAuthenticated}
-		<div class="relative {bordered ? 'rounded-md border' : ''}">
-			<div
-				aria-hidden="true"
-				class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
-			>{#each parseSegments(drafts[loc.id] ?? '') as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
-			<textarea
-				bind:this={textareaRefs[loc.id]}
-				class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
-				style="resize: none; caret-color: hsl(var(--foreground))"
-				placeholder="Enter translation…"
-				disabled={submitting[loc.id]}
-				value={drafts[loc.id] ?? ''}
-				oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-				onblur={() => submitProposal(loc)}
-				onkeydown={(e) => {
-					if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); return; }
-					if (e.key === 'Enter') {
-						if (e.shiftKey || e.altKey) {
+		{#if !hasValue}
+			<!-- ── Initial value: auto-submit on blur, no comment needed ── -->
+			<div class="relative {bordered ? 'rounded-md border' : ''}">
+				<div
+					aria-hidden="true"
+					class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
+				>{#each parseSegments(draft) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+				<textarea
+					bind:this={textareaRefs[loc.id]}
+					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+					style="resize: none; caret-color: hsl(var(--foreground))"
+					placeholder="Enter translation…"
+					disabled={submitting[loc.id]}
+					value={draft}
+					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+					onblur={() => setInitialValue(loc)}
+					onkeydown={(e) => {
+						if (e.key === 'Escape') { drafts[loc.id] = ''; e.currentTarget.blur(); return; }
+						if (e.key === 'Enter') {
+							if (e.shiftKey || e.altKey) {
+								e.preventDefault();
+								const el = e.currentTarget;
+								const start = el.selectionStart ?? 0;
+								const end = el.selectionEnd ?? 0;
+								const val = drafts[loc.id] ?? '';
+								drafts[loc.id] = val.slice(0, start) + '\n' + val.slice(end);
+								requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 1; });
+							} else {
+								e.preventDefault();
+								e.currentTarget.blur();
+							}
+						}
+					}}
+				></textarea>
+			</div>
+		{:else}
+			<!-- ── Existing value: editable draft; requires comment to propose ── -->
+			<div class="relative {bordered ? 'rounded-md border' : ''}">
+				<div
+					aria-hidden="true"
+					class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
+				>{#each parseSegments(draft) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
+				<textarea
+					bind:this={textareaRefs[loc.id]}
+					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+					style="resize: none; caret-color: hsl(var(--foreground))"
+					disabled={submitting[loc.id]}
+					value={draft}
+					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
+					onkeydown={(e) => {
+						if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; proposalComments[loc.id] = ''; e.currentTarget.blur(); return; }
+						if (e.key === 'Enter' && !e.shiftKey && !e.altKey) { e.preventDefault(); e.currentTarget.blur(); return; }
+						if (e.key === 'Enter' && (e.shiftKey || e.altKey)) {
 							e.preventDefault();
 							const el = e.currentTarget;
 							const start = el.selectionStart ?? 0;
 							const end = el.selectionEnd ?? 0;
 							const val = drafts[loc.id] ?? '';
 							drafts[loc.id] = val.slice(0, start) + '\n' + val.slice(end);
-							// restore cursor after Svelte re-renders
 							requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 1; });
-						} else {
-							e.preventDefault();
-							e.currentTarget.blur();
 						}
-					}
-				}}
-			></textarea>
-		</div>
+					}}
+				></textarea>
+			</div>
+			{#if draftChanged}
+				<!-- Comment + submit button appear when draft differs from current value -->
+				<div class="mt-1.5 space-y-1">
+					<textarea
+						class="w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+						style="resize: none;"
+						placeholder="Reason for change (in English, required)…"
+						rows={2}
+						value={proposalComments[loc.id] ?? ''}
+						oninput={(e) => { proposalComments[loc.id] = e.currentTarget.value; }}
+						disabled={submitting[loc.id]}
+					></textarea>
+					<div class="flex items-center gap-2">
+						<button
+							type="button"
+							class="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+							disabled={submitting[loc.id] || !(proposalComments[loc.id] ?? '').trim()}
+							onclick={() => submitProposal(loc)}
+						>Submit proposal</button>
+						<button
+							type="button"
+							class="text-xs text-muted-foreground hover:text-foreground"
+							onclick={() => { drafts[loc.id] = loc.value ?? ''; proposalComments[loc.id] = ''; }}
+						>Discard</button>
+					</div>
+				</div>
+			{/if}
+		{/if}
 	{:else}
-		<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm text-muted-foreground italic">{loc.value ?? '—'}</span>
+		<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm italic text-muted-foreground">{loc.value ?? '—'}</span>
 	{/if}
+
 	{#if placeholders.length > 0}
 		<div class="mt-1 flex flex-wrap items-center gap-1 pl-1">
 			<span class="text-xs text-muted-foreground">Placeholders:</span>
@@ -265,11 +356,15 @@
 				type="button"
 				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
 				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = proposal.proposed_value; }}
+				title={proposal.comment ? `Reason: ${proposal.comment}` : undefined}
 			>
 				<span class="shrink-0 text-muted-foreground/50">↳</span>
 				<span class="break-words">{proposal.proposed_value}</span>
 			</button>
 		{/each}
+	{/if}
+	{#if submitError[loc.id]}
+		<p class="mt-0.5 pl-1 text-xs text-destructive">{submitError[loc.id]}</p>
 	{/if}
 {/snippet}
 
