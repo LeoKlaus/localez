@@ -4,6 +4,6 @@
 	import { onMount } from 'svelte';
 
 	onMount(() => {
-		goto(auth.isAuthenticated ? '/projects' : '/login', { replaceState: true });
+		goto('/projects', { replaceState: true });
 	});
 </script>
