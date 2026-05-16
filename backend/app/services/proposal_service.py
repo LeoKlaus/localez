@@ -12,19 +12,16 @@ async def create_proposal(
     db: AsyncSession,
     localization_id: uuid.UUID,
     proposed_value: str,
+    comment: str,
     proposed_by: uuid.UUID,
-) -> TranslationProposal | Localization:
+) -> TranslationProposal:
     loc = await db.get(Localization, localization_id)
 
-    if loc is not None and loc.value == proposed_value:
-        raise ValueError("DUPLICATE_PROPOSAL")
+    if loc is None or loc.value is None:
+        raise ValueError("NO_VALUE")
 
-    if loc is not None and loc.state == LocalizationState.new:
-        loc.value = proposed_value
-        loc.state = LocalizationState.needs_review
-        await db.flush()
-        await db.refresh(loc)
-        return loc
+    if loc.value == proposed_value:
+        raise ValueError("DUPLICATE_PROPOSAL")
 
     existing = await db.scalar(
         select(TranslationProposal).where(
@@ -37,6 +34,7 @@ async def create_proposal(
         if existing.proposed_value == proposed_value:
             raise ValueError("DUPLICATE_PROPOSAL")
         existing.proposed_value = proposed_value
+        existing.comment = comment
         existing.proposed_at = datetime.now(UTC)
         await db.flush()
         return existing
@@ -44,6 +42,7 @@ async def create_proposal(
     proposal = TranslationProposal(
         localization_id=localization_id,
         proposed_value=proposed_value,
+        comment=comment,
         proposed_by=proposed_by,
     )
     db.add(proposal)

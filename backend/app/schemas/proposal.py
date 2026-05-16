@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class ProposalCreate(BaseModel):
     proposed_value: str
+    comment: str
 
 
 class ProposalResponse(BaseModel):
@@ -14,5 +15,6 @@ class ProposalResponse(BaseModel):
     proposed_value: str
     proposed_by: uuid.UUID | None
     proposed_at: datetime
+    comment: str
 
     model_config = {"from_attributes": True}

@@ -88,12 +88,13 @@ async def create_proposal(
 ):
     await _get_localization(db, project_id, key_id, loc_id)
     try:
-        result = await proposal_service.create_proposal(db, loc_id, body.proposed_value, user.id)
-    except ValueError:
+        proposal = await proposal_service.create_proposal(db, loc_id, body.proposed_value, body.comment, user.id)
+    except ValueError as e:
+        if str(e) == "NO_VALUE":
+            raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "NO_VALUE", "message": "Cannot propose on a localization with no existing value"})
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "DUPLICATE_PROPOSAL", "message": "An identical proposal or translation already exists"})
-    if isinstance(result, Localization):
-        return LocalizationResponse.model_validate(result)
-    return ProposalResponse.model_validate(result)
+    await db.commit()
+    return ProposalResponse.model_validate(proposal)
 
 
 @router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept", response_model=LocalizationResponse)

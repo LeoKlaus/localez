@@ -18,5 +18,6 @@ class TranslationProposal(Base):
     proposed_value: Mapped[str] = mapped_column(Text, nullable=False)
     proposed_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     proposed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
 
     localization: Mapped["Localization"] = relationship(back_populates="proposals")  # noqa: F821

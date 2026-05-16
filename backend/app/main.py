@@ -4,14 +4,14 @@ from fastapi.responses import JSONResponse
 from app.models import project_language  # noqa: F401 — ensure models are registered with Base
 from app.routers import auth, projects, proposals, strings, users, xcstrings
 
-app = FastAPI(title="Localez", version="0.1.0")
+app = FastAPI(title="Localez", version="0.1.0", openapi_prefix="/api")
 
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
-app.include_router(strings.router, prefix="/api/projects", tags=["strings"])
-app.include_router(xcstrings.router, prefix="/api/projects", tags=["xcstrings"])
-app.include_router(proposals.router, prefix="/api/projects", tags=["proposals"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(projects.router, prefix="/projects", tags=["projects"])
+app.include_router(strings.router, prefix="/projects", tags=["strings"])
+app.include_router(xcstrings.router, prefix="/projects", tags=["xcstrings"])
+app.include_router(proposals.router, prefix="/projects", tags=["proposals"])
 
 
 class AppError(Exception):
