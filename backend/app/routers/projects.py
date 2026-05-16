@@ -4,7 +4,7 @@ import uuid
 
 import io
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import Response as FastAPIResponse, StreamingResponse
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,7 @@ from sqlalchemy.orm import aliased, selectinload
 
 from app.config import settings
 from app.core import prefill_events
+from app.core.limiter import limiter
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.dependencies.project_token import generate_project_token
@@ -459,7 +460,9 @@ async def get_project_stats(
 
 
 @router.post("/{project_id}/tokens", response_model=ProjectTokenCreatedResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_project_token(
+    request: Request,
     project_id: uuid.UUID,
     body: ProjectTokenCreateRequest,
     user: User = Depends(require_admin),
