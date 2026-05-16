@@ -5,8 +5,23 @@
 	import { auth } from '$lib/stores/auth.svelte';
 	import { legalStore } from '$lib/stores/legal.svelte';
 	import { onMount } from 'svelte';
+	import { Toaster, toast } from 'svelte-sonner';
 
 	let { children } = $props();
+
+	function extractMessage(err: unknown): string {
+		if (err && typeof err === 'object') {
+			const detail = (err as Record<string, unknown>).detail;
+			if (detail && typeof detail === 'object') {
+				const msg = (detail as Record<string, unknown>).message;
+				if (typeof msg === 'string') return msg;
+			}
+			if (typeof detail === 'string') return detail;
+			const msg = (err as Record<string, unknown>).message;
+			if (typeof msg === 'string') return msg;
+		}
+		return 'An unexpected error occurred.';
+	}
 
 	const queryClient = new QueryClient({
 		defaultOptions: {
@@ -14,6 +29,22 @@
 				staleTime: 30_000,
 				retry: 1
 			}
+		}
+	});
+
+	queryClient.getQueryCache().subscribe((event) => {
+		if (event?.type === 'updated' && event.query.state.status === 'error') {
+			toast.error('Failed to load data', {
+				description: extractMessage(event.query.state.error)
+			});
+		}
+	});
+
+	queryClient.getMutationCache().subscribe((event) => {
+		if (event?.type === 'updated' && event.mutation?.state.status === 'error') {
+			toast.error('Action failed', {
+				description: extractMessage(event.mutation.state.error)
+			});
 		}
 	});
 
@@ -33,6 +64,7 @@
 </script>
 
 <QueryClientProvider client={queryClient}>
+	<Toaster richColors closeButton position="top-right" />
 	{@render children()}
 	{@const hasSidebar = !$page.url.pathname.startsWith('/legal') && !$page.url.pathname.startsWith('/login') && !$page.url.pathname.startsWith('/register') && !$page.url.pathname.startsWith('/recover')}
 	{#if !cookieNoticeDismissed && !(legalStore.hasPrivacy && $page.url.pathname === '/legal/privacy') && !(legalStore.hasImprint && $page.url.pathname === '/legal/imprint')}
