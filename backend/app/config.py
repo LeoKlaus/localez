@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    allowed_hosts: str = "*"
     postgres_host: str = "db"
     postgres_db: str = "localez"
     postgres_user: str = "localez"
