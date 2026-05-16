@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+envsubst '${ALLOWED_HOSTS}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
+
 PRIVACY_FILE="/usr/share/nginx/html/legal/privacy.md"
 
 if [ ! -f "$PRIVACY_FILE" ]; then

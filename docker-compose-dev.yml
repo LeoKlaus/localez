@@ -30,6 +30,7 @@ services:
       - ./legal:/usr/share/nginx/html/legal
     depends_on:
       - api
+    env_file: ".env"
     ports:
       - "3000:80"
 

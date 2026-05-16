@@ -1,4 +1,16 @@
 server {
+    listen 80 default_server;
+    server_name _;
+    
+    location / {
+        add_header Content-Type "application/html" always;
+        return 400 "<b>Hostname $host is not allowed.</b>";
+    }
+}
+
+server {
+    server_name localhost ${ALLOWED_HOSTS};
+
     client_max_body_size 50m;
 
     listen 80;
