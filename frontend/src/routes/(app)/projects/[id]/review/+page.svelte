@@ -112,6 +112,20 @@
 		onSuccess: invalidate
 	}));
 
+	const approveMutation = createMutation(() => ({
+		mutationFn: async ({ keyId, locId }: { keyId: string; locId: string }) => {
+			const { error } = await client.PATCH(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/state',
+				{
+					params: { path: { project_id: projectId, key_id: keyId, loc_id: locId } },
+					body: { state: 'translated' }
+				}
+			);
+			if (error) throw error;
+		},
+		onSuccess: invalidate
+	}));
+
 	const rejectMutation = createMutation(() => ({
 		mutationFn: async ({
 			keyId,
@@ -223,17 +237,32 @@
 					<div class="rounded-lg border bg-card p-4">
 						<!-- Key header -->
 						<div class="mb-3 flex flex-wrap items-start justify-between gap-2">
-							<a
-								href="/projects/{projectId}/strings/{loc.string_key_id}"
-								class="font-mono text-sm font-semibold hover:underline"
-							>
-								{loc.key}
-							</a>
-							{#if loc.variation_type !== 'none' && loc.variation_key}
-								<Badge variant="outline" class="shrink-0 text-xs">
-									{loc.variation_type}: {loc.variation_key}
-								</Badge>
-							{/if}
+							<div class="flex min-w-0 flex-1 items-center gap-2">
+								<a
+									href="/projects/{projectId}/strings/{loc.string_key_id}"
+									class="font-mono text-sm font-semibold hover:underline"
+								>
+									{loc.key}
+								</a>
+								{#if loc.variation_type !== 'none' && loc.variation_key}
+									<Badge variant="outline" class="shrink-0 text-xs">
+										{loc.variation_type}: {loc.variation_key}
+									</Badge>
+								{/if}
+							</div>
+							<div class="flex shrink-0 items-center gap-2">
+								<span class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+									needs review
+								</span>
+								<Button
+									size="sm"
+									disabled={approveMutation.isPending}
+									onclick={() => approveMutation.mutate({ keyId: loc.string_key_id, locId: loc.id })}
+								>
+									<Check size={14} class="mr-1" />
+									Accept
+								</Button>
+							</div>
 						</div>
 
 						{#if loc.comment}
