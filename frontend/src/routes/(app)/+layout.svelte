@@ -16,6 +16,7 @@
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import LogIn from 'lucide-svelte/icons/log-in';
 	import ClipboardCheck from 'lucide-svelte/icons/clipboard-check';
+	import Languages from 'lucide-svelte/icons/languages';
 
 	let { children } = $props();
 
@@ -112,18 +113,30 @@
 					</a>
 				{/each}
 
-				{#if auth.isAdmin && activeProjectId}
+				{#if activeProjectId}
 					<div class="mt-4 px-3 text-xs font-semibold uppercase text-muted-foreground">Project</div>
 					<a
-						href="/projects/{activeProjectId}/review"
+						href="/projects/{activeProjectId}"
 						class="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent
-							{currentPath.startsWith(`/projects/${activeProjectId}/review`)
+							{currentPath === `/projects/${activeProjectId}` || currentPath.startsWith(`/projects/${activeProjectId}/strings`)
 							? 'bg-accent font-medium text-accent-foreground'
 							: 'text-muted-foreground'}"
 					>
-						<ClipboardCheck size={16} />
-						Review
+						<Languages size={16} />
+						Strings
 					</a>
+					{#if auth.isAdmin}
+						<a
+							href="/projects/{activeProjectId}/review"
+							class="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent
+								{currentPath.startsWith(`/projects/${activeProjectId}/review`)
+								? 'bg-accent font-medium text-accent-foreground'
+								: 'text-muted-foreground'}"
+						>
+							<ClipboardCheck size={16} />
+							Review
+						</a>
+					{/if}
 				{/if}
 
 				{#if auth.isAdmin}
