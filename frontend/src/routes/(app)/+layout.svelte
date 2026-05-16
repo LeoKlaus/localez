@@ -21,7 +21,7 @@
 	let { children } = $props();
 
 	const navItems = [
-		{ href: '/projects', label: 'Projects', icon: FolderOpen }
+		{ href: '/projects', label: 'All Projects', icon: FolderOpen }
 	];
 
 	const authNavItems = [
