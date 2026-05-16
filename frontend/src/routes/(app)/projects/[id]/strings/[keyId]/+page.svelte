@@ -296,15 +296,10 @@
 						<div class="flex items-start justify-between gap-2 rounded-md border p-3 text-sm">
 							<div class="flex-1">
 								<p class="font-mono">{proposal.proposed_value}</p>
-								<p class="mt-1 text-xs text-muted-foreground">
-									{formatDate(proposal.proposed_at)}
-									{#if proposal.reviewer_note}
-										· {proposal.reviewer_note}
-									{/if}
-								</p>
+								<p class="mt-1 text-xs text-muted-foreground">{formatDate(proposal.proposed_at)}</p>
 							</div>
-							<div class="flex items-center gap-1">
-								{#if proposal.status === 'pending'}
+							{#if auth.isAdmin}
+								<div class="flex items-center gap-1">
 									<Button
 										variant="ghost"
 										size="icon"
@@ -321,12 +316,8 @@
 									>
 										<X size={14} />
 									</Button>
-								{:else}
-									<Badge variant={proposal.status === 'accepted' ? 'default' : 'secondary'}>
-										{proposal.status}
-									</Badge>
-								{/if}
-							</div>
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>

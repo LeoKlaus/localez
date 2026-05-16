@@ -505,6 +505,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Localization State */
+        patch: operations["update_localization_state_api_projects__project_id__strings__key_id__localizations__loc_id__state_patch"];
+        trace?: never;
+    };
+    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Localization */
+        post: operations["reset_localization_api_projects__project_id__strings__key_id__localizations__loc_id__reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project_id}/import": {
         parameters: {
             query?: never;
@@ -703,6 +737,10 @@ export interface components {
          * @enum {string}
          */
         LocalizationState: "new" | "needs_review" | "translated";
+        /** LocalizationStateUpdate */
+        LocalizationStateUpdate: {
+            state: components["schemas"]["LocalizationState"];
+        };
         /** LocalizationWithKeyResponse */
         LocalizationWithKeyResponse: {
             /**
@@ -877,24 +915,7 @@ export interface components {
              * Format: date-time
              */
             proposed_at: string;
-            status: components["schemas"]["ProposalStatus"];
-            /** Reviewed By */
-            reviewed_by: string | null;
-            /** Reviewed At */
-            reviewed_at: string | null;
-            /** Reviewer Note */
-            reviewer_note: string | null;
         };
-        /** ProposalReview */
-        ProposalReview: {
-            /** Reviewer Note */
-            reviewer_note?: string | null;
-        };
-        /**
-         * ProposalStatus
-         * @enum {string}
-         */
-        ProposalStatus: "pending" | "accepted" | "rejected";
         /** RecoverRequest */
         RecoverRequest: {
             /** Username */
@@ -2218,6 +2239,76 @@ export interface operations {
             };
         };
     };
+    update_localization_state_api_projects__project_id__strings__key_id__localizations__loc_id__state_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                key_id: string;
+                loc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocalizationStateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalizationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_localization_api_projects__project_id__strings__key_id__localizations__loc_id__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                key_id: string;
+                loc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalizationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     import_xcstrings_api_projects__project_id__import_post: {
         parameters: {
             query?: {
@@ -2293,7 +2384,6 @@ export interface operations {
     list_project_proposals_api_projects__project_id__proposals_get: {
         parameters: {
             query?: {
-                proposal_status?: components["schemas"]["ProposalStatus"] | null;
                 offset?: number;
                 limit?: number;
             };
@@ -2328,7 +2418,6 @@ export interface operations {
     list_proposals_api_projects__project_id__strings__key_id__localizations__loc_id__proposals_get: {
         parameters: {
             query?: {
-                proposal_status?: components["schemas"]["ProposalStatus"] | null;
                 offset?: number;
                 limit?: number;
             };
@@ -2411,11 +2500,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ProposalReview"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -2423,7 +2508,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProposalResponse"];
+                    "application/json": components["schemas"]["LocalizationResponse"];
                 };
             };
             /** @description Validation Error */

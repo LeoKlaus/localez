@@ -94,9 +94,6 @@
 		return map;
 	});
 
-	// Per-proposal accept expansion state and reviewer note
-	let expandedAccept = $state<Record<string, boolean>>({});
-	let reviewerNotes = $state<Record<string, string>>({});
 
 	function invalidate() {
 		qc.invalidateQueries({ queryKey: ['review-locs', projectId, language] });
@@ -105,23 +102,10 @@
 	}
 
 	const acceptMutation = createMutation(() => ({
-		mutationFn: async ({
-			keyId,
-			locId,
-			proposalId,
-			note
-		}: {
-			keyId: string;
-			locId: string;
-			proposalId: string;
-			note: string;
-		}) => {
+		mutationFn: async ({ keyId, locId, proposalId }: { keyId: string; locId: string; proposalId: string }) => {
 			const { error } = await client.POST(
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept',
-				{
-					params: { path: { project_id: projectId, key_id: keyId, loc_id: locId, proposal_id: proposalId } },
-					body: { reviewer_note: note || null }
-				}
+				{ params: { path: { project_id: projectId, key_id: keyId, loc_id: locId, proposal_id: proposalId } } }
 			);
 			if (error) throw error;
 		},
@@ -285,66 +269,33 @@
 											Proposed {formatDate(proposal.proposed_at)}
 										</p>
 
-										{#if expandedAccept[proposal.id]}
-											<!-- Accept with reviewer note -->
-											<div class="space-y-2">
-												<textarea
-													bind:value={reviewerNotes[proposal.id]}
-													placeholder="Reviewer note (optional)"
-													rows={2}
-													class="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-												></textarea>
-												<div class="flex gap-2">
-													<Button
-														size="sm"
-														disabled={acceptMutation.isPending}
-														onclick={() => {
-															acceptMutation.mutate({
-																keyId: loc.string_key_id,
-																locId: loc.id,
-																proposalId: proposal.id,
-																note: reviewerNotes[proposal.id] ?? ''
-															});
-															expandedAccept[proposal.id] = false;
-														}}
-													>
-														<Check size={14} class="mr-1" />
-														Confirm
-													</Button>
-													<Button
-														size="sm"
-														variant="ghost"
-														onclick={() => (expandedAccept[proposal.id] = false)}
-													>
-														Cancel
-													</Button>
-												</div>
-											</div>
-										{:else}
-											<div class="flex gap-2">
-												<Button
-													size="sm"
-													onclick={() => (expandedAccept[proposal.id] = true)}
-												>
-													<Check size={14} class="mr-1" />
-													Accept
-												</Button>
-												<Button
-													size="sm"
-													variant="destructive"
-													disabled={rejectMutation.isPending}
-													onclick={() =>
-														rejectMutation.mutate({
-															keyId: loc.string_key_id,
-															locId: loc.id,
-															proposalId: proposal.id
-														})}
-												>
-													<X size={14} class="mr-1" />
-													Reject
-												</Button>
-											</div>
-										{/if}
+										<div class="flex gap-2">
+											<Button
+												size="sm"
+												disabled={acceptMutation.isPending}
+												onclick={() => acceptMutation.mutate({
+													keyId: loc.string_key_id,
+													locId: loc.id,
+													proposalId: proposal.id
+												})}
+											>
+												<Check size={14} class="mr-1" />
+												Accept
+											</Button>
+											<Button
+												size="sm"
+												variant="destructive"
+												disabled={rejectMutation.isPending}
+												onclick={() => rejectMutation.mutate({
+													keyId: loc.string_key_id,
+													locId: loc.id,
+													proposalId: proposal.id
+												})}
+											>
+												<X size={14} class="mr-1" />
+												Reject
+											</Button>
+										</div>
 									</div>
 								{/each}
 							</div>
