@@ -151,10 +151,11 @@ async def set_localization_value(
     if loc is None or loc.string_key_id != key_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
 
-    if loc.value is not None and user.global_role != GlobalRole.admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "VALUE_ALREADY_SET", "message": "A translation already exists; only admins can override it"})
+    if loc.value is not None and user.global_role != GlobalRole.admin and user.id != loc.value_set_by:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "VALUE_ALREADY_SET", "message": "A translation already exists; only admins or the original author can override it"})
 
     loc.value = body.value
+    loc.value_set_by = user.id
     loc.state = LocalizationState.needs_review
 
     await db.commit()
@@ -190,6 +191,7 @@ async def update_localization_state(
 
     if body.state == LocalizationState.new:
         loc.value = None
+        loc.value_set_by = None
 
     await db.commit()
     await db.refresh(loc)
@@ -213,6 +215,7 @@ async def reset_localization(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
 
     loc.value = None
+    loc.value_set_by = None
     loc.state = LocalizationState.new
 
     await db.execute(

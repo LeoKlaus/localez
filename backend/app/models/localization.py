@@ -35,6 +35,7 @@ class Localization(Base):
     variation_key: Mapped[str] = mapped_column(Text, nullable=False, default="")
     state: Mapped[LocalizationState] = mapped_column(Enum(LocalizationState), nullable=False, default=LocalizationState.new)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    value_set_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     ai_suggestion: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

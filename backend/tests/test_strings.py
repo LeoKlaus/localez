@@ -231,3 +231,48 @@ async def test_unauthenticated_cannot_set_value(
         json={"value": "Anonym"},
     )
     assert resp.status_code == 401
+
+
+async def test_original_author_can_override_own_value(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    username = unique_username("sv_author")
+    async with member_client(username) as c:
+        key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
+        assert loc_id is not None, "No 'new' localization found"
+
+        await c.put(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
+            json={"value": "Erster Wert"},
+        )
+        resp = await c.put(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
+            json={"value": "Aktualisierter Wert"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["value"] == "Aktualisierter Wert"
+
+
+async def test_different_user_cannot_override_others_value(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    author = unique_username("sv_author2")
+    intruder = unique_username("sv_intruder")
+
+    async with member_client(author) as c:
+        key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
+        assert loc_id is not None, "No 'new' localization found"
+        await c.put(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
+            json={"value": "Gesetzt von Autor"},
+        )
+
+    async with member_client(intruder) as c:
+        resp = await c.put(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
+            json={"value": "Überschreiben versucht"},
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"]["code"] == "VALUE_ALREADY_SET"
