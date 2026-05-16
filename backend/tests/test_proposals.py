@@ -48,7 +48,6 @@ async def test_any_user_can_create_proposal(
         assert resp.status_code == 201
         data = resp.json()
         assert data["proposed_value"] == "Übersetzt"
-        assert data["status"] == "pending"
 
 
 async def test_unauthenticated_cannot_create_proposal(
@@ -130,12 +129,11 @@ async def test_admin_can_accept_proposal(
 
     resp = await admin_client.post(
         f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals/{prop['id']}/accept",
-        json={"reviewer_note": "Looks good"},
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "accepted"
-    assert data["reviewer_note"] == "Looks good"
+    assert data["value"] == "Akzeptiert"
+    assert data["state"] == "translated"
 
 
 async def test_accept_updates_canonical_localization(
@@ -188,8 +186,8 @@ async def test_accept_rejects_other_pending_proposals_atomically(
         f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals"
     )).json()
     proposal_ids = {p["id"] for p in proposals}
-    assert prop1["id"] in proposal_ids
-    assert prop2["id"] not in proposal_ids  # deleted on accept
+    assert prop1["id"] not in proposal_ids  # accepted proposal is also deleted
+    assert prop2["id"] not in proposal_ids  # other proposals deleted on accept
 
 
 async def test_non_admin_cannot_accept_proposal(
@@ -359,10 +357,10 @@ async def test_proposal_on_existing_translation_stays_pending(
             json={"proposed_value": "Neuer Vorschlag"},
         )
         assert resp.status_code == 201
-        assert resp.json()["status"] == "pending"
+        assert resp.json()["proposed_value"] == "Neuer Vorschlag"
 
 
-async def test_accept_already_accepted_proposal_returns_404(
+async def test_accept_deleted_proposal_returns_404(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]

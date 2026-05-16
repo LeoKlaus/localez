@@ -9,9 +9,9 @@ from app.dependencies.auth import get_current_active_user
 from app.dependencies.project_access import require_any_language_reviewer, require_reviewer, require_translator_plus
 from app.models.localization import Localization
 from app.models.string_key import StringKey
-from app.models.translation_proposal import ProposalStatus, TranslationProposal
+from app.models.translation_proposal import TranslationProposal
 from app.models.user import User
-from app.schemas.proposal import ProposalCreate, ProposalResponse, ProposalReview  # ProposalReview used by accept only
+from app.schemas.proposal import ProposalCreate, ProposalResponse
 from app.schemas.string_key import LocalizationResponse
 from app.services import proposal_service
 
@@ -33,7 +33,6 @@ async def _get_localization(db: AsyncSession, project_id: uuid.UUID, key_id: uui
 @router.get("/{project_id}/proposals", response_model=list[ProposalResponse])
 async def list_project_proposals(
     project_id: uuid.UUID,
-    proposal_status: ProposalStatus | None = None,
     offset: int = 0,
     limit: int = 50,
     _: User = Depends(require_any_language_reviewer),
@@ -45,8 +44,6 @@ async def list_project_proposals(
     loc_ids = select(Localization.id).where(Localization.string_key_id.in_(key_ids))
 
     query = select(TranslationProposal).where(TranslationProposal.localization_id.in_(loc_ids))
-    if proposal_status:
-        query = query.where(TranslationProposal.status == proposal_status)
 
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
     result = await db.execute(query.offset(offset).limit(limit))
@@ -61,7 +58,6 @@ async def list_proposals(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
-    proposal_status: ProposalStatus | None = None,
     offset: int = 0,
     limit: int = 50,
     _: User = Depends(require_translator_plus),
@@ -72,8 +68,6 @@ async def list_proposals(
     limit = min(limit, MAX_LIMIT)
 
     query = select(TranslationProposal).where(TranslationProposal.localization_id == loc_id)
-    if proposal_status:
-        query = query.where(TranslationProposal.status == proposal_status)
 
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
     result = await db.execute(query.offset(offset).limit(limit))
@@ -102,21 +96,22 @@ async def create_proposal(
     return ProposalResponse.model_validate(result)
 
 
-@router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept", response_model=ProposalResponse)
+@router.post("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}/accept", response_model=LocalizationResponse)
 async def accept_proposal(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
     proposal_id: uuid.UUID,
-    body: ProposalReview = ProposalReview(),
     user: User = Depends(require_reviewer),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_localization(db, project_id, key_id, loc_id)
-    proposal = await proposal_service.accept_proposal(db, proposal_id, user.id, body.reviewer_note)
-    if proposal is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found or not pending"})
-    return proposal
+    loc = await proposal_service.accept_proposal(db, proposal_id)
+    if loc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found"})
+    await db.commit()
+    await db.refresh(loc)
+    return loc
 
 
 @router.delete("/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals/{proposal_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -131,4 +126,5 @@ async def reject_proposal(
     await _get_localization(db, project_id, key_id, loc_id)
     found = await proposal_service.reject_proposal(db, proposal_id)
     if not found:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found or not pending"})
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROPOSAL_NOT_FOUND", "message": "Proposal not found"})
+    await db.commit()
