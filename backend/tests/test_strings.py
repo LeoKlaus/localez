@@ -132,19 +132,23 @@ async def test_get_localization(admin_client: AsyncClient, xcstrings_project: di
 
 
 async def test_get_localization_wrong_key_returns_404(admin_client: AsyncClient, xcstrings_project: dict):
-    import uuid
-    strings = (await admin_client.get(f"/api/projects/{xcstrings_project['id']}/strings")).json()
-    sk_a = strings[0]
-    sk_b = strings[1]
-    locs_a = (await admin_client.get(
-        f"/api/projects/{xcstrings_project['id']}/strings/{sk_a['id']}/localizations"
-    )).json()
-    if not locs_a:
-        pytest.skip("No localizations on first key")
-    loc = locs_a[0]
+    pid = xcstrings_project["id"]
+    strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+
+    # Find two distinct keys that each have at least one localization.
+    keys_with_locs = []
+    for sk in strings:
+        locs = (await admin_client.get(f"/api/projects/{pid}/strings/{sk['id']}/localizations")).json()
+        if locs:
+            keys_with_locs.append((sk, locs))
+        if len(keys_with_locs) == 2:
+            break
+
+    assert len(keys_with_locs) >= 2, "Need at least two translatable string keys"
+    (sk_a, locs_a), (sk_b, _) = keys_with_locs
 
     resp = await admin_client.get(
-        f"/api/projects/{xcstrings_project['id']}/strings/{sk_b['id']}/localizations/{loc['id']}"
+        f"/api/projects/{pid}/strings/{sk_b['id']}/localizations/{locs_a[0]['id']}"
     )
     assert resp.status_code == 404
 
