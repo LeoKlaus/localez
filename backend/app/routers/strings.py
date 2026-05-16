@@ -152,12 +152,15 @@ async def update_localization_state(
 
     loc.state = body.state
 
-    if body.state == LocalizationState.translated:
+    if body.state in (LocalizationState.translated, LocalizationState.new):
         await db.execute(
             delete(TranslationProposal).where(
                 TranslationProposal.localization_id == loc_id,
             )
         )
+
+    if body.state == LocalizationState.new:
+        loc.value = None
 
     await db.commit()
     await db.refresh(loc)

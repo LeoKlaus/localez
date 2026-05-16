@@ -25,10 +25,12 @@
 
 	const LIMIT = 20;
 	let offset = $state(0);
+	let filterState = $state<'needs_review' | 'translated'>('needs_review');
 
-	// Reset pagination when language changes
+	// Reset pagination when language or filter changes
 	$effect(() => {
 		language;
+		filterState;
 		offset = 0;
 	});
 
@@ -52,7 +54,7 @@
 
 	// Localizations in needs_review state for the selected language
 	const localizations = createQuery(() => ({
-		queryKey: ['review-locs', projectId, language, offset],
+		queryKey: ['review-locs', projectId, language, filterState, offset],
 		enabled: !!language,
 		queryFn: async () => {
 			const { data, error } = await client.GET(
@@ -60,7 +62,7 @@
 				{
 					params: {
 						path: { project_id: projectId, language: language! },
-						query: { state: 'needs_review', offset, limit: LIMIT }
+						query: { state: filterState, offset, limit: LIMIT }
 					}
 				}
 			);
@@ -96,7 +98,7 @@
 
 
 	function invalidate() {
-		qc.invalidateQueries({ queryKey: ['review-locs', projectId, language] });
+		qc.invalidateQueries({ queryKey: ['review-locs', projectId, language, filterState] });
 		qc.invalidateQueries({ queryKey: ['review-proposals', projectId] });
 		qc.invalidateQueries({ queryKey: ['stats', projectId] });
 	}
@@ -119,6 +121,34 @@
 				{
 					params: { path: { project_id: projectId, key_id: keyId, loc_id: locId } },
 					body: { state: 'translated' }
+				}
+			);
+			if (error) throw error;
+		},
+		onSuccess: invalidate
+	}));
+
+	const markForReviewMutation = createMutation(() => ({
+		mutationFn: async ({ keyId, locId }: { keyId: string; locId: string }) => {
+			const { error } = await client.PATCH(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/state',
+				{
+					params: { path: { project_id: projectId, key_id: keyId, loc_id: locId } },
+					body: { state: 'needs_review' }
+				}
+			);
+			if (error) throw error;
+		},
+		onSuccess: invalidate
+	}));
+
+	const resetMutation = createMutation(() => ({
+		mutationFn: async ({ keyId, locId }: { keyId: string; locId: string }) => {
+			const { error } = await client.PATCH(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/state',
+				{
+					params: { path: { project_id: projectId, key_id: keyId, loc_id: locId } },
+					body: { state: 'new' }
 				}
 			);
 			if (error) throw error;
@@ -208,13 +238,33 @@
 		{/if}
 	{:else}
 		<!-- ── Strings review list ── -->
-		<div class="mb-4 flex items-center gap-2">
-			<Button variant="ghost" size="icon" onclick={clearLanguage}>
-				<ChevronLeft size={16} />
-			</Button>
-			<h1 class="text-xl font-bold">
-				Review — <span class="font-mono">{language}</span>
-			</h1>
+		<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+			<div class="flex items-center gap-2">
+				<Button variant="ghost" size="icon" onclick={clearLanguage}>
+					<ChevronLeft size={16} />
+				</Button>
+				<h1 class="text-xl font-bold">
+					Review — <span class="font-mono">{language}</span>
+				</h1>
+			</div>
+			<div class="flex rounded-md border text-sm">
+				<button
+					onclick={() => (filterState = 'needs_review')}
+					class="px-3 py-1.5 transition-colors {filterState === 'needs_review'
+						? 'bg-primary text-primary-foreground'
+						: 'text-muted-foreground hover:text-foreground'} rounded-l-md"
+				>
+					Needs review
+				</button>
+				<button
+					onclick={() => (filterState = 'translated')}
+					class="px-3 py-1.5 transition-colors {filterState === 'translated'
+						? 'bg-primary text-primary-foreground'
+						: 'text-muted-foreground hover:text-foreground'} rounded-r-md border-l"
+				>
+					Translated
+				</button>
+			</div>
 		</div>
 
 		{#if localizations.isPending}
@@ -251,17 +301,37 @@
 								{/if}
 							</div>
 							<div class="flex shrink-0 items-center gap-2">
-								<span class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-									needs review
-								</span>
-								<Button
-									size="sm"
-									disabled={approveMutation.isPending}
-									onclick={() => approveMutation.mutate({ keyId: loc.string_key_id, locId: loc.id })}
-								>
-									<Check size={14} class="mr-1" />
-									Accept
-								</Button>
+								{#if filterState === 'needs_review'}
+									<span class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">needs review</span>
+									<Button
+										size="sm"
+										disabled={approveMutation.isPending}
+										onclick={() => approveMutation.mutate({ keyId: loc.string_key_id, locId: loc.id })}
+									>
+										<Check size={14} class="mr-1" />
+										Accept
+									</Button>
+								{:else}
+									<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">translated</span>
+									<Button
+										size="sm"
+										variant="outline"
+										disabled={markForReviewMutation.isPending}
+										onclick={() => markForReviewMutation.mutate({ keyId: loc.string_key_id, locId: loc.id })}
+									>
+										Mark for review
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										class="text-destructive hover:text-destructive"
+										disabled={resetMutation.isPending}
+										onclick={() => resetMutation.mutate({ keyId: loc.string_key_id, locId: loc.id })}
+									>
+										<X size={14} class="mr-1" />
+										Reset
+									</Button>
+								{/if}
 							</div>
 						</div>
 
@@ -284,10 +354,12 @@
 							</div>
 						{/if}
 
-						<!-- Proposals -->
-						{#if proposals.isPending}
+						<!-- Proposals (only relevant in needs_review mode) -->
+						{#if filterState === 'translated'}
+							<!-- no proposals shown for translated items -->
+						{:else if proposals.isPending}
 							<div class="h-10 animate-pulse rounded-md bg-muted"></div>
-						{:else if locProposals.length === 0}
+						{:else if locProposals.length === 0 && filterState === 'needs_review'}
 							<p class="text-xs text-muted-foreground">No pending proposals.</p>
 						{:else}
 							<div class="space-y-2">
