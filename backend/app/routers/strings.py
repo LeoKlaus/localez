@@ -1,13 +1,16 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies.project_access import require_reviewer
 from app.models.localization import Localization, LocalizationState
 from app.models.string_key import StringKey
-from app.schemas.string_key import LocalizationResponse, StringKeyDetail, StringKeyResponse
+from app.models.translation_proposal import ProposalStatus, TranslationProposal
+from app.models.user import User
+from app.schemas.string_key import LocalizationResponse, LocalizationStateUpdate, StringKeyDetail, StringKeyResponse
 
 router = APIRouter()
 
@@ -127,4 +130,36 @@ async def get_localization(
     loc = await db.get(Localization, loc_id)
     if loc is None or loc.string_key_id != key_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
+    return loc
+
+
+@router.patch("/{project_id}/strings/{key_id}/localizations/{loc_id}/state", response_model=LocalizationResponse)
+async def update_localization_state(
+    project_id: uuid.UUID,
+    key_id: uuid.UUID,
+    loc_id: uuid.UUID,
+    body: LocalizationStateUpdate,
+    _: User = Depends(require_reviewer),
+    db: AsyncSession = Depends(get_db),
+):
+    sk = await db.get(StringKey, key_id)
+    if sk is None or sk.project_id != project_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "STRING_NOT_FOUND", "message": "String key not found"})
+
+    loc = await db.get(Localization, loc_id)
+    if loc is None or loc.string_key_id != key_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
+
+    loc.state = body.state
+
+    if body.state == LocalizationState.translated:
+        await db.execute(
+            delete(TranslationProposal).where(
+                TranslationProposal.localization_id == loc_id,
+                TranslationProposal.status == ProposalStatus.pending,
+            )
+        )
+
+    await db.commit()
+    await db.refresh(loc)
     return loc
