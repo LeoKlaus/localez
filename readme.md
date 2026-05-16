@@ -15,3 +15,14 @@ docker compose --profile frontend -f docker-compose-dev.yml up
 ```bash
 docker compose exec api python -m app.cli create-admin --username <user>
 ```
+
+## GitHub Action Template
+
+```yaml
+- name: Push xcstrings
+  run: |
+    curl -sf -X POST https://your-host/api/projects/$PROJECT_ID/import \
+      -H "Authorization: Bearer ${{ secrets.LOCALEZ_PROJECT_TOKEN }}" \
+      -F "file=@Localizable.xcstrings" \
+      -F "conflict=overwrite"
+```

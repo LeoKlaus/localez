@@ -14,12 +14,18 @@ from app.config import settings
 from app.core import prefill_events
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
+from app.dependencies.project_token import generate_project_token
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
+from app.models.project_token import ProjectToken
 from app.models.string_key import StringKey
 from app.models.user import User
-from app.schemas.project import LanguageAdd, LanguageStats, PrefillResponse, ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate
+from app.schemas.project import (
+    LanguageAdd, LanguageStats, PrefillResponse,
+    ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate,
+    ProjectTokenCreateRequest, ProjectTokenCreatedResponse, ProjectTokenResponse,
+)
 from app.schemas.string_key import LocalizationWithKeyResponse
 from app.services.localization_service import fill_missing_localizations
 from app.services import translation_service
@@ -450,3 +456,59 @@ async def get_project_stats(
     ]
 
     return ProjectStats(total_strings=total_strings, languages=languages)
+
+
+@router.post("/{project_id}/tokens", response_model=ProjectTokenCreatedResponse, status_code=status.HTTP_201_CREATED)
+async def create_project_token(
+    project_id: uuid.UUID,
+    body: ProjectTokenCreateRequest,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    raw, token_hash = generate_project_token()
+    token = ProjectToken(project_id=project_id, name=body.name, token_hash=token_hash, created_by=user.id)
+    db.add(token)
+    await db.flush()
+    await db.refresh(token)
+    await db.commit()
+
+    return ProjectTokenCreatedResponse(
+        id=token.id,
+        name=token.name,
+        created_by=token.created_by,
+        created_at=token.created_at,
+        last_used_at=None,
+        token=raw,
+    )
+
+
+@router.get("/{project_id}/tokens", response_model=list[ProjectTokenResponse])
+async def list_project_tokens(
+    project_id: uuid.UUID,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    result = await db.execute(select(ProjectToken).where(ProjectToken.project_id == project_id))
+    return result.scalars().all()
+
+
+@router.delete("/{project_id}/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_project_token(
+    project_id: uuid.UUID,
+    token_id: uuid.UUID,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    token = await db.get(ProjectToken, token_id)
+    if token is None or token.project_id != project_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "TOKEN_NOT_FOUND", "message": "Token not found"})
+    await db.delete(token)
+    await db.commit()

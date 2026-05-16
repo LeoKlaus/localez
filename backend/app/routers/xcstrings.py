@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.auth import require_admin
+from app.dependencies.project_token import require_import_access
 from app.models.localization import Localization
 from app.models.user import User
 from app.models.project import Project
@@ -26,7 +27,7 @@ async def import_xcstrings(
     project_id: uuid.UUID,
     file: UploadFile = File(..., description="xcstrings file to import"),
     conflict: str = Query(default="skip", pattern="^(skip|overwrite)$"),
-    _: User = Depends(require_admin),
+    _: None = Depends(require_import_access),
     db: AsyncSession = Depends(get_db),
 ):
     try:

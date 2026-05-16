@@ -63,3 +63,21 @@ class LanguageAdd(BaseModel):
 class PrefillResponse(BaseModel):
     filled: int
     skipped: int
+
+
+class ProjectTokenCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class ProjectTokenResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_by: uuid.UUID | None
+    created_at: datetime
+    last_used_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectTokenCreatedResponse(ProjectTokenResponse):
+    token: str  # raw token, returned once on creation

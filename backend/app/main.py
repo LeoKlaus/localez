@@ -7,7 +7,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.core.limiter import limiter
-from app.models import project_language  # noqa: F401 — ensure models are registered with Base
+from app.models import project_language, project_token  # noqa: F401 — ensure models are registered with Base
 from app.routers import auth, projects, proposals, strings, users, xcstrings
 
 app = FastAPI(title="Localez", version="0.1.0", root_path="/api")

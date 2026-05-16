@@ -25,3 +25,6 @@ class Project(Base):
     string_keys: Mapped[list["StringKey"]] = relationship(  # noqa: F821
         back_populates="project", cascade="all, delete-orphan"
     )
+    tokens: Mapped[list["ProjectToken"]] = relationship(  # noqa: F821
+        back_populates="project", cascade="all, delete-orphan"
+    )
