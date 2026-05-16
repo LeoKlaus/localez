@@ -257,6 +257,7 @@ async def add_language(
     await db.flush()
     await fill_missing_localizations(project_id, db)
     await db.commit()
+    db.expire(project, ["languages"])
     prefill_events.register(project_id, body.language)
     background_tasks.add_task(_run_prefill_background, project_id, body.language, project.source_language, user.id)
     project = await _get_project(project_id, db)
