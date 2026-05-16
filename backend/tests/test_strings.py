@@ -147,3 +147,87 @@ async def test_get_localization_wrong_key_returns_404(admin_client: AsyncClient,
         f"/api/projects/{xcstrings_project['id']}/strings/{sk_b['id']}/localizations/{loc['id']}"
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Set localization value
+# ---------------------------------------------------------------------------
+
+async def _first_new_localization(admin_client, xcstrings_project):
+    pid = xcstrings_project["id"]
+    strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+    for sk in strings:
+        locs = (await admin_client.get(f"/api/projects/{pid}/strings/{sk['id']}/localizations")).json()
+        for loc in locs:
+            if loc["state"] == "new":
+                return sk["id"], loc["id"]
+    return None, None
+
+
+async def test_any_user_can_set_initial_value(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    username = unique_username("sv_user")
+    async with member_client(username) as c:
+        key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
+        assert loc_id is not None, "No 'new' localization found"
+        resp = await c.put(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
+            json={"value": "Erste Übersetzung"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["value"] == "Erste Übersetzung"
+        assert data["state"] == "needs_review"
+
+
+async def test_non_admin_cannot_override_existing_value(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+    key = next(s for s in strings if s["key"] == "Reviewed")
+    locs = (await admin_client.get(f"/api/projects/{pid}/strings/{key['id']}/localizations")).json()
+    loc = next(l for l in locs if l["state"] == "translated")
+
+    username = unique_username("sv_nooverride")
+    async with member_client(username) as c:
+        resp = await c.put(
+            f"/api/projects/{pid}/strings/{key['id']}/localizations/{loc['id']}/value",
+            json={"value": "Überschrieben"},
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"]["code"] == "VALUE_ALREADY_SET"
+
+
+async def test_admin_can_override_existing_value(
+    admin_client: AsyncClient, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
+    key = next(s for s in strings if s["key"] == "Reviewed")
+    locs = (await admin_client.get(f"/api/projects/{pid}/strings/{key['id']}/localizations")).json()
+    loc = next(l for l in locs if l["state"] == "translated")
+
+    resp = await admin_client.put(
+        f"/api/projects/{pid}/strings/{key['id']}/localizations/{loc['id']}/value",
+        json={"value": "Admin-Überschreibung"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["value"] == "Admin-Überschreibung"
+    assert data["state"] == "needs_review"
+
+
+async def test_unauthenticated_cannot_set_value(
+    admin_client: AsyncClient, client: AsyncClient, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
+    assert loc_id is not None
+    resp = await client.put(
+        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
+        json={"value": "Anonym"},
+    )
+    assert resp.status_code == 401

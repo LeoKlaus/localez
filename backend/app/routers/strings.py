@@ -5,12 +5,13 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies.auth import get_current_active_user
 from app.dependencies.project_access import require_reviewer
 from app.models.localization import Localization, LocalizationState
 from app.models.string_key import StringKey
 from app.models.translation_proposal import TranslationProposal
-from app.models.user import User
-from app.schemas.string_key import LocalizationResponse, LocalizationStateUpdate, StringKeyDetail, StringKeyResponse
+from app.models.user import GlobalRole, User
+from app.schemas.string_key import LocalizationResponse, LocalizationStateUpdate, LocalizationValueSet, StringKeyDetail, StringKeyResponse
 
 router = APIRouter()
 
@@ -130,6 +131,34 @@ async def get_localization(
     loc = await db.get(Localization, loc_id)
     if loc is None or loc.string_key_id != key_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
+    return loc
+
+
+@router.put("/{project_id}/strings/{key_id}/localizations/{loc_id}/value", response_model=LocalizationResponse)
+async def set_localization_value(
+    project_id: uuid.UUID,
+    key_id: uuid.UUID,
+    loc_id: uuid.UUID,
+    body: LocalizationValueSet,
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sk = await db.get(StringKey, key_id)
+    if sk is None or sk.project_id != project_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "STRING_NOT_FOUND", "message": "String key not found"})
+
+    loc = await db.get(Localization, loc_id)
+    if loc is None or loc.string_key_id != key_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "LOCALIZATION_NOT_FOUND", "message": "Localization not found"})
+
+    if loc.value is not None and user.global_role != GlobalRole.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "VALUE_ALREADY_SET", "message": "A translation already exists; only admins can override it"})
+
+    loc.value = body.value
+    loc.state = LocalizationState.needs_review
+
+    await db.commit()
+    await db.refresh(loc)
     return loc
 
 

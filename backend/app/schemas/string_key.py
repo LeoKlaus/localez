@@ -44,6 +44,10 @@ class StringKeyResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LocalizationValueSet(BaseModel):
+    value: str
+
+
 class LocalizationStateUpdate(BaseModel):
     state: LocalizationState
 
