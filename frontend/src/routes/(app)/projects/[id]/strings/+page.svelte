@@ -131,10 +131,13 @@
 		}
 	});
 
-	/** Set the initial value (loc has no value yet). Any authenticated user can do this. */
-	async function setInitialValue(loc: LocalizationWithKey) {
+	/**
+	 * Directly set/overwrite the translation value.
+	 * Allowed for: initial set (any user), original author, admins.
+	 */
+	async function saveValue(loc: LocalizationWithKey) {
 		const draft = drafts[loc.id] ?? '';
-		if (loc.value !== null || !draft.trim()) return;
+		if (draft === (loc.value ?? '') || !draft.trim()) return;
 		submitting[loc.id] = true;
 		submitError[loc.id] = '';
 		try {
@@ -147,9 +150,10 @@
 			);
 			if (error) throw error;
 			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
+			qc.invalidateQueries({ queryKey: ['proposals-pending', projectId] });
 		} catch {
 			submitError[loc.id] = 'Failed to set translation.';
-			drafts[loc.id] = '';
+			drafts[loc.id] = loc.value ?? '';
 		} finally {
 			submitting[loc.id] = false;
 		}
@@ -223,11 +227,12 @@
 	{@const placeholders = extractPlaceholders(loc.key)}
 	{@const draft = drafts[loc.id] ?? ''}
 	{@const hasValue = loc.value !== null}
+	{@const canEditDirectly = !hasValue || auth.isAdmin || loc.value_set_by === auth.user?.id}
 	{@const draftChanged = draft !== (loc.value ?? '') && draft.trim() !== ''}
 
 	{#if auth.isAuthenticated}
-		{#if !hasValue}
-			<!-- ── Initial value: auto-submit on blur, no comment needed ── -->
+		{#if canEditDirectly}
+			<!-- ── Direct edit: initial set, original author, or admin ── -->
 			<div class="relative {bordered ? 'rounded-md border' : ''}">
 				<div
 					aria-hidden="true"
@@ -241,9 +246,9 @@
 					disabled={submitting[loc.id]}
 					value={draft}
 					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
-					onblur={() => setInitialValue(loc)}
+					onblur={() => saveValue(loc)}
 					onkeydown={(e) => {
-						if (e.key === 'Escape') { drafts[loc.id] = ''; e.currentTarget.blur(); return; }
+						if (e.key === 'Escape') { drafts[loc.id] = loc.value ?? ''; e.currentTarget.blur(); return; }
 						if (e.key === 'Enter') {
 							if (e.shiftKey || e.altKey) {
 								e.preventDefault();
@@ -262,16 +267,18 @@
 				></textarea>
 			</div>
 		{:else}
-			<!-- ── Existing value: editable draft; requires comment to propose ── -->
-			<div class="relative {bordered ? 'rounded-md border' : ''}">
+			<!-- ── Other users: read-only current value + proposal textarea ── -->
+			<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm {bordered ? '' : 'block'}">{loc.value ?? '—'}</span>
+			<div class="relative mt-1.5 {bordered ? 'rounded-md border' : ''}">
 				<div
 					aria-hidden="true"
 					class="pointer-events-none whitespace-pre-wrap break-words px-1 py-0.5 text-sm"
 				>{#each parseSegments(draft) as seg}{#if seg.type === 'placeholder'}<mark class="rounded bg-blue-100 not-italic text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{seg.value}</mark>{:else}{seg.value}{/if}{/each}<br /></div>
 				<textarea
 					bind:this={textareaRefs[loc.id]}
-					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50 {submitError[loc.id] ? 'ring-1 ring-destructive' : ''}"
+					class="absolute inset-0 w-full rounded bg-transparent px-1 py-0.5 text-sm text-transparent outline-none ring-inset transition-shadow placeholder:italic placeholder:text-muted-foreground focus:ring-1 focus:ring-ring disabled:opacity-50"
 					style="resize: none; caret-color: hsl(var(--foreground))"
+					placeholder="Propose an alternate translation…"
 					disabled={submitting[loc.id]}
 					value={draft}
 					oninput={(e) => { drafts[loc.id] = e.currentTarget.value; }}
@@ -291,7 +298,6 @@
 				></textarea>
 			</div>
 			{#if draftChanged}
-				<!-- Comment + submit button appear when draft differs from current value -->
 				<div class="mt-1.5 space-y-1">
 					<textarea
 						class="w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"

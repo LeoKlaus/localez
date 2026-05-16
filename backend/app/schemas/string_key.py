@@ -19,6 +19,7 @@ class LocalizationResponse(BaseModel):
         return None if v == "" else v
     state: LocalizationState
     value: str | None
+    value_set_by: uuid.UUID | None
     updated_at: datetime
 
     model_config = {"from_attributes": True}

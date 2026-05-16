@@ -154,9 +154,16 @@ async def set_localization_value(
     if loc.value is not None and user.global_role != GlobalRole.admin and user.id != loc.value_set_by:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "VALUE_ALREADY_SET", "message": "A translation already exists; only admins or the original author can override it"})
 
+    is_overwrite = loc.value is not None
     loc.value = body.value
     loc.value_set_by = user.id
     loc.state = LocalizationState.needs_review
+
+    # Clear stale proposals whenever an existing value is overwritten
+    if is_overwrite:
+        await db.execute(
+            delete(TranslationProposal).where(TranslationProposal.localization_id == loc_id)
+        )
 
     await db.commit()
     await db.refresh(loc)

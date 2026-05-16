@@ -409,13 +409,13 @@
 					</span>
 				</div>
 				{#if auth.isAuthenticated}
-					{#if !loc.value}
-						<!-- No value yet — offer to set the initial translation -->
+					{#if !loc.value || auth.isAdmin || loc.value_set_by === auth.user?.id}
+						<!-- No value yet, original author, or admin — can set directly -->
 						<Button variant="outline" size="sm" onclick={() => openSetValueDialog(loc.id)}>
-							Set translation
+							{loc.value ? 'Edit translation' : 'Set translation'}
 						</Button>
 					{:else}
-						<!-- Value exists — offer a proposal for changes -->
+						<!-- Other users — must go through proposal flow -->
 						<Button variant="outline" size="sm" onclick={() => openProposalDialog(loc.id)}>
 							<Plus size={12} class="mr-1" /> Propose change
 						</Button>

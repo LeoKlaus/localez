@@ -2768,6 +2768,18 @@
             ],
             "title": "Value"
           },
+          "value_set_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Set By"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -2782,6 +2794,7 @@
           "variation_key",
           "state",
           "value",
+          "value_set_by",
           "updated_at"
         ],
         "title": "LocalizationResponse"
@@ -2859,6 +2872,18 @@
             ],
             "title": "Value"
           },
+          "value_set_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Set By"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -2915,6 +2940,7 @@
           "variation_key",
           "state",
           "value",
+          "value_set_by",
           "updated_at",
           "string_key_id",
           "key",

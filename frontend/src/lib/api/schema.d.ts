@@ -743,6 +743,8 @@ export interface components {
             state: components["schemas"]["LocalizationState"];
             /** Value */
             value: string | null;
+            /** Value Set By */
+            value_set_by: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -778,6 +780,8 @@ export interface components {
             state: components["schemas"]["LocalizationState"];
             /** Value */
             value: string | null;
+            /** Value Set By */
+            value_set_by: string | null;
             /**
              * Updated At
              * Format: date-time
