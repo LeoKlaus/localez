@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.auth import get_current_active_user
-from app.dependencies.project_access import require_any_language_reviewer, require_reviewer, require_translator_plus
+from app.dependencies.project_access import require_reviewer, require_translator_plus
 from app.models.localization import Localization
 from app.models.string_key import StringKey
 from app.models.translation_proposal import TranslationProposal
@@ -35,7 +35,7 @@ async def list_project_proposals(
     project_id: uuid.UUID,
     offset: int = 0,
     limit: int = 50,
-    _: User = Depends(require_any_language_reviewer),
+    _: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):

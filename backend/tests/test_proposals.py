@@ -119,14 +119,14 @@ async def test_list_project_proposals_dashboard(
     assert len(resp.json()) >= 1
 
 
-async def test_non_admin_cannot_access_dashboard(
+async def test_any_user_can_access_proposals_dashboard(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
     username = unique_username("tr_nodash")
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{pid}/proposals")
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------
