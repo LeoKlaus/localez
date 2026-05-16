@@ -34,6 +34,7 @@ async def delete_me(
     db: AsyncSession = Depends(get_db),
 ):
     await db.delete(user)
+    await db.commit()
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -45,6 +46,7 @@ async def update_password(
     if not verify_password(body.current_password, user.hashed_password):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "WRONG_PASSWORD", "message": "Current password is incorrect"})
     user.hashed_password = hash_password(body.new_password)
+    await db.commit()
     return user
 
 
@@ -84,6 +86,7 @@ async def update_role(
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "USER_NOT_FOUND", "message": "User not found"})
     user.global_role = body.global_role
+    await db.commit()
     return user
 
 
@@ -107,6 +110,7 @@ async def totp_verify(
     if not verify_totp(body.secret, body.code):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_TOTP_CODE", "message": "Invalid or expired TOTP code"})
     user.totp_secret = body.secret
+    await db.commit()
 
 
 @router.delete("/me/totp", status_code=status.HTTP_204_NO_CONTENT)
@@ -120,6 +124,7 @@ async def totp_disable(
     if not verify_totp(user.totp_secret, body.code):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_TOTP_CODE", "message": "Invalid or expired TOTP code"})
     user.totp_secret = None
+    await db.commit()
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -132,3 +137,4 @@ async def deactivate_user(
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "USER_NOT_FOUND", "message": "User not found"})
     user.is_active = False
+    await db.commit()

@@ -41,6 +41,7 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "USERNAME_TAKEN", "message": "Username already taken"})
 
     user, words, access_token, refresh_token = await auth_service.register_user(db, body.username, body.password)
+    await db.commit()
     return RegisterResponse(access_token=access_token, refresh_token=refresh_token, recovery_words=words)
 
 
@@ -58,6 +59,7 @@ async def login(
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
     _, access_token, refresh_token = result
+    await db.commit()
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -68,12 +70,14 @@ async def refresh(request: Request, body: RefreshRequest, db: AsyncSession = Dep
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_REFRESH_TOKEN", "message": "Invalid or expired refresh token"})
     access_token, new_refresh = result
+    await db.commit()
     return TokenResponse(access_token=access_token, refresh_token=new_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
     await auth_service.revoke_refresh_token(db, body.refresh_token)
+    await db.commit()
 
 
 @router.post("/recover", response_model=TokenResponse)
@@ -83,6 +87,7 @@ async def recover(request: Request, body: RecoverRequest, db: AsyncSession = Dep
     if result is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "RECOVERY_FAILED", "message": "Invalid username or recovery words"})
     access_token, refresh_token = result
+    await db.commit()
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -129,6 +134,7 @@ async def passkey_register_complete(
         aaguid=str(verified.aaguid) if verified.aaguid else None,
         name=body.name,
     ))
+    await db.commit()
     return {"message": "Passkey registered"}
 
 
@@ -170,4 +176,5 @@ async def passkey_auth_complete(request: Request, body: PasskeyAuthCompleteReque
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "ACCOUNT_DISABLED", "message": "Account disabled"})
 
     access_token, refresh_token = await auth_service._issue_tokens(db, user)
+    await db.commit()
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)

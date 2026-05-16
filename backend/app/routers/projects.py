@@ -134,6 +134,7 @@ async def create_project(
     project = Project(name=body.name, source_language=body.source_language, created_by=user.id)
     db.add(project)
     await db.flush()
+    await db.commit()
     project = await _get_project(project.id, db)
     return project
 
@@ -164,6 +165,7 @@ async def update_project(
         project.name = body.name
     if body.source_language is not None:
         project.source_language = body.source_language
+    await db.commit()
     return project
 
 
@@ -177,6 +179,7 @@ async def delete_project(
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
     await db.delete(project)
+    await db.commit()
 
 
 @router.put("/{project_id}/icon", status_code=status.HTTP_204_NO_CONTENT)
@@ -200,6 +203,7 @@ async def upload_icon(
         project.icon = buf.getvalue()
     except UnidentifiedImageError:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "INVALID_IMAGE", "message": "File is not a valid image"})
+    await db.commit()
 
 
 @router.delete("/{project_id}/icon", status_code=status.HTTP_204_NO_CONTENT)
@@ -212,6 +216,7 @@ async def delete_icon(
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
     project.icon = None
+    await db.commit()
 
 
 @router.get("/{project_id}/icon")
@@ -287,6 +292,7 @@ async def prefill_language(
     filled, skipped = await _run_prefill(
         project_id, language, project.source_language, user.id, db, raise_on_error=True
     )
+    await db.commit()
     return PrefillResponse(filled=filled, skipped=skipped)
 
 
@@ -329,6 +335,7 @@ async def remove_language(
         """),
         {"language": language, "project_id": project_id},
     )
+    await db.commit()
 
 
 @router.get("/{project_id}/languages/{language}/localizations", response_model=list[LocalizationWithKeyResponse])

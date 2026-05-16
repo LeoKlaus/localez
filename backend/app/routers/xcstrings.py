@@ -111,6 +111,7 @@ async def import_xcstrings(
 
     # Fill placeholder rows for any (string_key, project_language) without a flat localization
     await fill_missing_localizations(project_id, db)
+    await db.commit()
 
     keys_count = len(parsed.string_keys)
     locs_count = len(parsed.localizations)
