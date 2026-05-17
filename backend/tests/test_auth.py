@@ -101,3 +101,56 @@ async def test_username_case_insensitive_login(client: AsyncClient):
     # Login with lowercase should work
     resp2 = await client.post("/api/auth/token", data={"username": "mixedcase", "password": "securepass1"})
     assert resp2.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# JSON login (/auth/login)
+# ---------------------------------------------------------------------------
+
+async def test_json_login(client: AsyncClient):
+    await client.post("/api/auth/register", json={"username": "json_user", "password": "securepass1"})
+    resp = await client.post("/api/auth/login", json={"username": "json_user", "password": "securepass1"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
+
+
+async def test_json_login_wrong_password(client: AsyncClient):
+    await client.post("/api/auth/register", json={"username": "json_badpass", "password": "securepass1"})
+    resp = await client.post("/api/auth/login", json={"username": "json_badpass", "password": "wrong"})
+    assert resp.status_code == 401
+    assert resp.json()["detail"]["code"] == "INVALID_CREDENTIALS"
+
+
+async def test_json_login_unknown_user(client: AsyncClient):
+    resp = await client.post("/api/auth/login", json={"username": "nobody", "password": "securepass1"})
+    assert resp.status_code == 401
+    assert resp.json()["detail"]["code"] == "INVALID_CREDENTIALS"
+
+
+async def test_json_login_case_insensitive(client: AsyncClient):
+    await client.post("/api/auth/register", json={"username": "json_case", "password": "securepass1"})
+    resp = await client.post("/api/auth/login", json={"username": "JSON_CASE", "password": "securepass1"})
+    assert resp.status_code == 200
+
+
+async def test_json_login_token_is_usable(client: AsyncClient):
+    await client.post("/api/auth/register", json={"username": "json_usable", "password": "securepass1"})
+    resp = await client.post("/api/auth/login", json={"username": "json_usable", "password": "securepass1"})
+    token = resp.json()["access_token"]
+
+    me = await client.get("/api/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    assert me.json()["username"] == "json_usable"
+
+
+async def test_json_login_refresh_token_is_rotatable(client: AsyncClient):
+    await client.post("/api/auth/register", json={"username": "json_refresh", "password": "securepass1"})
+    resp = await client.post("/api/auth/login", json={"username": "json_refresh", "password": "securepass1"})
+    refresh_token = resp.json()["refresh_token"]
+
+    rotated = await client.post("/api/auth/refresh", json={"refresh_token": refresh_token})
+    assert rotated.status_code == 200
+    assert "access_token" in rotated.json()

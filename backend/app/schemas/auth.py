@@ -24,6 +24,17 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1)
+    password: str
+    totp_code: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def normalise_username(cls, v: str) -> str:
+        return v.lower()
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 

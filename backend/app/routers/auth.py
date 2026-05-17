@@ -19,6 +19,7 @@ from app.dependencies.auth import get_current_active_user
 from app.models.passkey import PasskeyCredential
 from app.models.user import User
 from app.schemas.auth import (
+    LoginRequest,
     PasskeyAuthBeginResponse,
     PasskeyAuthCompleteRequest,
     PasskeyCompleteRequest,
@@ -57,6 +58,19 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     result = await auth_service.authenticate_user(db, form.username.lower(), form.password, totp_code)
+    if result == "TOTP_REQUIRED":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "TOTP_REQUIRED", "message": "TOTP code required"})
+    if result is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
+    _, access_token, refresh_token = result
+    await db.commit()
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def login_json(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await auth_service.authenticate_user(db, body.username, body.password, body.totp_code)
     if result == "TOTP_REQUIRED":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "TOTP_REQUIRED", "message": "TOTP code required"})
     if result is None:
