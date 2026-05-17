@@ -36,4 +36,8 @@ server {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
+
+    location /.well-known/apple-app-site-association {
+        
+    }
 }
