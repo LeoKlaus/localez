@@ -87,6 +87,47 @@
         }
       }
     },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login Json",
+        "operationId": "login_json_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/refresh": {
       "post": {
         "tags": [
@@ -148,6 +189,220 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/cookie": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register Cookie",
+        "operationId": "register_cookie_auth_register_cookie_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterCookieResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login/cookie": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login Cookie",
+        "operationId": "login_cookie_auth_login_cookie_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh/cookie": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh Cookie",
+        "operationId": "refresh_cookie_auth_refresh_cookie_post",
+        "parameters": [
+          {
+            "name": "lz_refresh",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lz Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout/cookie": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout Cookie",
+        "operationId": "logout_cookie_auth_logout_cookie_post",
+        "parameters": [
+          {
+            "name": "lz_refresh",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lz Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/passkey/authenticate/complete/cookie": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Auth Complete Cookie",
+        "operationId": "passkey_auth_complete_cookie_auth_passkey_authenticate_complete_cookie_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAuthCompleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -2727,6 +2982,25 @@
   },
   "components": {
     "schemas": {
+      "AccessTokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "AccessTokenResponse",
+        "description": "Used by cookie-based auth endpoints \u2014 refresh token is in an HttpOnly cookie, not the body."
+      },
       "Body_import_xcstrings_projects__project_id__import_post": {
         "properties": {
           "file": {
@@ -3108,6 +3382,36 @@
           "ai_suggestion"
         ],
         "title": "LocalizationWithKeyResponse"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "totp_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totp Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
       },
       "MeResponse": {
         "properties": {
@@ -3615,6 +3919,33 @@
           "refresh_token"
         ],
         "title": "RefreshRequest"
+      },
+      "RegisterCookieResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "recovery_words": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recovery Words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "recovery_words"
+        ],
+        "title": "RegisterCookieResponse",
+        "description": "Registration response for cookie-based flow \u2014 refresh token is in an HttpOnly cookie."
       },
       "RegisterRequest": {
         "properties": {

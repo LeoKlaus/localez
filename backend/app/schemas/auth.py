@@ -24,6 +24,19 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class AccessTokenResponse(BaseModel):
+    """Used by cookie-based auth endpoints — refresh token is in an HttpOnly cookie, not the body."""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class RegisterCookieResponse(BaseModel):
+    """Registration response for cookie-based flow — refresh token is in an HttpOnly cookie."""
+    access_token: str
+    token_type: str = "bearer"
+    recovery_words: list[str]
+
+
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1)
     password: str

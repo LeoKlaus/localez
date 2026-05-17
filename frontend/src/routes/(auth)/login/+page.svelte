@@ -32,13 +32,14 @@
 		loading = true;
 
 		try {
-			const body = new URLSearchParams({ username, password, grant_type: 'password' });
-			if (needsTotp && totpCode) body.set('totp_code', totpCode);
-
-			const res = await fetch(`${BASE_URL}/api/auth/token`, {
+			const res = await fetch(`${BASE_URL}/api/auth/login/cookie`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					username,
+					password,
+					totp_code: needsTotp && totpCode ? totpCode : undefined
+				})
 			});
 
 			if (!res.ok) {
@@ -49,14 +50,15 @@
 					return;
 				}
 				const detail = data.detail;
-				error = (typeof detail === 'object' && detail !== null ? detail.message : detail)
-					?? data.message
-					?? 'Login failed. Check your credentials.';
+				error =
+					(typeof detail === 'object' && detail !== null ? detail.message : detail) ??
+					data.message ??
+					'Login failed. Check your credentials.';
 				return;
 			}
 
 			const data = await res.json();
-			auth.setTokens(data.access_token, data.refresh_token);
+			auth.setToken(data.access_token);
 			await fetchMe(data.access_token);
 			goto('/projects');
 		} finally {
@@ -79,7 +81,7 @@
 			const { options, challenge_token } = await beginRes.json();
 			const credential = await startAuthentication({ optionsJSON: options });
 
-			const completeRes = await fetch(`${BASE_URL}/api/auth/passkey/authenticate/complete`, {
+			const completeRes = await fetch(`${BASE_URL}/api/auth/passkey/authenticate/complete/cookie`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ credential, challenge_token })
@@ -91,7 +93,7 @@
 			}
 
 			const data = await completeRes.json();
-			auth.setTokens(data.access_token, data.refresh_token);
+			auth.setToken(data.access_token);
 			await fetchMe(data.access_token);
 			goto('/projects');
 		} catch (err) {

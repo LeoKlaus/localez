@@ -29,7 +29,7 @@
 
 		loading = true;
 		try {
-			const res = await fetch(`${BASE_URL}/api/auth/register`, {
+			const res = await fetch(`${BASE_URL}/api/auth/register/cookie`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username, password })
@@ -42,7 +42,7 @@
 			}
 
 			const data = await res.json();
-			auth.setTokens(data.access_token, data.refresh_token);
+			auth.setToken(data.access_token);
 			recoveryWords = data.recovery_words;
 			showRecovery = true;
 

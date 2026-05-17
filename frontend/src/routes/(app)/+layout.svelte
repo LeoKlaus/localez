@@ -31,6 +31,11 @@
 	const adminItems = [{ href: '/admin/users', label: 'Users', icon: Users }];
 
 	onMount(async () => {
+		// If there's no in-memory access token, try to obtain one silently using
+		// the HttpOnly refresh-token cookie set during the last login.
+		if (!auth.isAuthenticated) {
+			await auth.tryRefresh();
+		}
 		if (auth.isAuthenticated && !auth.user) {
 			const { data } = await client.GET('/api/users/me');
 			if (data) auth.user = data;
@@ -38,10 +43,7 @@
 	});
 
 	async function handleLogout() {
-		const refreshToken = auth.refreshToken;
-		if (refreshToken) {
-			await client.POST('/api/auth/logout', { body: { refresh_token: refreshToken } });
-		}
+		await fetch('/api/auth/logout/cookie', { method: 'POST' });
 		auth.clear();
 		goto('/login');
 	}

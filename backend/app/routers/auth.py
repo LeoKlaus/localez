@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +18,9 @@ from app.database import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models.passkey import PasskeyCredential
 from app.models.user import User
+from app.config import settings
 from app.schemas.auth import (
+    AccessTokenResponse,
     LoginRequest,
     PasskeyAuthBeginResponse,
     PasskeyAuthCompleteRequest,
@@ -26,6 +28,7 @@ from app.schemas.auth import (
     PasskeyRegisterBeginResponse,
     RecoverRequest,
     RefreshRequest,
+    RegisterCookieResponse,
     RegisterRequest,
     RegisterResponse,
     TokenResponse,
@@ -95,6 +98,130 @@ async def refresh(request: Request, body: RefreshRequest, db: AsyncSession = Dep
 async def logout(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
     await auth_service.revoke_refresh_token(db, body.refresh_token)
     await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Cookie-based auth endpoints
+# The refresh token is stored in an HttpOnly cookie rather than the response
+# body, making it inaccessible to JavaScript and immune to XSS theft.
+# ---------------------------------------------------------------------------
+
+_COOKIE_NAME = "lz_refresh"
+
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.refresh_token_expire_days * 86_400,
+        path="/api/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(key=_COOKIE_NAME, path="/api/auth")
+
+
+@router.post("/register/cookie", response_model=RegisterCookieResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def register_cookie(request: Request, body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select as _select
+    existing = await db.execute(_select(User).where(User.username == body.username))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "USERNAME_TAKEN", "message": "Username already taken"})
+
+    user, words, access_token, refresh_token = await auth_service.register_user(db, body.username, body.password)
+    await db.commit()
+    _set_refresh_cookie(response, refresh_token)
+    return RegisterCookieResponse(access_token=access_token, recovery_words=words)
+
+
+@router.post("/login/cookie", response_model=AccessTokenResponse)
+@limiter.limit("10/minute")
+async def login_cookie(request: Request, body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    result = await auth_service.authenticate_user(db, body.username, body.password, body.totp_code)
+    if result == "TOTP_REQUIRED":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "TOTP_REQUIRED", "message": "TOTP code required"})
+    if result is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
+    _, access_token, refresh_token = result
+    await db.commit()
+    _set_refresh_cookie(response, refresh_token)
+    return AccessTokenResponse(access_token=access_token)
+
+
+@router.post("/refresh/cookie", response_model=AccessTokenResponse)
+@limiter.limit("30/minute")
+async def refresh_cookie(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    lz_refresh: str | None = Cookie(default=None),
+):
+    if not lz_refresh:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "MISSING_REFRESH_TOKEN", "message": "No refresh token cookie"})
+    result = await auth_service.rotate_refresh_token(db, lz_refresh)
+    if result is None:
+        _clear_refresh_cookie(response)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "INVALID_REFRESH_TOKEN", "message": "Invalid or expired refresh token"})
+    access_token, new_refresh = result
+    await db.commit()
+    _set_refresh_cookie(response, new_refresh)
+    return AccessTokenResponse(access_token=access_token)
+
+
+@router.post("/logout/cookie", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_cookie(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    lz_refresh: str | None = Cookie(default=None),
+):
+    if lz_refresh:
+        await auth_service.revoke_refresh_token(db, lz_refresh)
+        await db.commit()
+    _clear_refresh_cookie(response)
+
+
+@router.post("/passkey/authenticate/complete/cookie", response_model=AccessTokenResponse)
+@limiter.limit("10/minute")
+async def passkey_auth_complete_cookie(
+    request: Request,
+    body: PasskeyAuthCompleteRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        challenge = decode_webauthn_challenge_token(body.challenge_token)
+        import base64
+        raw_id_str = body.credential.get("rawId", "")
+        raw_cred_id = base64.urlsafe_b64decode(raw_id_str + "==")
+        result = await db.execute(select(PasskeyCredential).where(PasskeyCredential.credential_id == raw_cred_id))
+        cred = result.scalar_one_or_none()
+        if cred is None:
+            raise ValueError("Credential not found")
+
+        verified = verify_authentication(
+            credential=body.credential,
+            expected_challenge=challenge,
+            stored_public_key=cred.public_key,
+            stored_sign_count=cred.sign_count,
+        )
+        cred.sign_count = verified.new_sign_count
+    except Exception as e:
+        logger.warning("Passkey authentication failed: %s", e)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "PASSKEY_AUTH_FAILED", "message": "Passkey authentication failed"})
+
+    user = await db.get(User, cred.user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "ACCOUNT_DISABLED", "message": "Account disabled"})
+
+    access_token, refresh_token = await auth_service._issue_tokens(db, user)
+    await db.commit()
+    _set_refresh_cookie(response, refresh_token)
+    return AccessTokenResponse(access_token=access_token)
 
 
 @router.post("/recover", response_model=TokenResponse)

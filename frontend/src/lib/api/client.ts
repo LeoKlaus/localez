@@ -27,14 +27,15 @@ const authMiddleware: Middleware = {
 	async onResponse({ response, request }) {
 		if (response.status !== 401) return response;
 
-		const refreshToken = auth.refreshToken;
-		if (!refreshToken) {
-			if (auth.isAuthenticated) {
-				auth.clear();
-				toast.error('Session expired', { description: 'Please sign in again to continue.' });
-			} else {
-				toast.error('Sign in required', { description: 'You must be signed in to perform this action.' });
-			}
+		// Don't recurse if the refresh endpoint itself returned 401.
+		if (request.url.includes('/api/auth/refresh/cookie')) {
+			const hadUser = !!auth.user;
+			auth.clear();
+			toast.error(hadUser ? 'Session expired' : 'Sign in required', {
+				description: hadUser
+					? 'Please sign in again to continue.'
+					: 'You must be signed in to perform this action.'
+			});
 			return response;
 		}
 
@@ -50,21 +51,22 @@ const authMiddleware: Middleware = {
 
 		isRefreshing = true;
 		try {
-			const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ refresh_token: refreshToken })
-			});
+			const res = await fetch(`${BASE_URL}/api/auth/refresh/cookie`, { method: 'POST' });
 
 			if (!res.ok) {
+				const hadUser = !!auth.user;
 				auth.clear();
 				drainQueue(null);
-				toast.error('Session expired', { description: 'Please sign in again to continue.' });
+				toast.error(hadUser ? 'Session expired' : 'Sign in required', {
+					description: hadUser
+						? 'Please sign in again to continue.'
+						: 'You must be signed in to perform this action.'
+				});
 				return response;
 			}
 
 			const data = await res.json();
-			auth.setTokens(data.access_token, data.refresh_token);
+			auth.setToken(data.access_token);
 			drainQueue(data.access_token);
 
 			const retried = request.clone();
