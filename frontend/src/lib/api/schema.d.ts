@@ -225,6 +225,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/passkey/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Passkey Credentials */
+        get: operations["list_passkey_credentials_auth_passkey_credentials_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/passkey/credentials/{credential_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Passkey Credential */
+        delete: operations["delete_passkey_credential_auth_passkey_credentials__credential_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/passkey/authenticate/begin": {
         parameters: {
             query?: never;
@@ -1011,6 +1045,15 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** PasskeyCredentialResponse */
+        PasskeyCredentialResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Aaguid */
+            aaguid: string | null;
+        };
         /** PasskeyRegisterBeginResponse */
         PasskeyRegisterBeginResponse: {
             /** Options */
@@ -1746,6 +1789,55 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_passkey_credentials_auth_passkey_credentials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyCredentialResponse"][];
+                };
+            };
+        };
+    };
+    delete_passkey_credential_auth_passkey_credentials__credential_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                credential_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

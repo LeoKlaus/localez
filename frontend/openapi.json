@@ -528,6 +528,76 @@
         ]
       }
     },
+    "/api/auth/passkey/credentials": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List Passkey Credentials",
+        "operationId": "list_passkey_credentials_auth_passkey_credentials_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PasskeyCredentialResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Passkey Credentials Auth Passkey Credentials Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/passkey/credentials/{credential_id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Delete Passkey Credential",
+        "operationId": "delete_passkey_credential_auth_passkey_credentials__credential_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "credential_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Credential Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/passkey/authenticate/begin": {
       "post": {
         "tags": [
@@ -3524,6 +3594,43 @@
           "challenge_token"
         ],
         "title": "PasskeyCompleteRequest"
+      },
+      "PasskeyCredentialResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "aaguid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aaguid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "aaguid"
+        ],
+        "title": "PasskeyCredentialResponse"
       },
       "PasskeyRegisterBeginResponse": {
         "properties": {

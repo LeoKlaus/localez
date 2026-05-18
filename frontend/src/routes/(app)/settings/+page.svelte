@@ -3,13 +3,18 @@
 	import { client } from '$lib/api/client';
 	import { goto } from '$app/navigation';
 	import { startRegistration } from '@simplewebauthn/browser';
+	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as Alert from '$lib/components/ui/alert';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import Trash2 from 'lucide-svelte/icons/trash-2';
+	import KeyRound from 'lucide-svelte/icons/key-round';
 	import QRCode from 'qrcode';
+
+	const qc = useQueryClient();
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
@@ -56,15 +61,41 @@
 		}
 	}
 
+	// ── Passkey list ────────────────────────────────────────────────────────
+	const passkeys = createQuery(() => ({
+		queryKey: ['passkeys'],
+		enabled: auth.isAuthenticated,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/auth/passkey/credentials');
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	const deletePasskey = createMutation(() => ({
+		mutationFn: async (credentialId: string) => {
+			const { error } = await client.DELETE('/api/auth/passkey/credentials/{credential_id}', {
+				params: { path: { credential_id: credentialId } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['passkeys'] });
+			refreshMe();
+		}
+	}));
+
 	// ── Passkey registration ────────────────────────────────────────────────
 	let passkeyError = $state('');
-	let passkeySuccess = $state(false);
 	let passkeyLoading = $state(false);
+	let passkeyNameOpen = $state(false);
+	let passkeyName = $state('');
 
 	async function handlePasskeyRegister() {
 		passkeyError = '';
-		passkeySuccess = false;
 		passkeyLoading = true;
+		const name = passkeyName.trim() || 'My passkey';
+		passkeyNameOpen = false;
 
 		try {
 			const beginRes = await fetch(`${BASE_URL}/api/auth/passkey/register/begin`, {
@@ -84,14 +115,14 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${auth.accessToken}`
 				},
-				body: JSON.stringify({ credential, challenge_token, name: 'My passkey' })
+				body: JSON.stringify({ credential, challenge_token, name })
 			});
 
 			if (!completeRes.ok) {
 				passkeyError = 'Passkey registration failed.';
 				return;
 			}
-			passkeySuccess = true;
+			qc.invalidateQueries({ queryKey: ['passkeys'] });
 			await refreshMe();
 		} catch (err) {
 			if (err instanceof Error && err.name !== 'NotAllowedError') {
@@ -99,6 +130,7 @@
 			}
 		} finally {
 			passkeyLoading = false;
+			passkeyName = '';
 		}
 	}
 
@@ -289,11 +321,16 @@
 
 		<!-- Passkeys -->
 		<Card.Root>
-			<Card.Header>
-				<Card.Title>Passkeys</Card.Title>
-				<Card.Description>
-					Add a passkey to sign in without a password using Face ID, Touch ID, or a security key.
-				</Card.Description>
+			<Card.Header class="flex flex-row items-start justify-between gap-4 space-y-0">
+				<div>
+					<Card.Title>Passkeys</Card.Title>
+					<Card.Description class="mt-1.5">
+						Sign in without a password using Face ID, Touch ID, or a hardware security key.
+					</Card.Description>
+				</div>
+				<Button variant="outline" size="sm" onclick={() => { passkeyName = ''; passkeyNameOpen = true; }} disabled={passkeyLoading}>
+					{passkeyLoading ? 'Registering…' : 'Add passkey'}
+				</Button>
 			</Card.Header>
 			<Card.Content class="space-y-3">
 				{#if passkeyError}
@@ -301,21 +338,29 @@
 						<Alert.Description>{passkeyError}</Alert.Description>
 					</Alert.Root>
 				{/if}
-				{#if passkeySuccess}
-					<Alert.Root>
-						<Alert.Description>Passkey registered successfully.</Alert.Description>
-					</Alert.Root>
+				{#if passkeys.isPending}
+					<div class="h-10 animate-pulse rounded-md bg-muted"></div>
+				{:else if (passkeys.data?.length ?? 0) === 0}
+					<p class="text-sm text-muted-foreground">No passkeys registered yet.</p>
+				{:else}
+					<div class="divide-y rounded-lg border">
+						{#each passkeys.data! as pk}
+							<div class="flex items-center gap-3 px-3 py-2.5">
+								<KeyRound size={14} class="shrink-0 text-muted-foreground" />
+								<span class="flex-1 text-sm">{pk.name ?? 'Unnamed passkey'}</span>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+									onclick={() => deletePasskey.mutate(pk.id)}
+									disabled={deletePasskey.isPending}
+								>
+									<Trash2 size={14} />
+								</Button>
+							</div>
+						{/each}
+					</div>
 				{/if}
-				<div class="flex items-center gap-3">
-					{#if auth.passkeysConfigured}
-						<span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-							Configured
-						</span>
-					{/if}
-					<Button variant="outline" onclick={handlePasskeyRegister} disabled={passkeyLoading}>
-						{passkeyLoading ? 'Registering…' : auth.passkeysConfigured ? 'Add another passkey' : 'Add passkey'}
-					</Button>
-				</div>
 			</Card.Content>
 		</Card.Root>
 
@@ -369,6 +414,26 @@
 		</Card.Root>
 	</div>
 </div>
+
+<!-- Passkey name dialog -->
+<Dialog.Root bind:open={passkeyNameOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Add passkey</Dialog.Title>
+			<Dialog.Description>Give this passkey a name so you can identify it later.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={(e) => { e.preventDefault(); handlePasskeyRegister(); }} class="space-y-4">
+			<div class="space-y-2">
+				<Label>Passkey name</Label>
+				<Input bind:value={passkeyName} placeholder="My MacBook, YubiKey 5…" maxlength={64} />
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (passkeyNameOpen = false)}>Cancel</Button>
+				<Button type="submit">Continue</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
 
 <!-- Delete account dialog -->
 <Dialog.Root bind:open={deleteAccountOpen}>
