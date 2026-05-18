@@ -2,3 +2,4 @@
 .env
 legal/privacy.md
 legal/imprint.md
+docker-compose.yml
