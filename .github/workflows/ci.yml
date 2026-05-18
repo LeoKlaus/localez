@@ -24,3 +24,26 @@ jobs:
           POSTGRES_PASSWORD: "test"
           ALLOWED_HOSTS: "*"
         run: pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Type check
+        working-directory: frontend
+        run: yarn run check
+
+      - name: Build
+        working-directory: frontend
+        run: yarn build
