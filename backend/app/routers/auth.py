@@ -25,6 +25,7 @@ from app.schemas.auth import (
     PasskeyAuthBeginResponse,
     PasskeyAuthCompleteRequest,
     PasskeyCompleteRequest,
+    PasskeyCredentialResponse,
     PasskeyRegisterBeginResponse,
     RecoverRequest,
     RefreshRequest,
@@ -281,6 +282,35 @@ async def passkey_register_complete(
     ))
     await db.commit()
     return {"message": "Passkey registered"}
+
+
+@router.get("/passkey/credentials", response_model=list[PasskeyCredentialResponse])
+async def list_passkey_credentials(
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(PasskeyCredential).where(PasskeyCredential.user_id == user.id))
+    creds = result.scalars().all()
+    return [PasskeyCredentialResponse(id=str(c.id), name=c.name, aaguid=c.aaguid) for c in creds]
+
+
+@router.delete("/passkey/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_passkey_credential(
+    credential_id: str,
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(PasskeyCredential).where(
+            PasskeyCredential.id == credential_id,
+            PasskeyCredential.user_id == user.id,
+        )
+    )
+    cred = result.scalar_one_or_none()
+    if cred is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "CREDENTIAL_NOT_FOUND", "message": "Passkey credential not found"})
+    await db.delete(cred)
+    await db.commit()
 
 
 @router.post("/passkey/authenticate/begin", response_model=PasskeyAuthBeginResponse)
