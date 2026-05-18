@@ -82,3 +82,9 @@ class PasskeyAuthBeginResponse(BaseModel):
 class PasskeyAuthCompleteRequest(BaseModel):
     credential: dict
     challenge_token: str
+
+
+class PasskeyCredentialResponse(BaseModel):
+    id: str
+    name: str | None
+    aaguid: str | None
