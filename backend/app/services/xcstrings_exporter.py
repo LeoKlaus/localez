@@ -14,6 +14,7 @@ def build_xcstrings(
     project: Project,
     string_keys: list[StringKey],
     localizations: list[Localization],
+    contributors: list[str] | None = None,
 ) -> dict:
     # group localizations by string_key_id
     locs_by_key: dict = defaultdict(list)
@@ -33,6 +34,19 @@ def build_xcstrings(
             key_data["localizations"] = _build_localizations(key_locs)
 
         strings[sk.key] = key_data
+
+    if contributors:
+        strings["__localization_contributors__"] = {
+            "shouldTranslate": False,
+            "localizations": {
+                project.source_language: {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": ", ".join(contributors),
+                    }
+                }
+            },
+        }
 
     return {
         "sourceLanguage": project.source_language,

@@ -151,7 +151,23 @@ async def export_xcstrings(
     locs_result = await db.execute(loc_query)
     localizations = list(locs_result.scalars().all())
 
-    xcstrings_data = build_xcstrings(project, string_keys, localizations)
+    contributor_names: list[str] = []
+    if key_ids:
+        contributors_result = await db.execute(
+            select(User)
+            .join(Localization, Localization.value_set_by == User.id)
+            .where(
+                Localization.string_key_id.in_(key_ids),
+                User.show_as_contributor.is_(True),
+            )
+            .distinct()
+        )
+        contributor_names = [
+            u.attribution_name or u.username
+            for u in contributors_result.scalars().all()
+        ]
+
+    xcstrings_data = build_xcstrings(project, string_keys, localizations, contributor_names)
     filename = f"{project.name.replace(' ', '_')}.xcstrings"
 
     return JSONResponse(
