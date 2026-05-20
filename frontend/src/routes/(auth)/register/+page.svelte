@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/stores/auth.svelte';
+	import { legalStore } from '$lib/stores/legal.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -16,6 +17,7 @@
 	let error = $state('');
 	let loading = $state(false);
 	let privacyAccepted = $state(false);
+	let contributionsAccepted = $state(false);
 	let recoveryWords = $state<string[]>([]);
 	let showRecovery = $state(false);
 
@@ -100,7 +102,22 @@
 					<a href="/legal/privacy" target="_blank" class="underline underline-offset-4">privacy policy</a>
 				</Label>
 			</div>
-			<Button type="submit" class="w-full" disabled={loading || !privacyAccepted}>
+			{#if legalStore.hasContributions}
+				<div class="flex items-center gap-2">
+					<input
+						id="contributions"
+						type="checkbox"
+						bind:checked={contributionsAccepted}
+						class="h-4 w-4 rounded border-input accent-primary"
+						required
+					/>
+					<Label for="contributions" class="font-normal">
+						I agree to the
+						<a href="/legal/contributions" target="_blank" class="underline underline-offset-4">contribution guidelines</a>
+					</Label>
+				</div>
+			{/if}
+			<Button type="submit" class="w-full" disabled={loading || !privacyAccepted || (legalStore.hasContributions && !contributionsAccepted)}>
 				{loading ? 'Creating account…' : 'Create account'}
 			</Button>
 		</form>
