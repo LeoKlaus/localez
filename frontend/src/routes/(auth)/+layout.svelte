@@ -19,13 +19,16 @@
 		</div>
 		{@render children()}
 	</div>
-	{#if legalStore.hasImprint || legalStore.hasPrivacy}
+	{#if legalStore.hasImprint || legalStore.hasPrivacy || legalStore.hasContributions}
 		<footer class="mt-8 flex gap-4 text-xs text-muted-foreground">
 			{#if legalStore.hasImprint}
 				<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
 			{/if}
 			{#if legalStore.hasPrivacy}
 				<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy</a>
+			{/if}
+			{#if legalStore.hasContributions}
+				<a href="/legal/contributions" class="hover:text-foreground hover:underline">Contribution Guidelines</a>
 			{/if}
 		</footer>
 	{/if}
