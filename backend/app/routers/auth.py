@@ -115,7 +115,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         key=_COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=True,
+        secure=settings.webauthn_rp_id != "localhost",
         samesite="strict",
         max_age=settings.refresh_token_expire_days * 86_400,
         path="/api/auth",
