@@ -4,7 +4,8 @@ import uuid
 import bcrypt
 from datetime import UTC, datetime, timedelta
 
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 
 from app.config import settings
 
@@ -49,7 +50,7 @@ def decode_access_token(token: str) -> dict:
         if payload.get("type") != "access":
             raise ValueError("Not an access token")
         return payload
-    except JWTError as e:
+    except InvalidTokenError as e:
         raise ValueError("Invalid token") from e
 
 
@@ -68,5 +69,5 @@ def decode_webauthn_challenge_token(token: str) -> bytes:
         if payload.get("type") != "webauthn_challenge":
             raise ValueError("Not a webauthn challenge token")
         return bytes.fromhex(payload["challenge"])
-    except JWTError as e:
+    except InvalidTokenError as e:
         raise ValueError("Invalid challenge token") from e
