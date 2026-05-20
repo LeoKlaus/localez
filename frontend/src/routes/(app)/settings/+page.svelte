@@ -25,6 +25,48 @@
 		if (res.ok) auth.user = await res.json();
 	}
 
+	// ── Contributor settings ─────────────────────────────────────────────────
+	let showAsContributor = $state(auth.user?.show_as_contributor ?? false);
+	let attributionName = $state(auth.user?.attribution_name ?? '');
+	let contributorError = $state('');
+	let contributorSuccess = $state(false);
+	let contributorLoading = $state(false);
+
+	$effect(() => {
+		if (auth.user) {
+			showAsContributor = auth.user.show_as_contributor ?? false;
+			attributionName = auth.user.attribution_name ?? '';
+		}
+	});
+
+	async function handleContributorSave(e: SubmitEvent) {
+		e.preventDefault();
+		contributorError = '';
+		contributorSuccess = false;
+		contributorLoading = true;
+		try {
+			const res = await fetch(`${BASE_URL}/api/users/me/contributor`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${auth.accessToken}`
+				},
+				body: JSON.stringify({
+					show_as_contributor: showAsContributor,
+					attribution_name: attributionName.trim() || null
+				})
+			});
+			if (!res.ok) {
+				contributorError = 'Failed to save contributor settings.';
+				return;
+			}
+			auth.user = await res.json();
+			contributorSuccess = true;
+		} finally {
+			contributorLoading = false;
+		}
+	}
+
 	// ── Password change ──────────────────────────────────────────────────────
 	let currentPassword = $state('');
 	let newPassword = $state('');
@@ -261,6 +303,56 @@
 					<span class="text-muted-foreground">Role:</span>
 					<strong class="ml-2">{auth.user?.global_role ?? '…'}</strong>
 				</p>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Contributor settings -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Contributor settings</Card.Title>
+				<Card.Description>
+					Choose whether to be credited for your translations.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				{#if contributorError}
+					<Alert.Root variant="destructive" class="mb-4">
+						<Alert.Description>{contributorError}</Alert.Description>
+					</Alert.Root>
+				{/if}
+				{#if contributorSuccess}
+					<Alert.Root class="mb-4">
+						<Alert.Description>Contributor settings saved.</Alert.Description>
+					</Alert.Root>
+				{/if}
+				<form onsubmit={handleContributorSave} class="space-y-4">
+					<div class="flex items-center gap-2">
+						<input
+							id="show-as-contributor"
+							type="checkbox"
+							bind:checked={showAsContributor}
+							class="h-4 w-4 rounded border-input accent-primary"
+						/>
+						<Label for="show-as-contributor" class="font-normal">Show me as a contributor</Label>
+					</div>
+					{#if showAsContributor}
+						<div class="space-y-2">
+							<Label for="attribution-name">Attribution name</Label>
+							<Input
+								id="attribution-name"
+								bind:value={attributionName}
+								placeholder="Your name or alias"
+								maxlength={100}
+							/>
+							<p class="text-xs text-muted-foreground">
+								Shown in translation credits. Leave blank to use your username.
+							</p>
+						</div>
+					{/if}
+					<Button type="submit" disabled={contributorLoading}>
+						{contributorLoading ? 'Saving…' : 'Save'}
+					</Button>
+				</form>
 			</Card.Content>
 		</Card.Root>
 

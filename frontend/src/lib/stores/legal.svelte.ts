@@ -1,6 +1,7 @@
 function createLegalStore() {
 	let hasImprint = $state(false);
 	let hasPrivacy = $state(false);
+	let hasContributions = $state(false);
 
 	async function fileExists(url: string): Promise<boolean> {
 		const res = await fetch(url, { method: 'HEAD' });
@@ -10,15 +11,17 @@ function createLegalStore() {
 	}
 
 	async function init() {
-		[hasImprint, hasPrivacy] = await Promise.all([
+		[hasImprint, hasPrivacy, hasContributions] = await Promise.all([
 			fileExists('/legal/imprint.md'),
-			fileExists('/legal/privacy.md')
+			fileExists('/legal/privacy.md'),
+			fileExists('/legal/contributions.md')
 		]);
 	}
 
 	return {
 		get hasImprint() { return hasImprint; },
 		get hasPrivacy() { return hasPrivacy; },
+		get hasContributions() { return hasContributions; },
 		init
 	};
 }

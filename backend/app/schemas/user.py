@@ -12,6 +12,8 @@ class UserResponse(BaseModel):
     global_role: GlobalRole
     is_active: bool
     created_at: datetime
+    show_as_contributor: bool
+    attribution_name: str | None
 
     model_config = {"from_attributes": True}
 
@@ -24,6 +26,11 @@ class MeResponse(UserResponse):
 class UpdatePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8)
+
+
+class UpdateContributorSettingsRequest(BaseModel):
+    show_as_contributor: bool
+    attribution_name: str | None = Field(None, max_length=100)
 
 
 class UpdateRoleRequest(BaseModel):

@@ -165,13 +165,20 @@
 		</nav>
 
 		<div class="border-t p-2">
-			{#if legalStore.hasImprint || legalStore.hasPrivacy}
-				<div class="mb-2 flex gap-3 px-3 text-xs text-muted-foreground">
-					{#if legalStore.hasImprint}
-						<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+			{#if legalStore.hasImprint || legalStore.hasPrivacy || legalStore.hasContributions}
+				<div class="mb-2 flex flex-col gap-1 px-3 text-xs text-muted-foreground">
+					{#if legalStore.hasImprint || legalStore.hasPrivacy}
+						<div class="flex gap-3">
+							{#if legalStore.hasImprint}
+								<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
+							{/if}
+							{#if legalStore.hasPrivacy}
+								<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy Policy</a>
+							{/if}
+						</div>
 					{/if}
-					{#if legalStore.hasPrivacy}
-						<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy Policy</a>
+					{#if legalStore.hasContributions}
+						<a href="/legal/contributions" class="hover:text-foreground hover:underline">Contribution Guidelines</a>
 					{/if}
 				</div>
 			{/if}
@@ -218,13 +225,16 @@
 				<span class="font-bold">Localez</span>
 			{/if}
 			<div class="flex items-center gap-3">
-				{#if legalStore.hasImprint || legalStore.hasPrivacy}
+				{#if legalStore.hasImprint || legalStore.hasPrivacy || legalStore.hasContributions}
 					<div class="flex gap-3 text-xs text-muted-foreground">
 						{#if legalStore.hasImprint}
 							<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
 						{/if}
 						{#if legalStore.hasPrivacy}
 							<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy Policy</a>
+						{/if}
+						{#if legalStore.hasContributions}
+							<a href="/legal/contributions" class="hover:text-foreground hover:underline">Contribution Guidelines</a>
 						{/if}
 					</div>
 				{/if}

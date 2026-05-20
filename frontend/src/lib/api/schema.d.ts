@@ -1011,6 +1011,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Show As Contributor */
+            show_as_contributor: boolean;
+            /** Attribution Name */
+            attribution_name: string | null;
             /** Totp Enabled */
             totp_enabled: boolean;
             /** Passkeys Configured */
@@ -1365,6 +1369,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Show As Contributor */
+            show_as_contributor: boolean;
+            /** Attribution Name */
+            attribution_name: string | null;
         };
         /** ValidationError */
         ValidationError: {

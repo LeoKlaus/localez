@@ -26,6 +26,8 @@ class User(Base):
     recovery_word_hash: Mapped[str] = mapped_column(String, nullable=False)
     totp_secret: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    show_as_contributor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    attribution_name: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     passkey_credentials: Mapped[list["PasskeyCredential"]] = relationship(  # noqa: F821
