@@ -15,6 +15,7 @@
 	let confirmPassword = $state('');
 	let error = $state('');
 	let loading = $state(false);
+	let privacyAccepted = $state(false);
 	let recoveryWords = $state<string[]>([]);
 	let showRecovery = $state(false);
 
@@ -86,7 +87,20 @@
 				<Label for="confirm">Confirm password</Label>
 				<Input id="confirm" type="password" bind:value={confirmPassword} required />
 			</div>
-			<Button type="submit" class="w-full" disabled={loading}>
+			<div class="flex items-center gap-2">
+				<input
+					id="privacy"
+					type="checkbox"
+					bind:checked={privacyAccepted}
+					class="h-4 w-4 rounded border-input accent-primary"
+					required
+				/>
+				<Label for="privacy" class="font-normal">
+					I have read and agree to the
+					<a href="/legal/privacy" target="_blank" class="underline underline-offset-4">privacy policy</a>
+				</Label>
+			</div>
+			<Button type="submit" class="w-full" disabled={loading || !privacyAccepted}>
 				{loading ? 'Creating account…' : 'Create account'}
 			</Button>
 		</form>
