@@ -71,7 +71,7 @@ function createAuth() {
 			return !!accessToken;
 		},
 		get isAdmin() {
-			return user?.global_role === 'admin';
+			return !!accessToken && user?.global_role === 'admin';
 		},
 		get totpEnabled() {
 			return user?.totp_enabled ?? false;
