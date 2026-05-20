@@ -11,7 +11,7 @@ from app.database import get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.models.user import User
 from app.models.passkey import PasskeyCredential
-from app.schemas.user import MeResponse, TotpCodeRequest, TotpSetupResponse, TotpVerifyRequest, UpdatePasswordRequest, UpdateRoleRequest, UserResponse
+from app.schemas.user import MeResponse, TotpCodeRequest, TotpSetupResponse, TotpVerifyRequest, UpdateContributorSettingsRequest, UpdatePasswordRequest, UpdateRoleRequest, UserResponse
 
 router = APIRouter()
 
@@ -46,6 +46,18 @@ async def update_password(
     if not verify_password(body.current_password, user.hashed_password):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"code": "WRONG_PASSWORD", "message": "Current password is incorrect"})
     user.hashed_password = hash_password(body.new_password)
+    await db.commit()
+    return user
+
+
+@router.patch("/me/contributor", response_model=UserResponse)
+async def update_contributor_settings(
+    body: UpdateContributorSettingsRequest,
+    user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user.show_as_contributor = body.show_as_contributor
+    user.attribution_name = body.attribution_name if body.show_as_contributor else None
     await db.commit()
     return user
 
