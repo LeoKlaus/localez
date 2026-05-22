@@ -125,6 +125,7 @@
 	let submitting = $state<Record<string, boolean>>({});
 	let submitError = $state<Record<string, string>>({});
 	let textareaRefs = $state<Record<string, HTMLTextAreaElement>>({});
+	let suggesting = $state<Record<string, boolean>>({});
 
 	$effect(() => {
 		for (const loc of langStrings.data?.items ?? []) {
@@ -185,6 +186,32 @@
 			submitError[loc.id] = 'Failed to submit proposal.';
 		} finally {
 			submitting[loc.id] = false;
+		}
+	}
+
+	/** Request an AI suggestion for a localization that doesn't have one yet. */
+	async function requestSuggestion(loc: LocalizationWithKey) {
+		suggesting[loc.id] = true;
+		try {
+			const { data, error } = await client.POST(
+				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/suggest',
+				{
+					params: { path: { project_id: projectId, key_id: loc.string_key_id, loc_id: loc.id } }
+				}
+			);
+			if (error) throw error;
+			// Patch only the affected row across all cached pages for this language
+			qc.setQueriesData(
+				{ queryKey: ['lang-strings', projectId] },
+				(old: { items: LocalizationWithKey[]; total: number } | undefined) => {
+					if (!old) return old;
+					return { ...old, items: old.items.map((item) => (item.id === loc.id ? data : item)) };
+				}
+			);
+		} catch {
+			// Silently ignore — the button stays available to retry
+		} finally {
+			suggesting[loc.id] = false;
 		}
 	}
 
@@ -377,6 +404,13 @@
 				<span class="shrink-0 font-medium text-violet-500 dark:text-violet-400">✦ AI</span>
 				<span class="break-words">{loc.ai_suggestion}</span>
 			</button>
+		{:else if !loc.ai_suggestion && loc.state === 'new'}
+			<button
+				type="button"
+				class="mt-0.5 text-xs text-muted-foreground/60 hover:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40"
+				disabled={suggesting[loc.id]}
+				onclick={() => requestSuggestion(loc)}
+			>{suggesting[loc.id] ? '✦ Getting suggestion…' : '✦ Get AI suggestion'}</button>
 		{/if}
 		{#if locProposals.length > 0}
 			<div class="mt-1.5 space-y-1">
