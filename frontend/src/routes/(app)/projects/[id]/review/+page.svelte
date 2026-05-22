@@ -13,6 +13,9 @@
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import Check from 'lucide-svelte/icons/check';
 	import X from 'lucide-svelte/icons/x';
+	import Languages from 'lucide-svelte/icons/languages';
+
+	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
 	function pct(n: number, total: number) {
 		return total === 0 ? 0 : Math.round((n / total) * 100);
@@ -176,6 +179,35 @@
 		},
 		onSuccess: invalidate
 	}));
+
+	// Back-translation — ephemeral, keyed by localization id or proposal id
+	let backTranslations = $state<Record<string, string>>({});
+	let backTranslating = $state<Record<string, boolean>>({});
+
+	async function toggleBackTranslate(id: string, type: 'localization' | 'proposal') {
+		if (backTranslations[id]) {
+			const { [id]: _, ...rest } = backTranslations;
+			backTranslations = rest;
+			return;
+		}
+		backTranslating = { ...backTranslating, [id]: true };
+		const path = type === 'localization'
+			? `${BASE_URL}/api/projects/${projectId}/localizations/${id}/back-translate`
+			: `${BASE_URL}/api/projects/${projectId}/proposals/${id}/back-translate`;
+		try {
+			const res = await fetch(path, {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${auth.accessToken}` }
+			});
+			if (res.ok) {
+				const data = await res.json();
+				backTranslations = { ...backTranslations, [id]: data.text };
+			}
+		} finally {
+			const { [id]: _, ...rest } = backTranslating;
+			backTranslating = rest;
+		}
+	}
 
 	function selectLanguage(lang: string) {
 		goto(`/projects/${projectId}/review?language=${lang}`);
@@ -352,6 +384,21 @@
 							<div class="mb-3 rounded-md bg-muted px-3 py-2 font-mono text-sm">
 								{loc.value}
 							</div>
+							<div class="mb-3">
+								<button
+									onclick={() => toggleBackTranslate(loc.id, 'localization')}
+									disabled={backTranslating[loc.id]}
+									class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+								>
+									<Languages size={12} />
+									{backTranslations[loc.id] ? 'Hide back-translation' : backTranslating[loc.id] ? 'Translating…' : 'Back-translate'}
+								</button>
+								{#if backTranslations[loc.id]}
+									<p class="mt-1.5 font-mono text-xs text-muted-foreground">
+										→ {backTranslations[loc.id]}
+									</p>
+								{/if}
+							</div>
 						{/if}
 
 						<!-- Proposals (only relevant in needs_review mode) -->
@@ -366,6 +413,21 @@
 								{#each locProposals as proposal (proposal.id)}
 									<div class="rounded-md border bg-background p-3">
 										<p class="mb-1 font-mono text-sm">{proposal.proposed_value}</p>
+										<div class="mb-3">
+											<button
+												onclick={() => toggleBackTranslate(proposal.id, 'proposal')}
+												disabled={backTranslating[proposal.id]}
+												class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+											>
+												<Languages size={12} />
+												{backTranslations[proposal.id] ? 'Hide back-translation' : backTranslating[proposal.id] ? 'Translating…' : 'Back-translate'}
+											</button>
+											{#if backTranslations[proposal.id]}
+												<p class="mt-1.5 font-mono text-xs text-muted-foreground">
+													→ {backTranslations[proposal.id]}
+												</p>
+											{/if}
+										</div>
 										<p class="mb-3 text-xs text-muted-foreground">
 											Proposed {formatDate(proposal.proposed_at)}
 										</p>

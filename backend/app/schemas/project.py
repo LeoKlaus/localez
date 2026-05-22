@@ -65,6 +65,10 @@ class PrefillResponse(BaseModel):
     skipped: int
 
 
+class BackTranslateResponse(BaseModel):
+    text: str
+
+
 class ProjectTokenCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 

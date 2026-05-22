@@ -17,12 +17,14 @@ from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.dependencies.project_token import generate_project_token
 from app.models.localization import Localization, LocalizationState
+from app.models.translation_proposal import TranslationProposal
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
 from app.models.project_token import ProjectToken
 from app.models.string_key import StringKey
 from app.models.user import User
 from app.schemas.project import (
+    BackTranslateResponse,
     LanguageAdd, LanguageStats, PrefillResponse,
     ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate,
     ProjectTokenCreateRequest, ProjectTokenCreatedResponse, ProjectTokenResponse,
@@ -313,6 +315,74 @@ async def prefill_stream(
         yield f"data: {result}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+def _require_translation_provider() -> str:
+    provider = settings.prefill_provider
+    if not provider:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "PROVIDER_NOT_CONFIGURED", "message": "No translation provider configured"},
+        )
+    return provider
+
+
+async def _back_translate(source_lang: str, target_lang: str, text: str, provider: str) -> str:
+    try:
+        results = await translation_service.prefill(source_lang, target_lang, [text], provider)
+        return results[0]
+    except RuntimeError as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "TRANSLATION_ERROR", "message": str(exc)},
+        ) from exc
+
+
+@router.post("/{project_id}/localizations/{loc_id}/back-translate", response_model=BackTranslateResponse)
+async def back_translate_localization(
+    project_id: uuid.UUID,
+    loc_id: uuid.UUID,
+    _user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    provider = _require_translation_provider()
+    result = await db.execute(
+        select(Localization, Project.source_language)
+        .join(StringKey, Localization.string_key_id == StringKey.id)
+        .join(Project, StringKey.project_id == Project.id)
+        .where(Localization.id == loc_id, Project.id == project_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "NOT_FOUND", "message": "Localization not found"})
+    loc, source_language = row
+    if not loc.value:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "NO_VALUE", "message": "Localization has no value to back-translate"})
+    text = await _back_translate(loc.language, source_language, loc.value, provider)
+    return BackTranslateResponse(text=text)
+
+
+@router.post("/{project_id}/proposals/{proposal_id}/back-translate", response_model=BackTranslateResponse)
+async def back_translate_proposal(
+    project_id: uuid.UUID,
+    proposal_id: uuid.UUID,
+    _user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    provider = _require_translation_provider()
+    result = await db.execute(
+        select(TranslationProposal, Localization.language, Project.source_language)
+        .join(Localization, TranslationProposal.localization_id == Localization.id)
+        .join(StringKey, Localization.string_key_id == StringKey.id)
+        .join(Project, StringKey.project_id == Project.id)
+        .where(TranslationProposal.id == proposal_id, Project.id == project_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "NOT_FOUND", "message": "Proposal not found"})
+    proposal, target_lang, source_language = row
+    text = await _back_translate(target_lang, source_language, proposal.proposed_value, provider)
+    return BackTranslateResponse(text=text)
 
 
 @router.delete("/{project_id}/languages/{language}", status_code=status.HTTP_204_NO_CONTENT)
