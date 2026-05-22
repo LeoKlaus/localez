@@ -290,15 +290,11 @@ async def suggest_localization(
     )
     source_loc = result.scalar_one_or_none()
 
-    if source_loc is None or not source_loc.value:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"code": "NO_SOURCE_VALUE", "message": "No source value available to translate from"},
-        )
+    source_text = (source_loc.value if source_loc and source_loc.value else None) or sk.key
 
     try:
         results = await translation_service.prefill(
-            project.source_language, loc.language, [source_loc.value], provider, [sk.comment]
+            project.source_language, loc.language, [source_text], provider, [sk.comment]
         )
         suggestion = results[0]
     except Exception as exc:
@@ -314,5 +310,5 @@ async def suggest_localization(
     data = {c.name: getattr(loc, c.name) for c in loc.__table__.columns}
     data["key"] = sk.key
     data["comment"] = sk.comment
-    data["source_value"] = source_loc.value
+    data["source_value"] = source_loc.value if source_loc else None
     return LocalizationWithKeyResponse.model_validate(data)
