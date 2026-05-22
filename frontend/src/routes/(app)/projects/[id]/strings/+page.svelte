@@ -404,7 +404,7 @@
 				<span class="shrink-0 font-medium text-violet-500 dark:text-violet-400">✦ AI</span>
 				<span class="break-words">{loc.ai_suggestion}</span>
 			</button>
-		{:else if !loc.ai_suggestion && loc.state === 'new'}
+		{:else if !loc.ai_suggestion && loc.state === 'new' && !loc.value}
 			<button
 				type="button"
 				class="mt-0.5 text-xs text-muted-foreground/60 hover:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40"
