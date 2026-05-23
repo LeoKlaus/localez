@@ -44,6 +44,10 @@ jobs:
         working-directory: frontend
         run: yarn run check
 
+      - name: Run tests
+        working-directory: frontend
+        run: yarn test:ci
+
       - name: Build
         working-directory: frontend
         run: yarn build
