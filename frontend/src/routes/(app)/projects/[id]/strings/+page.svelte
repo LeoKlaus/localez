@@ -14,6 +14,11 @@
 	import Search from 'lucide-svelte/icons/search';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+	import {
+		extractPlaceholders,
+		parseSegments,
+		placeholderLabel
+	} from '$lib/strings/placeholders';
 
 	type LocalizationState = components['schemas']['LocalizationState'];
 	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
@@ -213,28 +218,6 @@
 		} finally {
 			suggesting[loc.id] = false;
 		}
-	}
-
-	// Placeholder parsing
-	const PLACEHOLDER_RE = /%(?:\d+\$)?(?:@|lld|ld|d|f|s)/;
-
-	type Segment = { type: 'text' | 'placeholder'; value: string };
-
-	function parseSegments(text: string): Segment[] {
-		const parts = text.split(new RegExp(`(${PLACEHOLDER_RE.source})`));
-		return parts
-			.map((value, i) => ({ type: (i % 2 === 1 ? 'placeholder' : 'text') as Segment['type'], value }))
-			.filter((s) => s.value !== '');
-	}
-
-	function extractPlaceholders(text: string): string[] {
-		return [...new Set(text.match(new RegExp(PLACEHOLDER_RE.source, 'g')) ?? [])];
-	}
-
-	function placeholderLabel(ph: string): string {
-		if (ph.endsWith('@') || ph.endsWith('s')) return 'string';
-		if (ph.endsWith('f')) return 'decimal';
-		return 'number';
 	}
 
 	const stateColors: Record<LocalizationState, string> = {

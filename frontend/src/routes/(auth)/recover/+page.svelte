@@ -6,6 +6,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Alert from '$lib/components/ui/alert';
 	import { Textarea } from '$lib/components/ui/textarea';
+	import { parseRecoveryWords } from '$lib/auth/recovery-words';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
 
@@ -26,10 +27,7 @@
 			return;
 		}
 
-		const recovery_words = recoveryWordsRaw
-			.trim()
-			.split(/\s+/)
-			.filter((w) => w.length > 0);
+		const recovery_words = parseRecoveryWords(recoveryWordsRaw);
 
 		if (recovery_words.length !== 12) {
 			error = 'Please enter exactly 12 recovery words.';

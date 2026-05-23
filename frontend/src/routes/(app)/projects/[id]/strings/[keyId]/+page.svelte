@@ -13,6 +13,11 @@
 	import Check from 'lucide-svelte/icons/check';
 	import X from 'lucide-svelte/icons/x';
 	import Plus from 'lucide-svelte/icons/plus';
+	import {
+		extractPlaceholders,
+		parseSegments,
+		placeholderLabel
+	} from '$lib/strings/placeholders';
 
 	type LocalizationState = components['schemas']['LocalizationState'];
 	type LocalizationResponse = components['schemas']['LocalizationResponse'];
@@ -39,28 +44,6 @@
 		needs_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
 		translated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
 	};
-
-	// Placeholder helpers
-	const PLACEHOLDER_RE = /%(?:\d+\$)?(?:@|lld|ld|d|f|s)/;
-
-	type Segment = { type: 'text' | 'placeholder'; value: string };
-
-	function parseSegments(text: string): Segment[] {
-		const parts = text.split(new RegExp(`(${PLACEHOLDER_RE.source})`));
-		return parts
-			.map((value, i) => ({ type: (i % 2 === 1 ? 'placeholder' : 'text') as Segment['type'], value }))
-			.filter((s) => s.value !== '');
-	}
-
-	function extractPlaceholders(text: string): string[] {
-		return [...new Set(text.match(new RegExp(PLACEHOLDER_RE.source, 'g')) ?? [])];
-	}
-
-	function placeholderLabel(ph: string): string {
-		if (ph.endsWith('@') || ph.endsWith('s')) return 'string';
-		if (ph.endsWith('f')) return 'decimal';
-		return 'number';
-	}
 
 	let placeholders = $derived(extractPlaceholders(stringDetail.data?.key ?? ''));
 
