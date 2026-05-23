@@ -88,17 +88,3 @@ jobs:
             -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:dev \
             ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:dev-linux-amd64 \
             ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:dev-linux-arm64
-
-      - name: Delete untagged backend images
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: localez-backend
-          package-type: container
-          delete-untagged-versions: true
-
-      - name: Delete untagged frontend images
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: localez-frontend
-          package-type: container
-          delete-untagged-versions: true
