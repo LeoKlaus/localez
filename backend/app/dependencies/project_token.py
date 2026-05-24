@@ -18,9 +18,9 @@ EXPORT_TOKEN_PREFIX = "lzr_"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
-def generate_project_token(token_type: TokenType = TokenType.import_) -> tuple[str, str]:
+def generate_project_token(token_type: TokenType = TokenType.import_token) -> tuple[str, str]:
     """Return (raw_token, token_hash). Raw token is shown once and never stored."""
-    prefix = EXPORT_TOKEN_PREFIX if token_type == TokenType.export else IMPORT_TOKEN_PREFIX
+    prefix = EXPORT_TOKEN_PREFIX if token_type == TokenType.export_token else IMPORT_TOKEN_PREFIX
     raw = prefix + secrets.token_urlsafe(32)
     return raw, hash_token(raw)
 
@@ -77,7 +77,7 @@ async def require_import_access(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     if token.startswith(IMPORT_TOKEN_PREFIX):
-        await _resolve_project_token(token, project_id, TokenType.import_, db)
+        await _resolve_project_token(token, project_id, TokenType.import_token, db)
         return
     await _require_jwt_admin(token, db)
 
@@ -88,6 +88,6 @@ async def require_export_access(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     if token.startswith(EXPORT_TOKEN_PREFIX):
-        await _resolve_project_token(token, project_id, TokenType.export, db)
+        await _resolve_project_token(token, project_id, TokenType.export_token, db)
         return
     await _require_jwt_admin(token, db)

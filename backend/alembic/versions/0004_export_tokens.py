@@ -14,14 +14,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE tokentype AS ENUM ('import', 'export')")
+    op.execute("CREATE TYPE tokentype AS ENUM ('import_token', 'export_token')")
     op.add_column(
         "project_tokens",
         sa.Column(
             "token_type",
-            sa.Enum("import", "export", name="tokentype", create_type=False),
+            sa.Enum("import_token", "export_token", name="tokentype", create_type=False),
             nullable=False,
-            server_default="import",
+            server_default="import_token",
         ),
     )
 

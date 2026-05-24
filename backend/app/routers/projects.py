@@ -16,7 +16,6 @@ from app.core.limiter import limiter
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.dependencies.project_token import generate_project_token
-from app.models.project_token import TokenType
 from app.models.localization import Localization, LocalizationState
 from app.models.translation_proposal import TranslationProposal
 from app.models.project import Project

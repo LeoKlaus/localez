@@ -10,8 +10,8 @@ from app.database import Base
 
 
 class TokenType(str, enum.Enum):
-    import_ = "import"
-    export = "export"
+    import_token = "import_token"
+    export_token = "export_token"
 
 
 class ProjectToken(Base):
@@ -21,7 +21,7 @@ class ProjectToken(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    token_type: Mapped[TokenType] = mapped_column(Enum(TokenType, name="tokentype"), nullable=False, default=TokenType.import_)
+    token_type: Mapped[TokenType] = mapped_column(Enum(TokenType, name="tokentype"), nullable=False, default=TokenType.import_token)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

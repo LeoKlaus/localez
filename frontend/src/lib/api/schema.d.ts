@@ -1164,7 +1164,7 @@ export interface components {
             last_used_at: string | null;
         };
         /** TokenType */
-        TokenType: "import" | "export";
+        TokenType: "import_token" | "export_token";
         /** ProjectUpdate */
         ProjectUpdate: {
             /** Name */

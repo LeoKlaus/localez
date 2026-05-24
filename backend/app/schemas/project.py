@@ -72,7 +72,7 @@ class BackTranslateResponse(BaseModel):
 
 class ProjectTokenCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    token_type: TokenType = TokenType.import_
+    token_type: TokenType = TokenType.import_token
 
 
 class ProjectTokenResponse(BaseModel):
