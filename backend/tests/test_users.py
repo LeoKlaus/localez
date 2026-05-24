@@ -158,3 +158,75 @@ async def test_non_admin_cannot_delete_user(client: AsyncClient, unique_username
 
     resp = await client.delete(f"/api/users/{uuid.uuid4()}")
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# DELETE /me
+# ---------------------------------------------------------------------------
+
+async def test_user_can_delete_own_account(client: AsyncClient, unique_username):
+    username = unique_username("selfdelete")
+    reg = await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
+    client.headers["Authorization"] = f"Bearer {reg.json()['access_token']}"
+
+    resp = await client.delete("/api/users/me")
+    assert resp.status_code == 204
+
+    # Subsequent login should fail since account is gone
+    login = await client.post("/api/auth/token", data={"username": username, "password": "securepass1"})
+    assert login.status_code == 401
+
+
+async def test_delete_me_requires_auth(client: AsyncClient):
+    resp = await client.delete("/api/users/me")
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# PATCH /me/contributor
+# ---------------------------------------------------------------------------
+
+async def test_update_contributor_settings(client: AsyncClient, unique_username):
+    username = unique_username("contrib")
+    reg = await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
+    client.headers["Authorization"] = f"Bearer {reg.json()['access_token']}"
+
+    # Enable contributor visibility with a display name
+    resp = await client.patch(
+        "/api/users/me/contributor",
+        json={"show_as_contributor": True, "attribution_name": "My Display Name"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["show_as_contributor"] is True
+    assert data["attribution_name"] == "My Display Name"
+
+
+async def test_update_contributor_settings_hide_clears_name(client: AsyncClient, unique_username):
+    username = unique_username("contrib_hide")
+    reg = await client.post("/api/auth/register", json={"username": username, "password": "securepass1"})
+    client.headers["Authorization"] = f"Bearer {reg.json()['access_token']}"
+
+    # First enable
+    await client.patch(
+        "/api/users/me/contributor",
+        json={"show_as_contributor": True, "attribution_name": "Visible Name"},
+    )
+
+    # Now hide — attribution_name should be cleared
+    resp = await client.patch(
+        "/api/users/me/contributor",
+        json={"show_as_contributor": False, "attribution_name": "Visible Name"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["show_as_contributor"] is False
+    assert data["attribution_name"] is None
+
+
+async def test_update_contributor_settings_requires_auth(client: AsyncClient):
+    resp = await client.patch(
+        "/api/users/me/contributor",
+        json={"show_as_contributor": True, "attribution_name": "Test"},
+    )
+    assert resp.status_code == 401
