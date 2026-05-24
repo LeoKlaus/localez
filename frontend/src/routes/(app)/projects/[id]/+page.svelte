@@ -241,7 +241,7 @@
 		return total === 0 ? 0 : Math.round((n / total) * 100);
 	}
 
-	// Push tokens (admin only)
+	// API tokens (admin only)
 	const tokens = createQuery(() => ({
 		queryKey: ['tokens', projectId],
 		enabled: auth.isAdmin,
@@ -256,14 +256,15 @@
 
 	let createTokenOpen = $state(false);
 	let newTokenName = $state('');
-	let createdToken = $state<{ name: string; token: string } | null>(null);
+	let newTokenType = $state<'import_token' | 'export_token'>('import_token');
+	let createdToken = $state<{ name: string; token: string; token_type: 'import_token' | 'export_token' } | null>(null);
 	let createdTokenOpen = $state(false);
 
 	const createToken = createMutation(() => ({
 		mutationFn: async () => {
 			const { data, error } = await client.POST('/api/projects/{project_id}/tokens', {
 				params: { path: { project_id: projectId } },
-				body: { name: newTokenName.trim() }
+				body: { name: newTokenName.trim(), token_type: newTokenType }
 			});
 			if (error) throw error;
 			return data;
@@ -271,9 +272,10 @@
 		onSuccess: (data) => {
 			qc.invalidateQueries({ queryKey: ['tokens', projectId] });
 			createTokenOpen = false;
-			createdToken = { name: data!.name, token: data!.token };
+			createdToken = { name: data!.name, token: data!.token, token_type: data!.token_type };
 			createdTokenOpen = true;
 			newTokenName = '';
+			newTokenType = 'import_token';
 		}
 	}));
 
@@ -446,10 +448,10 @@
 
 			<div class="mb-4 flex items-center justify-between">
 				<div>
-					<h2 class="text-lg font-semibold">Push Tokens</h2>
-					<p class="text-sm text-muted-foreground">Allow external tools to push xcstrings updates to this project.</p>
+					<h2 class="text-lg font-semibold">API Tokens</h2>
+					<p class="text-sm text-muted-foreground">Tokens for CI/CD pipelines and Xcode integrations.</p>
 				</div>
-				<Button size="sm" onclick={() => { createTokenOpen = true; newTokenName = ''; }}>
+				<Button size="sm" onclick={() => { createTokenOpen = true; newTokenName = ''; newTokenType = 'import_token'; }}>
 					<Key size={14} class="mr-1" /> Create token
 				</Button>
 			</div>
@@ -457,14 +459,19 @@
 			{#if tokens.isPending}
 				<div class="h-16 animate-pulse rounded-lg bg-muted"></div>
 			{:else if (tokens.data?.length ?? 0) === 0}
-				<p class="text-sm text-muted-foreground">No push tokens yet.</p>
+				<p class="text-sm text-muted-foreground">No API tokens yet.</p>
 			{:else}
 				<div class="divide-y rounded-lg border">
 					{#each tokens.data! as token}
 						<div class="flex items-center gap-4 px-4 py-3">
 							<Key size={14} class="shrink-0 text-muted-foreground" />
 							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium truncate">{token.name}</p>
+								<div class="flex items-center gap-2">
+									<p class="text-sm font-medium truncate">{token.name}</p>
+									<Badge variant={token.token_type === 'export_token' ? 'secondary' : 'outline'} class="shrink-0 text-xs">
+										{token.token_type === 'export_token' ? 'export' : 'import'}
+									</Badge>
+								</div>
 								<p class="text-xs text-muted-foreground">
 									Created {formatDate(token.created_at)}
 									{#if token.last_used_at}
@@ -536,13 +543,34 @@
 <Dialog.Root bind:open={createTokenOpen}>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
-			<Dialog.Title>Create push token</Dialog.Title>
-			<Dialog.Description>Give this token a descriptive name, e.g. the CI system that will use it.</Dialog.Description>
+			<Dialog.Title>Create API token</Dialog.Title>
+			<Dialog.Description>Give this token a descriptive name, e.g. the tool or pipeline that will use it.</Dialog.Description>
 		</Dialog.Header>
 		<form onsubmit={(e) => { e.preventDefault(); createToken.mutate(); }} class="space-y-4">
 			<div class="space-y-2">
 				<Label>Token name</Label>
-				<Input bind:value={newTokenName} placeholder="GitHub Actions" required maxlength={100} />
+				<Input bind:value={newTokenName} placeholder="Xcode / GitHub Actions" required maxlength={100} />
+			</div>
+			<div class="space-y-2">
+				<Label>Type</Label>
+				<div class="grid grid-cols-2 gap-2">
+					<button
+						type="button"
+						onclick={() => (newTokenType = 'import_token')}
+						class="rounded-md border px-3 py-2 text-left text-sm transition-colors {newTokenType === 'import_token' ? 'border-primary bg-primary/5 font-medium' : 'border-border hover:bg-muted'}"
+					>
+						<span class="font-medium">Import</span>
+						<p class="mt-0.5 text-xs text-muted-foreground">Push xcstrings to this project</p>
+					</button>
+					<button
+						type="button"
+						onclick={() => (newTokenType = 'export_token')}
+						class="rounded-md border px-3 py-2 text-left text-sm transition-colors {newTokenType === 'export_token' ? 'border-primary bg-primary/5 font-medium' : 'border-border hover:bg-muted'}"
+					>
+						<span class="font-medium">Export</span>
+						<p class="mt-0.5 text-xs text-muted-foreground">Pull xcstrings from this project</p>
+					</button>
+				</div>
 			</div>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (createTokenOpen = false)}>Cancel</Button>
@@ -565,16 +593,27 @@
 		</Dialog.Header>
 		{#if createdToken}
 			<div class="space-y-3">
-				<p class="text-sm font-medium">{createdToken.name}</p>
+				<div class="flex items-center gap-2">
+					<p class="text-sm font-medium">{createdToken.name}</p>
+					<Badge variant={createdToken.token_type === 'export_token' ? 'secondary' : 'outline'} class="text-xs">
+						{createdToken.token_type === 'export_token' ? 'export' : 'import'}
+					</Badge>
+				</div>
 				<div class="flex items-center gap-2 rounded-md border bg-muted px-3 py-2">
 					<code class="flex-1 break-all text-xs">{createdToken.token}</code>
 					<Button variant="ghost" size="icon" class="size-7 shrink-0" onclick={() => copyToken(createdToken!.token)}>
 						<Copy size={14} />
 					</Button>
 				</div>
-				<p class="text-xs text-muted-foreground">
-					Pass this token as the <code class="rounded bg-muted px-1">Authorization: Bearer &lt;token&gt;</code> header when calling the push endpoint.
-				</p>
+				{#if createdToken.token_type === 'export_token'}
+					<p class="text-xs text-muted-foreground">
+						Use this token to pull translations: <code class="rounded bg-muted px-1">GET /api/projects/…/export</code> with <code class="rounded bg-muted px-1">Authorization: Bearer &lt;token&gt;</code>.
+					</p>
+				{:else}
+					<p class="text-xs text-muted-foreground">
+						Use this token to push translations: <code class="rounded bg-muted px-1">POST /api/projects/…/import</code> with <code class="rounded bg-muted px-1">Authorization: Bearer &lt;token&gt;</code>.
+					</p>
+				{/if}
 			</div>
 		{/if}
 		<Dialog.Footer>

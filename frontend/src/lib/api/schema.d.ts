@@ -1118,6 +1118,8 @@ export interface components {
         ProjectTokenCreateRequest: {
             /** Name */
             name: string;
+            /** @default import */
+            token_type?: components["schemas"]["TokenType"];
         };
         /** ProjectTokenCreatedResponse */
         ProjectTokenCreatedResponse: {
@@ -1128,6 +1130,7 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            token_type: components["schemas"]["TokenType"];
             /** Created By */
             created_by: string | null;
             /**
@@ -1149,6 +1152,7 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            token_type: components["schemas"]["TokenType"];
             /** Created By */
             created_by: string | null;
             /**
@@ -1159,6 +1163,8 @@ export interface components {
             /** Last Used At */
             last_used_at: string | null;
         };
+        /** TokenType */
+        TokenType: "import_token" | "export_token";
         /** ProjectUpdate */
         ProjectUpdate: {
             /** Name */

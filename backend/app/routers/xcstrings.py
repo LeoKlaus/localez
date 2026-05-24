@@ -8,8 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.auth import require_admin
-from app.dependencies.project_token import require_import_access
+from app.dependencies.project_token import require_export_access, require_import_access
 from app.models.localization import Localization
 from app.models.user import User
 from app.models.project import Project
@@ -124,7 +123,7 @@ async def export_xcstrings(
     project_id: uuid.UUID,
     languages: str | None = Query(default=None, description="Comma-separated language codes"),
     state: str | None = Query(default=None),
-    _: User = Depends(require_admin),
+    _: None = Depends(require_export_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)

@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.language import LanguageCode
+from app.models.project_token import TokenType
 
 
 class ProjectCreate(BaseModel):
@@ -71,11 +72,13 @@ class BackTranslateResponse(BaseModel):
 
 class ProjectTokenCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    token_type: TokenType = TokenType.import_token
 
 
 class ProjectTokenResponse(BaseModel):
     id: uuid.UUID
     name: str
+    token_type: TokenType
     created_by: uuid.UUID | None
     created_at: datetime
     last_used_at: datetime | None
