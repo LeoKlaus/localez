@@ -246,22 +246,22 @@ async def test_import_fills_variation_placeholders_for_missing_languages(admin_c
 async def test_create_export_token_has_lzr_prefix(admin_client: AsyncClient, xcstrings_project: dict):
     resp = await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "CI export", "token_type": "export"},
+        json={"name": "CI export", "token_type": "export_token"},
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["token_type"] == "export"
+    assert data["token_type"] == "export_token"
     assert data["token"].startswith("lzr_")
 
 
 async def test_create_import_token_has_lz_prefix(admin_client: AsyncClient, xcstrings_project: dict):
     resp = await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "CI import", "token_type": "import"},
+        json={"name": "CI import", "token_type": "import_token"},
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["token_type"] == "import"
+    assert data["token_type"] == "import_token"
     assert data["token"].startswith("lz_")
     assert not data["token"].startswith("lzr_")
 
@@ -269,23 +269,23 @@ async def test_create_import_token_has_lz_prefix(admin_client: AsyncClient, xcst
 async def test_list_tokens_includes_token_type(admin_client: AsyncClient, xcstrings_project: dict):
     await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "tok list import", "token_type": "import"},
+        json={"name": "tok list import", "token_type": "import_token"},
     )
     await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "tok list export", "token_type": "export"},
+        json={"name": "tok list export", "token_type": "export_token"},
     )
     resp = await admin_client.get(f"/api/projects/{xcstrings_project['id']}/tokens")
     assert resp.status_code == 200
     types = {t["token_type"] for t in resp.json()}
-    assert "import" in types
-    assert "export" in types
+    assert "import_token" in types
+    assert "export_token" in types
 
 
 async def test_export_token_can_access_export(admin_client: AsyncClient, xcstrings_project: dict, client: AsyncClient):
     tok_resp = await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "xcode export", "token_type": "export"},
+        json={"name": "xcode export", "token_type": "export_token"},
     )
     raw = tok_resp.json()["token"]
 
@@ -298,7 +298,7 @@ async def test_export_token_can_access_export(admin_client: AsyncClient, xcstrin
 async def test_export_token_cannot_access_import(admin_client: AsyncClient, xcstrings_project: dict, client: AsyncClient):
     tok_resp = await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "xcode export no-import", "token_type": "export"},
+        json={"name": "xcode export no-import", "token_type": "export_token"},
     )
     raw = tok_resp.json()["token"]
 
@@ -314,7 +314,7 @@ async def test_export_token_cannot_access_import(admin_client: AsyncClient, xcst
 async def test_import_token_cannot_access_export(admin_client: AsyncClient, xcstrings_project: dict, client: AsyncClient):
     tok_resp = await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "ci import no-export", "token_type": "import"},
+        json={"name": "ci import no-export", "token_type": "import_token"},
     )
     raw = tok_resp.json()["token"]
 
@@ -327,7 +327,7 @@ async def test_import_token_cannot_access_export(admin_client: AsyncClient, xcst
 async def test_export_token_wrong_project_is_rejected(admin_client: AsyncClient, xcstrings_project: dict, client: AsyncClient):
     tok_resp = await admin_client.post(
         f"/api/projects/{xcstrings_project['id']}/tokens",
-        json={"name": "wrong proj export", "token_type": "export"},
+        json={"name": "wrong proj export", "token_type": "export_token"},
     )
     raw = tok_resp.json()["token"]
 
