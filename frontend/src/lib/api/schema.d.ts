@@ -710,23 +710,6 @@ export interface paths {
         patch: operations["update_localization_state_projects__project_id__strings__key_id__localizations__loc_id__state_patch"];
         trace?: never;
     };
-    "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reset Localization */
-        post: operations["reset_localization_projects__project_id__strings__key_id__localizations__loc_id__reset_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/suggest": {
         parameters: {
             query?: never;
@@ -2946,39 +2929,6 @@ export interface operations {
                 "application/json": components["schemas"]["LocalizationStateUpdate"];
             };
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LocalizationResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reset_localization_projects__project_id__strings__key_id__localizations__loc_id__reset_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: string;
-                key_id: string;
-                loc_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

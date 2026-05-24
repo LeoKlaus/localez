@@ -376,51 +376,6 @@ async def test_update_state_wrong_project_returns_404(admin_client: AsyncClient,
 
 
 # ---------------------------------------------------------------------------
-# reset_localization
-# ---------------------------------------------------------------------------
-
-async def test_admin_can_reset_localization(admin_client: AsyncClient, xcstrings_project: dict):
-    pid = xcstrings_project["id"]
-    key_id, loc_id, _ = await _find_localization(admin_client, xcstrings_project, state="translated")
-    assert loc_id is not None, "No translated localization found"
-
-    resp = await admin_client.post(
-        f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/reset"
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["state"] == "new"
-    assert data["value"] is None
-    assert data["value_set_by"] is None
-
-
-async def test_non_admin_cannot_reset_localization(
-    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
-):
-    pid = xcstrings_project["id"]
-    key_id, loc_id, _ = await _find_localization(admin_client, xcstrings_project, state="translated")
-    assert loc_id is not None
-
-    async with member_client(unique_username("reset_user")) as c:
-        resp = await c.post(
-            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/reset"
-        )
-        assert resp.status_code == 403
-
-
-async def test_reset_wrong_project_returns_404(admin_client: AsyncClient, xcstrings_project: dict):
-    import uuid
-    pid = xcstrings_project["id"]
-    key_id, loc_id, _ = await _find_localization(admin_client, xcstrings_project, state="translated")
-    assert loc_id is not None
-
-    resp = await admin_client.post(
-        f"/api/projects/{uuid.uuid4()}/strings/{key_id}/localizations/{loc_id}/reset"
-    )
-    assert resp.status_code == 404
-
-
-# ---------------------------------------------------------------------------
 # suggest_localization
 # ---------------------------------------------------------------------------
 
