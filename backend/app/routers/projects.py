@@ -16,6 +16,7 @@ from app.core.limiter import limiter
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
 from app.dependencies.project_token import generate_project_token
+from app.models.project_token import TokenType
 from app.models.localization import Localization, LocalizationState
 from app.models.translation_proposal import TranslationProposal
 from app.models.project import Project
@@ -542,8 +543,8 @@ async def create_project_token(
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
 
-    raw, token_hash = generate_project_token()
-    token = ProjectToken(project_id=project_id, name=body.name, token_hash=token_hash, created_by=user.id)
+    raw, token_hash = generate_project_token(body.token_type)
+    token = ProjectToken(project_id=project_id, name=body.name, token_hash=token_hash, token_type=body.token_type, created_by=user.id)
     db.add(token)
     await db.flush()
     await db.refresh(token)
@@ -552,6 +553,7 @@ async def create_project_token(
     return ProjectTokenCreatedResponse(
         id=token.id,
         name=token.name,
+        token_type=token.token_type,
         created_by=token.created_by,
         created_at=token.created_at,
         last_used_at=None,
