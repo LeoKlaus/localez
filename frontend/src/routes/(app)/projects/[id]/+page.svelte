@@ -22,6 +22,8 @@
 	import ClipboardCheck from 'lucide-svelte/icons/clipboard-check';
 	import Key from 'lucide-svelte/icons/key';
 	import Copy from 'lucide-svelte/icons/copy';
+	import Globe from 'lucide-svelte/icons/globe';
+	import Lock from 'lucide-svelte/icons/lock';
 	import { toast } from 'svelte-sonner';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
@@ -55,10 +57,12 @@
 	let editOpen = $state(false);
 	let editName = $state('');
 	let editLang = $state('');
+	let editIsPublic = $state(false);
 
 	function openEdit() {
 		editName = project.data?.name ?? '';
 		editLang = project.data?.source_language ?? '';
+		editIsPublic = project.data?.is_public ?? false;
 		editOpen = true;
 	}
 
@@ -66,7 +70,7 @@
 		mutationFn: async () => {
 			const { data, error } = await client.PATCH('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } },
-				body: { name: editName, source_language: editLang }
+				body: { name: editName, source_language: editLang, is_public: editIsPublic }
 			});
 			if (error) throw error;
 			return data;
@@ -310,9 +314,18 @@
 					<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-16 rounded-xl object-cover shadow-sm" />
 				{/if}
 				<div>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-2 flex-wrap">
 						<h1 class="text-2xl font-bold">{p.name}</h1>
 						<Badge variant="secondary">{p.source_language}</Badge>
+						{#if p.is_public}
+							<Badge variant="outline" class="gap-1 text-muted-foreground">
+								<Globe size={11} />Public
+							</Badge>
+						{:else}
+							<Badge variant="outline" class="gap-1 text-muted-foreground">
+								<Lock size={11} />Private
+							</Badge>
+						{/if}
 					</div>
 					<p class="mt-1 text-sm text-muted-foreground">Created {formatDate(p.created_at)}</p>
 				</div>
@@ -513,6 +526,13 @@
 				<Label>Source language</Label>
 				<Input bind:value={editLang} required maxlength={20} />
 			</div>
+			<label class="flex items-center gap-3 cursor-pointer select-none">
+				<input type="checkbox" bind:checked={editIsPublic} class="size-4 rounded border accent-primary" />
+				<div>
+					<span class="text-sm font-medium">Public project</span>
+					<p class="text-xs text-muted-foreground">Anyone can read; authenticated users can translate</p>
+				</div>
+			</label>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (editOpen = false)}>Cancel</Button>
 				<Button type="submit" disabled={updateProject.isPending}>Save</Button>
