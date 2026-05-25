@@ -102,6 +102,7 @@ async def _run_prefill(
         translations = await translation_service.prefill(source_lang, target_lang, source_texts, provider, comments)
     except Exception as exc:
         if raise_on_error:
+            logger.exception("Translation provider error for project=%s lang=%s: %s", project_id, target_lang, exc)
             raise HTTPException(
                 status.HTTP_502_BAD_GATEWAY,
                 detail={"code": "TRANSLATION_PROVIDER_ERROR", "message": str(exc)},
@@ -332,6 +333,7 @@ async def _back_translate(source_lang: str, target_lang: str, text: str, provide
         results = await translation_service.prefill(source_lang, target_lang, [text], provider)
         return results[0]
     except RuntimeError as exc:
+        logger.exception("Back-translate error (%s→%s): %s", source_lang, target_lang, exc)
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             detail={"code": "TRANSLATION_ERROR", "message": str(exc)},
