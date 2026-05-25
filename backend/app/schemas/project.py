@@ -11,11 +11,13 @@ from app.models.project_token import TokenType
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     source_language: LanguageCode
+    is_public: bool = False
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     source_language: LanguageCode | None = None
+    is_public: bool | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -25,6 +27,7 @@ class ProjectResponse(BaseModel):
     created_by: uuid.UUID | None
     created_at: datetime
     has_icon: bool
+    is_public: bool
     languages: list[LanguageCode] = []
 
     model_config = {"from_attributes": True}
@@ -42,6 +45,7 @@ class ProjectResponse(BaseModel):
             "created_by": data.created_by,
             "created_at": data.created_at,
             "has_icon": data.icon is not None,
+            "is_public": data.is_public,
             "languages": sorted(pl.language for pl in langs),
         }
 

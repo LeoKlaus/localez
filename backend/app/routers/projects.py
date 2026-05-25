@@ -6,7 +6,7 @@ import io
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import Response as FastAPIResponse, StreamingResponse
-from sqlalchemy import case, func, select, text
+from sqlalchemy import case, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
@@ -14,8 +14,8 @@ from app.config import settings
 from app.core import prefill_events
 from app.core.limiter import limiter
 from app.database import create_db_session, get_db
-from app.dependencies.auth import get_current_active_user, require_admin
-from app.dependencies.project_access import require_member, require_project_admin, require_reviewer
+from app.dependencies.auth import get_current_active_user, get_optional_user, require_admin
+from app.dependencies.project_access import require_member, require_project_admin, require_read_access, require_reviewer
 from app.dependencies.project_token import generate_project_token
 from app.models.localization import Localization, LocalizationState
 from app.models.translation_proposal import TranslationProposal
@@ -24,7 +24,7 @@ from app.models.project_language import ProjectLanguage
 from app.models.project_member import ProjectMember
 from app.models.project_token import ProjectToken
 from app.models.string_key import StringKey
-from app.models.user import User
+from app.models.user import GlobalRole, User
 from app.schemas.project import (
     BackTranslateResponse,
     LanguageAdd, LanguageStats, PrefillResponse,
@@ -124,12 +124,27 @@ async def _run_prefill(
 async def list_projects(
     offset: int = 0,
     limit: int = 50,
+    user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
     limit = min(limit, MAX_LIMIT)
-    q = select(Project).options(selectinload(Project.languages)).order_by(Project.created_at.desc())
+
+    # Build access filter
+    if user is None:
+        access_filter = Project.is_public == True  # noqa: E712
+    elif user.global_role == GlobalRole.admin:
+        access_filter = None  # global admins see everything
+    else:
+        member_project_ids = select(ProjectMember.project_id).where(ProjectMember.user_id == user.id)
+        access_filter = or_(Project.is_public == True, Project.id.in_(member_project_ids))  # noqa: E712
+
     count_q = select(func.count()).select_from(Project)
+    q = select(Project).options(selectinload(Project.languages)).order_by(Project.created_at.desc())
+    if access_filter is not None:
+        count_q = count_q.where(access_filter)
+        q = q.where(access_filter)
+
     total = await db.scalar(count_q)
     result = await db.execute(q.offset(offset).limit(limit))
     projects = result.scalars().all()
@@ -144,7 +159,7 @@ async def create_project(
     user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    project = Project(name=body.name, source_language=body.source_language, created_by=user.id)
+    project = Project(name=body.name, source_language=body.source_language, created_by=user.id, is_public=body.is_public)
     db.add(project)
     await db.flush()
     await db.commit()
@@ -155,6 +170,7 @@ async def create_project(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: uuid.UUID,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
@@ -178,6 +194,8 @@ async def update_project(
         project.name = body.name
     if body.source_language is not None:
         project.source_language = body.source_language
+    if body.is_public is not None:
+        project.is_public = body.is_public
     await db.commit()
     return project
 
@@ -235,6 +253,7 @@ async def delete_icon(
 @router.get("/{project_id}/icon")
 async def get_icon(
     project_id: uuid.UUID,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)
@@ -427,6 +446,7 @@ async def list_language_localizations(
     state: str | None = None,
     offset: int = 0,
     limit: int = 50,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -482,6 +502,7 @@ async def list_language_localizations(
 @router.get("/{project_id}/stats", response_model=ProjectStats)
 async def get_project_stats(
     project_id: uuid.UUID,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)

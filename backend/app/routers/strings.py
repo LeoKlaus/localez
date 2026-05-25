@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.dependencies.project_access import require_reviewer, require_translator_plus
+from app.dependencies.project_access import require_read_access, require_reviewer, require_translator_plus
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.string_key import StringKey
@@ -33,6 +33,7 @@ async def list_strings(
     q: str | None = None,
     offset: int = 0,
     limit: int = 50,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -64,6 +65,7 @@ async def list_strings(
 async def get_string(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     sk = await db.get(StringKey, key_id)
@@ -93,6 +95,7 @@ async def list_localizations(
     state: LocalizationState | None = None,
     offset: int = 0,
     limit: int = 50,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
     response: Response = None,
 ):
@@ -125,6 +128,7 @@ async def get_localization(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
+    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     sk = await db.get(StringKey, key_id)

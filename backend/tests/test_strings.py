@@ -9,18 +9,26 @@ pytestmark = pytest.mark.usefixtures("setup_database")
 # Strings list
 # ---------------------------------------------------------------------------
 
-async def test_list_strings_as_any_user(member_client, unique_username, xcstrings_project: dict):
+async def test_list_strings_as_member(admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict):
     username = unique_username("str_user")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{xcstrings_project['id']}/members", json={"username": username})
         resp = await c.get(f"/api/projects/{xcstrings_project['id']}/strings")
         assert resp.status_code == 200
         assert len(resp.json()) > 0
         assert "X-Total-Count" in resp.headers
 
 
-async def test_list_strings_unauthenticated(client: AsyncClient, xcstrings_project: dict):
+async def test_non_member_cannot_list_strings_of_private_project(member_client, unique_username, xcstrings_project: dict):
+    username = unique_username("str_nonmember")
+    async with member_client(username) as c:
+        resp = await c.get(f"/api/projects/{xcstrings_project['id']}/strings")
+        assert resp.status_code == 403
+
+
+async def test_unauthenticated_cannot_list_strings_of_private_project(client: AsyncClient, xcstrings_project: dict):
     resp = await client.get(f"/api/projects/{xcstrings_project['id']}/strings")
-    assert resp.status_code == 200
+    assert resp.status_code == 401
 
 
 async def test_list_strings_filter_should_translate(admin_client: AsyncClient, xcstrings_project: dict):

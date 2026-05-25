@@ -24,19 +24,20 @@ async def test_list_projects_admin_sees_all(admin_client: AsyncClient):
     assert "ListAll B" in names
 
 
-async def test_list_projects_any_user_sees_all(
+async def test_list_projects_non_member_sees_only_public(
     admin_client: AsyncClient, member_client, unique_username
 ):
-    await admin_client.post("/api/projects", json={"name": "Global Project A", "source_language": "en"})
-    await admin_client.post("/api/projects", json={"name": "Global Project B", "source_language": "en"})
+    # Public projects are visible; private ones are not
+    await admin_client.post("/api/projects", json={"name": "Public Project Visible", "source_language": "en", "is_public": True})
+    await admin_client.post("/api/projects", json={"name": "Private Project Hidden", "source_language": "en"})
 
-    username = unique_username("listall")
+    username = unique_username("listpub")
     async with member_client(username) as c:
         resp = await c.get("/api/projects")
         assert resp.status_code == 200
         names = [p["name"] for p in resp.json()]
-        assert "Global Project A" in names
-        assert "Global Project B" in names
+        assert "Public Project Visible" in names
+        assert "Private Project Hidden" not in names
 
 
 async def test_list_projects_unauthenticated(client: AsyncClient):
@@ -50,12 +51,11 @@ async def test_get_project_as_admin(admin_client: AsyncClient, project: dict):
     assert resp.json()["id"] == project["id"]
 
 
-async def test_get_project_as_any_user(member_client, unique_username, project: dict):
+async def test_non_member_cannot_get_private_project(member_client, unique_username, project: dict):
     username = unique_username("getuser")
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{project['id']}")
-        assert resp.status_code == 200
-        assert resp.json()["id"] == project["id"]
+        assert resp.status_code == 403
 
 
 async def test_get_project_not_found(admin_client: AsyncClient):
@@ -221,11 +221,11 @@ async def test_stats_not_found(admin_client: AsyncClient):
     assert resp.json()["detail"]["code"] == "PROJECT_NOT_FOUND"
 
 
-async def test_stats_any_user_can_access(member_client, unique_username, project: dict):
+async def test_non_member_cannot_access_private_project_stats(member_client, unique_username, project: dict):
     username = unique_username("stats_user")
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{project['id']}/stats")
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------
@@ -278,12 +278,12 @@ async def test_language_localizations_unknown_language(admin_client: AsyncClient
     assert resp.json()["detail"]["code"] == "LANGUAGE_NOT_FOUND"
 
 
-async def test_language_localizations_any_user_can_access(member_client, unique_username, xcstrings_project: dict):
+async def test_non_member_cannot_access_private_language_localizations(member_client, unique_username, xcstrings_project: dict):
     username = unique_username("loclang_user")
     proj_id = xcstrings_project["id"]
     async with member_client(username) as c:
         resp = await c.get(f"/api/projects/{proj_id}/languages/en/localizations")
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
 
 async def test_language_localizations_pagination(admin_client: AsyncClient, xcstrings_project: dict):

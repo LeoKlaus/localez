@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.user import GlobalRole, User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
 
 async def get_current_user(
@@ -25,6 +26,24 @@ async def get_current_user(
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail={"code": "USER_NOT_FOUND", "message": "User not found"})
+    return user
+
+
+async def get_optional_user(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Like get_current_user but returns None instead of raising when unauthenticated."""
+    if token is None:
+        return None
+    try:
+        payload = decode_access_token(token)
+        user_id = uuid.UUID(payload["sub"])
+    except (ValueError, KeyError):
+        return None
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        return None
     return user
 
 

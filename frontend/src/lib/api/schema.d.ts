@@ -1185,6 +1185,11 @@ export interface components {
             name: string;
             /** Source Language */
             source_language: string;
+            /**
+             * Is Public
+             * @default false
+             */
+            is_public?: boolean;
         };
         /** ProjectResponse */
         ProjectResponse: {
@@ -1206,6 +1211,8 @@ export interface components {
             created_at: string;
             /** Has Icon */
             has_icon: boolean;
+            /** Is Public */
+            is_public: boolean;
             /**
              * Languages
              * @default []
@@ -1276,6 +1283,8 @@ export interface components {
             name?: string | null;
             /** Source Language */
             source_language?: string | null;
+            /** Is Public */
+            is_public?: boolean | null;
         };
         /** ProposalCreate */
         ProposalCreate: {
