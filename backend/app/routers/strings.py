@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -16,6 +17,8 @@ from app.models.translation_proposal import TranslationProposal
 from app.models.user import GlobalRole, User
 from app.schemas.string_key import LocalizationResponse, LocalizationStateUpdate, LocalizationValueSet, LocalizationWithKeyResponse, StringKeyDetail, StringKeyResponse
 from app.services import translation_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -267,6 +270,7 @@ async def suggest_localization(
         )
         suggestion = results[0]
     except Exception as exc:
+        logger.exception("Translation provider error for loc_id=%s: %s", loc_id, exc)
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             detail={"code": "TRANSLATION_ERROR", "message": str(exc)},

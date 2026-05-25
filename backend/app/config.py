@@ -9,6 +9,7 @@ _WEAK_POSTGRES_PASSWORDS = {"localez", "postgres", "password", "changeme"}
 
 class Settings(BaseSettings):
     allowed_hosts: str = "*"
+    log_level: str = "INFO"
     postgres_host: str = "db"
     postgres_db: str = "localez"
     postgres_user: str = "localez"
