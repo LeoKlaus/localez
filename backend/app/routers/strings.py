@@ -8,8 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.dependencies.auth import get_current_active_user
-from app.dependencies.project_access import require_reviewer
+from app.dependencies.project_access import require_reviewer, require_translator_plus
 from app.models.localization import Localization, LocalizationState
 from app.models.project import Project
 from app.models.string_key import StringKey
@@ -147,7 +146,7 @@ async def set_localization_value(
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
     body: LocalizationValueSet,
-    user: User = Depends(get_current_active_user),
+    user: User = Depends(require_translator_plus),
     db: AsyncSession = Depends(get_db),
 ):
     sk = await db.get(StringKey, key_id)
@@ -217,7 +216,7 @@ async def suggest_localization(
     project_id: uuid.UUID,
     key_id: uuid.UUID,
     loc_id: uuid.UUID,
-    _user: User = Depends(get_current_active_user),
+    _: User = Depends(require_translator_plus),
     db: AsyncSession = Depends(get_db),
 ):
     provider = settings.prefill_provider

@@ -77,9 +77,10 @@ async def require_member(
     return user
 
 
-# Any authenticated user can read and submit translations
+# Any authenticated user can read project content
 require_guest_plus = get_current_active_user
-require_translator_plus = get_current_active_user
+# Any project member (translator, reviewer, or admin) can write translations
+require_translator_plus = require_member
 
 
 async def get_project_or_404(project_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Project:
