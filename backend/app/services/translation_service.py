@@ -31,7 +31,7 @@ async def translate_with_deepl(source_lang: str, target_lang: str, texts: list[s
                 json={"text": batch, "source_lang": src, "target_lang": tgt},
             )
             if resp.status_code != 200:
-                raise RuntimeError(f"DEEPL_ERROR: {resp.status_code}")
+                raise RuntimeError(f"DEEPL_ERROR: {resp.status_code} {resp.text}")
             data = resp.json()
             results.extend(t["text"] for t in data["translations"])
 
@@ -86,7 +86,7 @@ async def translate_with_llm(
             },
         )
         if resp.status_code != 200:
-            raise RuntimeError(f"LLM_ERROR: {resp.status_code}")
+            raise RuntimeError(f"LLM_ERROR: {resp.status_code} {resp.text}")
 
     content = resp.json()["choices"][0]["message"]["content"].strip()
     # Strip markdown code fences if present
