@@ -15,11 +15,13 @@ from app.core import prefill_events
 from app.core.limiter import limiter
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, require_admin
+from app.dependencies.project_access import require_member, require_project_admin, require_reviewer
 from app.dependencies.project_token import generate_project_token
 from app.models.localization import Localization, LocalizationState
 from app.models.translation_proposal import TranslationProposal
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
+from app.models.project_member import ProjectMember
 from app.models.project_token import ProjectToken
 from app.models.string_key import StringKey
 from app.models.user import User
@@ -27,6 +29,7 @@ from app.schemas.project import (
     BackTranslateResponse,
     LanguageAdd, LanguageStats, PrefillResponse,
     ProjectCreate, ProjectResponse, ProjectStats, ProjectUpdate,
+    ProjectMemberCreate, ProjectMemberUpdate, ProjectMemberResponse,
     ProjectTokenCreateRequest, ProjectTokenCreatedResponse, ProjectTokenResponse,
 )
 from app.schemas.string_key import LocalizationWithKeyResponse
@@ -125,7 +128,7 @@ async def list_projects(
     response: Response = None,
 ):
     limit = min(limit, MAX_LIMIT)
-    q = select(Project).options(selectinload(Project.languages))
+    q = select(Project).options(selectinload(Project.languages)).order_by(Project.created_at.desc())
     count_q = select(func.count()).select_from(Project)
     total = await db.scalar(count_q)
     result = await db.execute(q.offset(offset).limit(limit))
@@ -164,7 +167,7 @@ async def get_project(
 async def update_project(
     project_id: uuid.UUID,
     body: ProjectUpdate,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
@@ -196,7 +199,7 @@ async def delete_project(
 async def upload_icon(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     from PIL import Image, UnidentifiedImageError
@@ -219,7 +222,7 @@ async def upload_icon(
 @router.delete("/{project_id}/icon", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_icon(
     project_id: uuid.UUID,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)
@@ -258,7 +261,7 @@ async def add_language(
     project_id: uuid.UUID,
     body: LanguageAdd,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_current_active_user),
+    user: User = Depends(require_member),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
@@ -283,7 +286,7 @@ async def add_language(
 async def prefill_language(
     project_id: uuid.UUID,
     language: str,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -344,7 +347,7 @@ async def _back_translate(source_lang: str, target_lang: str, text: str, provide
 async def back_translate_localization(
     project_id: uuid.UUID,
     loc_id: uuid.UUID,
-    _user: User = Depends(require_admin),
+    _user: User = Depends(require_reviewer),
     db: AsyncSession = Depends(get_db),
 ):
     provider = _require_translation_provider()
@@ -368,7 +371,7 @@ async def back_translate_localization(
 async def back_translate_proposal(
     project_id: uuid.UUID,
     proposal_id: uuid.UUID,
-    _user: User = Depends(require_admin),
+    _user: User = Depends(require_reviewer),
     db: AsyncSession = Depends(get_db),
 ):
     provider = _require_translation_provider()
@@ -391,7 +394,7 @@ async def back_translate_proposal(
 async def remove_language(
     project_id: uuid.UUID,
     language: str,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -537,7 +540,7 @@ async def create_project_token(
     request: Request,
     project_id: uuid.UUID,
     body: ProjectTokenCreateRequest,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)
@@ -565,7 +568,7 @@ async def create_project_token(
 @router.get("/{project_id}/tokens", response_model=list[ProjectTokenResponse])
 async def list_project_tokens(
     project_id: uuid.UUID,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)
@@ -580,11 +583,128 @@ async def list_project_tokens(
 async def revoke_project_token(
     project_id: uuid.UUID,
     token_id: uuid.UUID,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     token = await db.get(ProjectToken, token_id)
     if token is None or token.project_id != project_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "TOKEN_NOT_FOUND", "message": "Token not found"})
     await db.delete(token)
+    await db.commit()
+
+
+# ── Member management ──────────────────────────────────────────────────────────
+
+@router.get("/{project_id}/members", response_model=list[ProjectMemberResponse])
+async def list_project_members(
+    project_id: uuid.UUID,
+    _: User = Depends(require_project_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+    rows = (await db.execute(
+        select(ProjectMember, User.username)
+        .join(User, ProjectMember.user_id == User.id)
+        .where(ProjectMember.project_id == project_id)
+        .order_by(ProjectMember.created_at)
+    )).all()
+    return [
+        ProjectMemberResponse(
+            id=m.id,
+            project_id=m.project_id,
+            user_id=m.user_id,
+            username=username,
+            role=m.role,
+            created_at=m.created_at,
+        )
+        for m, username in rows
+    ]
+
+
+@router.post("/{project_id}/members", response_model=ProjectMemberResponse, status_code=status.HTTP_201_CREATED)
+async def add_project_member(
+    project_id: uuid.UUID,
+    body: ProjectMemberCreate,
+    _: User = Depends(require_project_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
+
+    target_user = await db.scalar(select(User).where(User.username == body.username))
+    if target_user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "USER_NOT_FOUND", "message": "User not found"})
+
+    existing = await db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == target_user.id,
+        )
+    )
+    if existing is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "ALREADY_MEMBER", "message": "User is already a member of this project"})
+
+    member = ProjectMember(project_id=project_id, user_id=target_user.id, role=body.role)
+    db.add(member)
+    await db.flush()
+    await db.commit()
+    await db.refresh(member)
+    return ProjectMemberResponse(
+        id=member.id,
+        project_id=member.project_id,
+        user_id=member.user_id,
+        username=target_user.username,
+        role=member.role,
+        created_at=member.created_at,
+    )
+
+
+@router.patch("/{project_id}/members/{member_id}", response_model=ProjectMemberResponse)
+async def update_project_member(
+    project_id: uuid.UUID,
+    member_id: uuid.UUID,
+    body: ProjectMemberUpdate,
+    _: User = Depends(require_project_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ProjectMember, User.username)
+        .join(User, ProjectMember.user_id == User.id)
+        .where(ProjectMember.id == member_id, ProjectMember.project_id == project_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "MEMBER_NOT_FOUND", "message": "Member not found"})
+    member, username = row
+    member.role = body.role
+    await db.commit()
+    return ProjectMemberResponse(
+        id=member.id,
+        project_id=member.project_id,
+        user_id=member.user_id,
+        username=username,
+        role=member.role,
+        created_at=member.created_at,
+    )
+
+
+@router.delete("/{project_id}/members/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_project_member(
+    project_id: uuid.UUID,
+    member_id: uuid.UUID,
+    _: User = Depends(require_project_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    member = await db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.id == member_id,
+            ProjectMember.project_id == project_id,
+        )
+    )
+    if member is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "MEMBER_NOT_FOUND", "message": "Member not found"})
+    await db.delete(member)
     await db.commit()
