@@ -1,3 +1,6 @@
+from app.logging_config import configure_logging
+configure_logging()
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
