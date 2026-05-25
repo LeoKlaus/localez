@@ -299,6 +299,72 @@
 		await navigator.clipboard.writeText(token);
 		toast.success('Token copied to clipboard');
 	}
+
+	// Members (admin only)
+	const members = createQuery(() => ({
+		queryKey: ['members', projectId],
+		enabled: auth.isAdmin,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/members', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	let addMemberOpen = $state(false);
+	let newMemberUsername = $state('');
+	let addMemberError = $state('');
+
+	const addMember = createMutation(() => ({
+		mutationFn: async () => {
+			const { data, error } = await client.POST('/api/projects/{project_id}/members', {
+				params: { path: { project_id: projectId } },
+				body: { username: newMemberUsername.trim() }
+			});
+			if (error) throw error;
+			return data;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['members', projectId] });
+			addMemberOpen = false;
+			newMemberUsername = '';
+			addMemberError = '';
+		},
+		onError: (err: unknown) => {
+			const code = (err as { detail?: { code?: string } })?.detail?.code;
+			if (code === 'USER_NOT_FOUND') addMemberError = 'User not found.';
+			else if (code === 'ALREADY_MEMBER') addMemberError = 'User is already a member.';
+			else addMemberError = 'Failed to add member.';
+		}
+	}));
+
+	const updateMemberRole = createMutation(() => ({
+		mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
+			const { data, error } = await client.PATCH('/api/projects/{project_id}/members/{member_id}', {
+				params: { path: { project_id: projectId, member_id: memberId } },
+				body: { role: role as 'admin' | 'reviewer' | 'translator' }
+			});
+			if (error) throw error;
+			return data;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['members', projectId] });
+		}
+	}));
+
+	const removeMember = createMutation(() => ({
+		mutationFn: async (memberId: string) => {
+			const { error } = await client.DELETE('/api/projects/{project_id}/members/{member_id}', {
+				params: { path: { project_id: projectId, member_id: memberId } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['members', projectId] });
+		}
+	}));
 </script>
 
 <div class="p-6">
@@ -457,6 +523,53 @@
 		{/if}
 
 		{#if auth.isAdmin}
+			<Separator class="my-6" />
+
+			<div class="mb-4 flex items-center justify-between">
+				<div>
+					<h2 class="text-lg font-semibold">Members</h2>
+					<p class="text-sm text-muted-foreground">Users with explicit access to this project.</p>
+				</div>
+				<Button size="sm" onclick={() => { addMemberOpen = true; newMemberUsername = ''; addMemberError = ''; }}>
+					<Plus size={14} class="mr-1" /> Add member
+				</Button>
+			</div>
+
+			{#if members.isPending}
+				<div class="h-16 animate-pulse rounded-lg bg-muted"></div>
+			{:else if (members.data?.length ?? 0) === 0}
+				<p class="text-sm text-muted-foreground">No members yet.</p>
+			{:else}
+				<div class="divide-y rounded-lg border">
+					{#each members.data! as member}
+						<div class="flex items-center gap-3 px-4 py-3">
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium">{member.username}</p>
+								<p class="text-xs text-muted-foreground">Added {formatDate(member.created_at)}</p>
+							</div>
+							<select
+								class="rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+								value={member.role}
+								onchange={(e) => updateMemberRole.mutate({ memberId: member.id, role: e.currentTarget.value })}
+							>
+								<option value="translator">Translator</option>
+								<option value="reviewer">Reviewer</option>
+								<option value="admin">Admin</option>
+							</select>
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+								onclick={() => removeMember.mutate(member.id)}
+								disabled={removeMember.isPending}
+							>
+								<Trash2 size={14} />
+							</Button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			<Separator class="my-6" />
 
 			<div class="mb-4 flex items-center justify-between">
@@ -639,6 +752,31 @@
 		<Dialog.Footer>
 			<Button onclick={() => (createdTokenOpen = false)}>Done</Button>
 		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Add member dialog -->
+<Dialog.Root bind:open={addMemberOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Add member</Dialog.Title>
+			<Dialog.Description>Enter the username of the user to add to this project.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={(e) => { e.preventDefault(); addMember.mutate(); }} class="space-y-4">
+			{#if addMemberError}
+				<p class="text-sm text-destructive">{addMemberError}</p>
+			{/if}
+			<div class="space-y-2">
+				<Label>Username</Label>
+				<Input bind:value={newMemberUsername} placeholder="username" required maxlength={150} />
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (addMemberOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={!newMemberUsername.trim() || addMember.isPending}>
+					{addMember.isPending ? 'Adding…' : 'Add'}
+				</Button>
+			</Dialog.Footer>
+		</form>
 	</Dialog.Content>
 </Dialog.Root>
 
