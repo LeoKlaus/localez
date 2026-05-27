@@ -81,6 +81,25 @@ def test_export_roundtrip(xcstrings_data):
     assert exported["strings"]["Don't translate"].get("shouldTranslate") is False
 
 
+def test_empty_string_value_treated_as_null():
+    """An xcstrings entry with value='' should produce value=None, not ''."""
+    project_id = uuid.uuid4()
+    data = {
+        "sourceLanguage": "en",
+        "strings": {
+            "greeting": {
+                "localizations": {
+                    "de": {"stringUnit": {"state": "new", "value": ""}},
+                }
+            }
+        },
+        "version": "1.2",
+    }
+    result = parse_xcstrings(data, project_id)
+    de_loc = next(l for l in result.localizations if l.language == "de")
+    assert de_loc.value is None, "Empty string value should be stored as None"
+
+
 def test_export_device_variations_preserved(xcstrings_data):
     from app.models.project import Project
     project_id = uuid.uuid4()

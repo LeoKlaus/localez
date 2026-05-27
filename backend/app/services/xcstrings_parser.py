@@ -78,5 +78,5 @@ def _make_localization(
         variation_type=variation_type,
         variation_key=variation_key,
         state=state,
-        value=string_unit.get("value"),
+        value=string_unit.get("value") or None,
     )
