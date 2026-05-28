@@ -34,7 +34,7 @@
 	onMount(async () => {
 		// If there's no in-memory access token, try to obtain one silently using
 		// the HttpOnly refresh-token cookie set during the last login.
-		if (!auth.isAuthenticated) {
+		if (!auth.isAuthenticated && auth.user) {
 			await auth.tryRefresh();
 		}
 		// Signal that the auth state is resolved so queries gated on authReady
