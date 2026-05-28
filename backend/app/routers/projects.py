@@ -304,13 +304,14 @@ async def add_language(
     if any(pl.language == body.language for pl in project.languages):
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "LANGUAGE_ALREADY_EXISTS", "message": f"Language '{body.language}' is already added to this project"})
 
+    source_language = project.source_language  # capture before commit expires attributes
     db.add(ProjectLanguage(project_id=project_id, language=body.language))
     await db.flush()
     await fill_missing_localizations(project_id, db)
     await db.commit()
     db.expire(project, ["languages"])
     prefill_events.register(project_id, body.language)
-    background_tasks.add_task(_run_prefill_background, project_id, body.language, project.source_language, user.id)
+    background_tasks.add_task(_run_prefill_background, project_id, body.language, source_language, user.id)
     project = await _get_project(project_id, db)
     return project
 
