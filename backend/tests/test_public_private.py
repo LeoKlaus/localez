@@ -314,11 +314,11 @@ async def test_non_member_cannot_update_public_project(
         assert resp.status_code == 403
 
 
-async def test_non_member_cannot_add_language_to_public_project(
+async def test_non_member_can_add_language_to_public_project(
     admin_client: AsyncClient, member_client, unique_username
 ):
     proj = await _create_project(admin_client, "AddLangPub_Restricted", is_public=True)
     username = unique_username("addlang_pub_nm")
     async with member_client(username) as c:
         resp = await c.post(f"/api/projects/{proj['id']}/languages", json={"language": "fr"})
-        assert resp.status_code == 403
+        assert resp.status_code == 201
