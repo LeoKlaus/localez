@@ -19,6 +19,7 @@
 
 	const projects = createQuery(() => ({
 		queryKey: ['projects'],
+		enabled: auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects', { params: { query: { limit: 100 } } });
 			if (error) throw error;

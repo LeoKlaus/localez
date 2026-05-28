@@ -34,14 +34,12 @@
 	onMount(async () => {
 		// If there's no in-memory access token, try to obtain one silently using
 		// the HttpOnly refresh-token cookie set during the last login.
-		if (!auth.isAuthenticated) {
-			const refreshed = await auth.tryRefresh();
-			if (refreshed) {
-				// The projects query may have already fired without auth and cached
-				// public-only results. Invalidate so it re-fetches as an authenticated user.
-				qc.invalidateQueries({ queryKey: ['projects'] });
-			}
+		if (!auth.isAuthenticated && auth.user) {
+			await auth.tryRefresh();
 		}
+		// Signal that the auth state is resolved so queries gated on authReady
+		// fire exactly once with the correct authentication context.
+		auth.setReady();
 		if (auth.isAuthenticated && !auth.user) {
 			const { data } = await client.GET('/api/users/me');
 			if (data) auth.user = data;
@@ -67,7 +65,7 @@
 
 	const activeProject = createQuery(() => ({
 		queryKey: ['project', activeProjectId],
-		enabled: !!activeProjectId,
+		enabled: !!activeProjectId && auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}', {
 				params: { path: { project_id: activeProjectId! } }
