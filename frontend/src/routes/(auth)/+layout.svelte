@@ -13,9 +13,13 @@
 
 <div class="flex min-h-svh flex-col items-center justify-center bg-background p-4">
 	<div class="w-full max-w-sm">
-		<div class="mb-8 text-center">
-			<h1 class="text-2xl font-bold tracking-tight">Localez</h1>
-			<p class="text-sm text-muted-foreground">Localization management</p>
+		<div class="mb-8 flex flex-col items-center gap-3 text-center">
+			<img src="/icons/icon.svg" alt="" class="size-16 dark:hidden" aria-hidden="true" />
+			<img src="/icons/IconDark.svg" alt="" class="size-16 hidden dark:block" aria-hidden="true" />
+			<div>
+				<h1 class="text-2xl font-bold tracking-tight">Localez</h1>
+				<p class="text-sm text-muted-foreground">Localization management</p>
+			</div>
 		</div>
 		{@render children()}
 	</div>
