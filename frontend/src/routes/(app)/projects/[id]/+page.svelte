@@ -36,6 +36,7 @@
 
 	const project = createQuery(() => ({
 		queryKey: ['project', projectId],
+		enabled: auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } }
@@ -47,6 +48,7 @@
 
 	const stats = createQuery(() => ({
 		queryKey: ['stats', projectId],
+		enabled: auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/stats', {
 				params: { path: { project_id: projectId } }

@@ -30,6 +30,7 @@
 
 	const stringDetail = createQuery(() => ({
 		queryKey: ['string', projectId, keyId],
+		enabled: auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/strings/{key_id}', {
 				params: { path: { project_id: projectId, key_id: keyId } }
@@ -330,7 +331,7 @@
 {#snippet localizationCard(loc: LocalizationResponse)}
 	{@const proposals = createQuery(() => ({
 		queryKey: ['proposals', projectId, keyId, loc.id],
-		enabled: auth.isAuthenticated,
+		enabled: auth.isAuthenticated && auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET(
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/proposals',

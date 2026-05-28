@@ -40,6 +40,7 @@
 
 	const project = createQuery(() => ({
 		queryKey: ['project', projectId],
+		enabled: auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } }
@@ -66,6 +67,7 @@
 	// Stats for language selection screen
 	const stats = createQuery(() => ({
 		queryKey: ['stats', projectId],
+		enabled: auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/stats', {
 				params: { path: { project_id: projectId } }
@@ -78,7 +80,7 @@
 	// Localizations in needs_review state for the selected language
 	const localizations = createQuery(() => ({
 		queryKey: ['review-locs', projectId, language, filterState, offset],
-		enabled: !!language,
+		enabled: !!language && auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET(
 				'/api/projects/{project_id}/languages/{language}/localizations',
@@ -97,7 +99,7 @@
 	// All pending proposals for the project — joined to localizations on the client
 	const proposals = createQuery(() => ({
 		queryKey: ['review-proposals', projectId],
-		enabled: !!language,
+		enabled: !!language && auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/proposals', {
 				params: {

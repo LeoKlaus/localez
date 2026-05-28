@@ -39,7 +39,7 @@
 
 	const langStrings = createQuery(() => ({
 		queryKey: ['lang-strings', projectId, language, { stateFilter, offset }],
-		enabled: !!language,
+		enabled: !!language && auth.authReady,
 		queryFn: async () => {
 			const { data, error, response } = await client.GET(
 				'/api/projects/{project_id}/languages/{language}/localizations',
@@ -58,7 +58,7 @@
 
 	const strings = createQuery(() => ({
 		queryKey: ['strings', projectId, { q, stateFilter, offset }],
-		enabled: !language,
+		enabled: !language && auth.authReady,
 		queryFn: async () => {
 			const { data, error, response } = await client.GET('/api/projects/{project_id}/strings', {
 				params: {
@@ -79,7 +79,7 @@
 
 	const pendingProposals = createQuery(() => ({
 		queryKey: ['proposals-pending', projectId],
-		enabled: !!language && auth.isAuthenticated,
+		enabled: !!language && auth.isAuthenticated && auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/proposals', {
 				params: { path: { project_id: projectId }, query: { proposal_status: 'pending', limit: 1000 } }

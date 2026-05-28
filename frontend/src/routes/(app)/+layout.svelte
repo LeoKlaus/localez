@@ -65,7 +65,7 @@
 
 	const activeProject = createQuery(() => ({
 		queryKey: ['project', activeProjectId],
-		enabled: !!activeProjectId,
+		enabled: !!activeProjectId && auth.authReady,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}', {
 				params: { path: { project_id: activeProjectId! } }
