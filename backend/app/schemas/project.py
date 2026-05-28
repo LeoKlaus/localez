@@ -29,6 +29,7 @@ class ProjectResponse(BaseModel):
     has_icon: bool
     is_public: bool
     languages: list[LanguageCode] = []
+    my_role: ProjectRole | None = None  # Current user's project role; None for global admins and non-members
 
     model_config = {"from_attributes": True}
 

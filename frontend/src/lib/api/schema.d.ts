@@ -1218,6 +1218,8 @@ export interface components {
              * @default []
              */
             languages: string[];
+            /** Current user's project role; null for global admins and non-members */
+            my_role: components["schemas"]["ProjectRole"] | null;
         };
         /** ProjectStats */
         ProjectStats: {

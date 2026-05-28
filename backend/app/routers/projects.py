@@ -170,13 +170,27 @@ async def create_project(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: uuid.UUID,
-    _access: User | None = Depends(require_read_access),
+    user: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail={"code": "PROJECT_NOT_FOUND", "message": "Project not found"})
-    return project
+
+    # Populate the current user's project role (None for unauthenticated users and global admins)
+    my_role = None
+    if user is not None and user.global_role != GlobalRole.admin:
+        member = await db.scalar(
+            select(ProjectMember).where(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == user.id,
+            )
+        )
+        if member is not None:
+            my_role = member.role
+
+    base = ProjectResponse.model_validate(project)
+    return base.model_copy(update={"my_role": my_role})
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
