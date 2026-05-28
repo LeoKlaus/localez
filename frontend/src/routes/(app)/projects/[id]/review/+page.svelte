@@ -6,6 +6,7 @@
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
+	import { configStore } from '$lib/stores/config.svelte';
 	import { formatDate } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
@@ -403,21 +404,23 @@
 							<div class="mb-3 rounded-md bg-muted px-3 py-2 font-mono text-sm">
 								{loc.value}
 							</div>
-							<div class="mb-3">
-								<button
-									onclick={() => toggleBackTranslate(loc.id, 'localization')}
-									disabled={backTranslating[loc.id]}
-									class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-								>
-									<Languages size={12} />
-									{backTranslations[loc.id] ? 'Hide back-translation' : backTranslating[loc.id] ? 'Translating…' : 'Back-translate'}
-								</button>
-								{#if backTranslations[loc.id]}
-									<p class="mt-1.5 font-mono text-xs text-muted-foreground">
-										→ {backTranslations[loc.id]}
-									</p>
-								{/if}
-							</div>
+							{#if configStore.aiEnabled}
+								<div class="mb-3">
+									<button
+										onclick={() => toggleBackTranslate(loc.id, 'localization')}
+										disabled={backTranslating[loc.id]}
+										class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+									>
+										<Languages size={12} />
+										{backTranslations[loc.id] ? 'Hide back-translation' : backTranslating[loc.id] ? 'Translating…' : `Back-translate via ${configStore.providerLabel}`}
+									</button>
+									{#if backTranslations[loc.id]}
+										<p class="mt-1.5 font-mono text-xs text-muted-foreground">
+											→ {backTranslations[loc.id]}
+										</p>
+									{/if}
+								</div>
+							{/if}
 						{/if}
 
 						<!-- Proposals (only relevant in needs_review mode) -->
@@ -432,6 +435,7 @@
 								{#each locProposals as proposal (proposal.id)}
 									<div class="rounded-md border bg-background p-3">
 										<p class="mb-1 font-mono text-sm">{proposal.proposed_value}</p>
+										{#if configStore.aiEnabled}
 										<div class="mb-3">
 											<button
 												onclick={() => toggleBackTranslate(proposal.id, 'proposal')}
@@ -439,7 +443,7 @@
 												class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
 											>
 												<Languages size={12} />
-												{backTranslations[proposal.id] ? 'Hide back-translation' : backTranslating[proposal.id] ? 'Translating…' : 'Back-translate'}
+												{backTranslations[proposal.id] ? 'Hide back-translation' : backTranslating[proposal.id] ? 'Translating…' : `Back-translate via ${configStore.providerLabel}`}
 											</button>
 											{#if backTranslations[proposal.id]}
 												<p class="mt-1.5 font-mono text-xs text-muted-foreground">
@@ -447,6 +451,7 @@
 												</p>
 											{/if}
 										</div>
+									{/if}
 										<p class="mb-3 text-xs text-muted-foreground">
 											Proposed {formatDate(proposal.proposed_at)}
 										</p>

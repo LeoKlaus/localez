@@ -11,6 +11,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import type { components } from '$lib/api/schema.d.ts';
 	import { prefillStore } from '$lib/stores/prefill.svelte';
+	import { configStore } from '$lib/stores/config.svelte';
 	import Search from 'lucide-svelte/icons/search';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -384,16 +385,16 @@
 				class="mt-0.5 flex w-full items-baseline gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
 				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = loc.ai_suggestion!; requestAnimationFrame(() => textareaRefs[loc.id]?.focus()); }}
 			>
-				<span class="shrink-0 font-medium text-violet-500 dark:text-violet-400">✦ AI</span>
+				<span class="shrink-0 font-medium text-violet-500 dark:text-violet-400">✦ {configStore.providerLabel}</span>
 				<span class="break-words">{loc.ai_suggestion}</span>
 			</button>
-		{:else if !loc.ai_suggestion && loc.state === 'new' && !loc.value}
+		{:else if !loc.ai_suggestion && loc.state === 'new' && !loc.value && configStore.aiEnabled}
 			<button
 				type="button"
 				class="mt-0.5 text-xs text-muted-foreground/60 hover:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40"
 				disabled={suggesting[loc.id]}
 				onclick={() => requestSuggestion(loc)}
-			>{suggesting[loc.id] ? '✦ Getting suggestion…' : '✦ Get AI suggestion'}</button>
+			>{suggesting[loc.id] ? `✦ Getting ${configStore.providerLabel} suggestion…` : `✦ Get ${configStore.providerLabel} suggestion`}</button>
 		{/if}
 		{#if locProposals.length > 0}
 			<div class="mt-1.5 space-y-1">

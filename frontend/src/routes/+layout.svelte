@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { legalStore } from '$lib/stores/legal.svelte';
+	import { configStore } from '$lib/stores/config.svelte';
 	import { onMount } from 'svelte';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -51,9 +52,12 @@
 	const COOKIE_KEY = 'lz_cookie_notice';
 	let cookieNoticeDismissed = $state(true);
 
+	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
+
 	onMount(() => {
 		legalStore.init();
 		cookieNoticeDismissed = localStorage.getItem(COOKIE_KEY) === '1';
+		configStore.load(BASE_URL);
 	});
 
 	function dismissCookieNotice() {

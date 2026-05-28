@@ -1,3 +1,3 @@
-from app.routers import auth, projects, proposals, strings, users, xcstrings
+from app.routers import auth, config, projects, proposals, strings, users, xcstrings
 
-__all__ = ["auth", "users", "projects", "strings", "xcstrings", "proposals"]
+__all__ = ["auth", "config", "users", "projects", "strings", "xcstrings", "proposals"]
