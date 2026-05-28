@@ -75,7 +75,7 @@ async def _run_prefill(
 
     SourceLoc = aliased(Localization)
     rows = (await db.execute(
-        select(Localization, SourceLoc.value.label("source_value"), StringKey.comment)
+        select(Localization, SourceLoc.value.label("source_value"), StringKey.comment, StringKey.key.label("key_name"))
         .join(StringKey, StringKey.id == Localization.string_key_id)
         .outerjoin(SourceLoc, (
             (SourceLoc.string_key_id == Localization.string_key_id) &
@@ -91,8 +91,8 @@ async def _run_prefill(
         )
     )).all()
 
-    to_translate = [(loc, src, comment) for loc, src, comment in rows if src]
-    skipped = len(rows) - len(to_translate)
+    to_translate = [(loc, src or key_name, comment) for loc, src, comment, key_name in rows]
+    skipped = 0
 
     if not to_translate:
         return 0, skipped
