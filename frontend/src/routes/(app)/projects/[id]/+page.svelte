@@ -6,7 +6,7 @@
 	import { prefillStore } from '$lib/stores/prefill.svelte';
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
-	import { formatDate } from '$lib/utils';
+	import { formatDate, languageName, COMMON_LANGUAGE_CODES } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -391,7 +391,7 @@
 				<div>
 					<div class="flex items-center gap-2 flex-wrap">
 						<h1 class="text-2xl font-bold">{p.name}</h1>
-						<Badge variant="secondary">{p.source_language}</Badge>
+						<Badge variant="secondary">{languageName(p.source_language)}</Badge>
 						{#if p.is_public}
 							<Badge variant="outline" class="gap-1 text-muted-foreground">
 								<Globe size={11} />Public
@@ -505,7 +505,7 @@
 							href="/projects/{p.id}/strings?language={lang.language}"
 							class="flex flex-1 items-center gap-4"
 						>
-							<span class="w-12 font-mono text-sm font-medium">{lang.language}</span>
+							<span class="shrink-0 text-sm font-medium">{languageName(lang.language)}</span>
 
 							<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
 								{#if total > 0}
@@ -650,7 +650,21 @@
 			</div>
 			<div class="space-y-2">
 				<Label>Source language</Label>
-				<Input bind:value={editLang} required maxlength={20} />
+				<input
+					list="edit-project-languages"
+					bind:value={editLang}
+					required
+					maxlength={20}
+					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+				/>
+				<datalist id="edit-project-languages">
+					{#each COMMON_LANGUAGE_CODES as code}
+						<option value={code}>{languageName(code)}</option>
+					{/each}
+				</datalist>
+				{#if editLang.trim()}
+					<p class="text-xs text-muted-foreground">→ {languageName(editLang.trim())}</p>
+				{/if}
 			</div>
 			<label class="flex items-center gap-3 cursor-pointer select-none">
 				<input type="checkbox" bind:checked={editIsPublic} class="size-4 rounded border accent-primary" />
@@ -798,15 +812,29 @@
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
 			<Dialog.Title>Add language</Dialog.Title>
-			<Dialog.Description>Enter a BCP 47 language tag, e.g. <code>de</code>, <code>fr-FR</code>.</Dialog.Description>
 		</Dialog.Header>
 		<form onsubmit={(e) => { e.preventDefault(); addLanguage.mutate(); }} class="space-y-4">
 			{#if addLangError}
 				<p class="text-sm text-destructive">{addLangError}</p>
 			{/if}
 			<div class="space-y-2">
-				<Label>Language code</Label>
-				<Input bind:value={newLanguage} placeholder="de" required maxlength={20} />
+				<Label>Language</Label>
+				<input
+					list="add-language-suggestions"
+					bind:value={newLanguage}
+					placeholder="de"
+					required
+					maxlength={20}
+					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+				/>
+				<datalist id="add-language-suggestions">
+					{#each COMMON_LANGUAGE_CODES as code}
+						<option value={code}>{languageName(code)}</option>
+					{/each}
+				</datalist>
+				{#if newLanguage.trim()}
+					<p class="text-xs text-muted-foreground">→ {languageName(newLanguage.trim())}</p>
+				{/if}
 			</div>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (addLangOpen = false)}>Cancel</Button>

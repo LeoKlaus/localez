@@ -3,7 +3,7 @@
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
-	import { formatDate } from '$lib/utils';
+	import { formatDate, languageName } from '$lib/utils';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
@@ -393,7 +393,7 @@
 		<Card.Header class="pb-3">
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
-					<span class="font-semibold">{loc.language}</span>
+					<span class="font-semibold">{languageName(loc.language)}</span>
 					{#if loc.variation_type !== 'none'}
 						<Badge variant="outline">{loc.variation_type}: {loc.variation_key}</Badge>
 					{/if}

@@ -20,6 +20,7 @@
 		parseSegments,
 		placeholderLabel
 	} from '$lib/strings/placeholders';
+	import { languageName } from '$lib/utils';
 
 	type LocalizationState = components['schemas']['LocalizationState'];
 	type LocalizationWithKey = components['schemas']['LocalizationWithKeyResponse'];
@@ -437,7 +438,7 @@
 			← Back to project
 		</a>
 		<h1 class="mt-1 text-2xl font-bold">
-			Strings{language ? ` — ${language}` : ''}
+			Strings{language ? ` — ${languageName(language)}` : ''}
 		</h1>
 	</div>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
-	import { formatDate } from '$lib/utils';
+	import { formatDate, languageName, COMMON_LANGUAGE_CODES } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -100,7 +100,7 @@
 									/>
 								{/if}
 								<span class="truncate">{project.name}</span>
-								<Badge variant="secondary" class="shrink-0">{project.source_language}</Badge>
+								<Badge variant="secondary" class="shrink-0">{languageName(project.source_language)}</Badge>
 								{#if project.is_public}
 									<Badge variant="outline" class="shrink-0 gap-1 text-muted-foreground">
 										<Globe size={10} />Public
@@ -131,8 +131,23 @@
 			</div>
 			<div class="space-y-2">
 				<Label for="lang">Source language</Label>
-				<Input id="lang" bind:value={sourceLanguage} placeholder="en" required maxlength={20} />
-				<p class="text-xs text-muted-foreground">BCP 47 language code, e.g. en, de, ja</p>
+				<input
+					id="lang"
+					list="create-project-languages"
+					bind:value={sourceLanguage}
+					placeholder="en"
+					required
+					maxlength={20}
+					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+				/>
+				<datalist id="create-project-languages">
+					{#each COMMON_LANGUAGE_CODES as code}
+						<option value={code}>{languageName(code)}</option>
+					{/each}
+				</datalist>
+				{#if sourceLanguage.trim()}
+					<p class="text-xs text-muted-foreground">→ {languageName(sourceLanguage.trim())}</p>
+				{/if}
 			</div>
 			<label class="flex items-center gap-3 cursor-pointer select-none">
 				<input type="checkbox" bind:checked={isPublic} class="size-4 rounded border accent-primary" />

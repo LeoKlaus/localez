@@ -7,7 +7,7 @@
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { configStore } from '$lib/stores/config.svelte';
-	import { formatDate } from '$lib/utils';
+	import { formatDate, languageName } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
@@ -272,7 +272,7 @@
 							onclick={() => selectLanguage(lang.language)}
 							class="flex w-full items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/50 md:py-3"
 						>
-							<span class="w-12 font-mono text-sm font-medium">{lang.language}</span>
+							<span class="shrink-0 text-sm font-medium">{languageName(lang.language)}</span>
 
 							<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
 								{#if total > 0}
@@ -296,7 +296,7 @@
 					<ChevronLeft size={16} />
 				</Button>
 				<h1 class="text-xl font-bold">
-					Review — <span class="font-mono">{language}</span>
+					Review — {languageName(language!)}
 				</h1>
 			</div>
 			<div class="flex rounded-md border text-sm">
@@ -330,7 +330,7 @@
 		{:else if !localizations.data?.length}
 			<div class="flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
 				<Check size={40} strokeWidth={1.5} />
-				<p>No strings pending review for <span class="font-mono">{language}</span>.</p>
+				<p>No strings pending review for {languageName(language!)}.</p>
 			</div>
 		{:else}
 			<div class="space-y-3">
