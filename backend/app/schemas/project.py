@@ -19,7 +19,7 @@ class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     source_language: LanguageCode | None = None
     is_public: bool | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=10_000)
 
 
 class ProjectResponse(BaseModel):
