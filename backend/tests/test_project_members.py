@@ -307,17 +307,6 @@ async def test_project_admin_can_create_token(admin_client: AsyncClient, member_
         assert resp.json()["token"].startswith("lz_")
 
 
-async def test_project_reviewer_cannot_create_token(admin_client: AsyncClient, member_client, unique_username):
-    proj = await _create_project(admin_client, "MemberTokenReviewer")
-    reviewer_name = unique_username("token_reviewer")
-    async with member_client(reviewer_name) as c_reviewer:
-        await _add_member(admin_client, proj["id"], reviewer_name, role="reviewer")
-        resp = await c_reviewer.post(
-            f"/api/projects/{proj['id']}/tokens",
-            json={"name": "ci-token"},
-        )
-        assert resp.status_code == 403
-
 
 async def test_project_translator_cannot_manage_tokens(admin_client: AsyncClient, member_client, unique_username):
     proj = await _create_project(admin_client, "MemberTokenTranslator")

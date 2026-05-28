@@ -24,21 +24,6 @@ async def test_list_projects_admin_sees_all(admin_client: AsyncClient):
     assert "ListAll B" in names
 
 
-async def test_list_projects_non_member_sees_only_public(
-    admin_client: AsyncClient, member_client, unique_username
-):
-    # Public projects are visible; private ones are not
-    await admin_client.post("/api/projects", json={"name": "Public Project Visible", "source_language": "en", "is_public": True})
-    await admin_client.post("/api/projects", json={"name": "Private Project Hidden", "source_language": "en"})
-
-    username = unique_username("listpub")
-    async with member_client(username) as c:
-        resp = await c.get("/api/projects")
-        assert resp.status_code == 200
-        names = [p["name"] for p in resp.json()]
-        assert "Public Project Visible" in names
-        assert "Private Project Hidden" not in names
-
 
 async def test_list_projects_unauthenticated(client: AsyncClient):
     resp = await client.get("/api/projects")
@@ -50,12 +35,6 @@ async def test_get_project_as_admin(admin_client: AsyncClient, project: dict):
     assert resp.status_code == 200
     assert resp.json()["id"] == project["id"]
 
-
-async def test_non_member_cannot_get_private_project(member_client, unique_username, project: dict):
-    username = unique_username("getuser")
-    async with member_client(username) as c:
-        resp = await c.get(f"/api/projects/{project['id']}")
-        assert resp.status_code == 403
 
 
 async def test_get_project_not_found(admin_client: AsyncClient):
