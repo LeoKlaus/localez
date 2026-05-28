@@ -43,7 +43,8 @@ export default defineConfig({
 				display: 'standalone',
 				start_url: '/',
 				icons: [
-					{ src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
+					{ src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+					{ src: '/icons/IconDark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
 				]
 			},
 			workbox: {

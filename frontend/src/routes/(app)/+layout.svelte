@@ -87,7 +87,11 @@
 						<span class="truncate font-bold tracking-tight">{p.name}</span>
 					</a>
 				{:else}
-					<span class="font-bold tracking-tight">Localez</span>
+					<a href="/projects" class="flex items-center gap-2">
+						<img src="/icons/icon.svg" alt="" class="size-7 dark:hidden" aria-hidden="true" />
+						<img src="/icons/IconDark.svg" alt="" class="size-7 hidden dark:block" aria-hidden="true" />
+						<span class="font-bold tracking-tight">Localez</span>
+					</a>
 				{/if}
 			</div>
 			<a href="https://github.com/leoklaus/localez" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" class="text-muted-foreground hover:text-foreground">
@@ -224,7 +228,11 @@
 					<span class="truncate font-bold">{p.name}</span>
 				</a>
 			{:else}
-				<span class="font-bold">Localez</span>
+				<a href="/projects" class="flex items-center gap-2">
+					<img src="/icons/icon.svg" alt="" class="size-7 dark:hidden" aria-hidden="true" />
+					<img src="/icons/IconDark.svg" alt="" class="size-7 hidden dark:block" aria-hidden="true" />
+					<span class="font-bold">Localez</span>
+				</a>
 			{/if}
 			<div class="flex items-center gap-3">
 				{#if legalStore.hasImprint || legalStore.hasPrivacy || legalStore.hasContributions}
