@@ -15,7 +15,7 @@ from app.core import prefill_events
 from app.core.limiter import limiter
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, get_optional_user, require_admin
-from app.dependencies.project_access import require_member, require_project_admin, require_read_access, require_reviewer
+from app.dependencies.project_access import require_member, require_project_admin, require_read_access, require_reviewer, require_write_access
 from app.dependencies.project_token import generate_project_token
 from app.models.localization import Localization, LocalizationState
 from app.models.translation_proposal import TranslationProposal
@@ -294,7 +294,7 @@ async def add_language(
     project_id: uuid.UUID,
     body: LanguageAdd,
     background_tasks: BackgroundTasks,
-    user: User = Depends(require_member),
+    user: User = Depends(require_write_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)

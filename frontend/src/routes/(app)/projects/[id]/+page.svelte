@@ -253,6 +253,8 @@
 	let isProjectReviewer = $derived(isProjectAdmin || myProjectRole === 'reviewer');
 	// project member: global admin OR any member (any role)
 	let isProjectMember = $derived(auth.isAdmin || myProjectRole !== null);
+	// any authenticated user may add languages to public projects; private requires membership
+	let canAddLanguage = $derived(auth.isAuthenticated && (project.data?.is_public === true || isProjectMember));
 
 	// API tokens (project admin and above)
 	const tokens = createQuery(() => ({
@@ -479,7 +481,7 @@
 					<p class="text-sm text-muted-foreground">{stats.data.total_strings} translatable strings</p>
 				{/if}
 			</div>
-			{#if isProjectMember}
+			{#if canAddLanguage}
 				<Button size="sm" onclick={() => { addLangOpen = true; newLanguage = ''; addLangError = ''; }}>
 					<Plus size={14} class="mr-1" /> Add language
 				</Button>
