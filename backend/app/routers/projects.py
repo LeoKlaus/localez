@@ -159,7 +159,7 @@ async def create_project(
     user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    project = Project(name=body.name, source_language=body.source_language, created_by=user.id, is_public=body.is_public)
+    project = Project(name=body.name, source_language=body.source_language, created_by=user.id, is_public=body.is_public, description=body.description)
     db.add(project)
     await db.flush()
     await db.commit()
@@ -210,6 +210,8 @@ async def update_project(
         project.source_language = body.source_language
     if body.is_public is not None:
         project.is_public = body.is_public
+    if body.description is not None or "description" in body.model_fields_set:
+        project.description = body.description
     await db.commit()
     return project
 

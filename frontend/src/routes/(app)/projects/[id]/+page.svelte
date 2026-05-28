@@ -7,9 +7,12 @@
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { formatDate, languageName, COMMON_LANGUAGE_CODES } from '$lib/utils';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Alert from '$lib/components/ui/alert';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Badge } from '$lib/components/ui/badge';
@@ -58,11 +61,13 @@
 	let editName = $state('');
 	let editLang = $state('');
 	let editIsPublic = $state(false);
+	let editDescription = $state('');
 
 	function openEdit() {
 		editName = project.data?.name ?? '';
 		editLang = project.data?.source_language ?? '';
 		editIsPublic = project.data?.is_public ?? false;
+		editDescription = project.data?.description ?? '';
 		editOpen = true;
 	}
 
@@ -70,7 +75,7 @@
 		mutationFn: async () => {
 			const { data, error } = await client.PATCH('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } },
-				body: { name: editName, source_language: editLang, is_public: editIsPublic }
+				body: { name: editName, source_language: editLang, is_public: editIsPublic, description: editDescription || null }
 			});
 			if (error) throw error;
 			return data;
@@ -456,6 +461,13 @@
 			</Alert.Root>
 		{/if}
 
+		{#if p.description}
+			{@const descHtml = DOMPurify.sanitize(marked(p.description) as string)}
+			<article class="prose prose-neutral max-w-none dark:prose-invert mb-6 text-sm">
+				{@html descHtml}
+			</article>
+		{/if}
+
 		<Separator class="mb-6" />
 
 		{#each stats.data?.languages ?? [] as lang}
@@ -667,6 +679,16 @@
 				{#if editLang.trim()}
 					<p class="text-xs text-muted-foreground">→ {languageName(editLang.trim())}</p>
 				{/if}
+			</div>
+			<div class="space-y-2">
+				<Label>Description <span class="text-xs text-muted-foreground">(Markdown)</span></Label>
+				<Textarea
+					bind:value={editDescription}
+					placeholder="Optional project description. Supports Markdown."
+					rows={4}
+					maxlength={10000}
+					class="resize-y"
+				/>
 			</div>
 			<label class="flex items-center gap-3 cursor-pointer select-none">
 				<input type="checkbox" bind:checked={editIsPublic} class="size-4 rounded border accent-primary" />
