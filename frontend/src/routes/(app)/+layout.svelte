@@ -35,13 +35,11 @@
 		// If there's no in-memory access token, try to obtain one silently using
 		// the HttpOnly refresh-token cookie set during the last login.
 		if (!auth.isAuthenticated) {
-			const refreshed = await auth.tryRefresh();
-			if (refreshed) {
-				// The projects query may have already fired without auth and cached
-				// public-only results. Invalidate so it re-fetches as an authenticated user.
-				qc.invalidateQueries({ queryKey: ['projects'] });
-			}
+			await auth.tryRefresh();
 		}
+		// Signal that the auth state is resolved so queries gated on authReady
+		// fire exactly once with the correct authentication context.
+		auth.setReady();
 		if (auth.isAuthenticated && !auth.user) {
 			const { data } = await client.GET('/api/users/me');
 			if (data) auth.user = data;

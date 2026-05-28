@@ -7,6 +7,7 @@ const USER_KEY = 'lz_user';
 function createAuth() {
 	let accessToken = $state<string | null>(null);
 	let user = $state<MeResponse | null>(null);
+	let authReady = $state(false);
 
 	// Eagerly restore cached user profile from localStorage (synchronous — safe
 	// to do at module init time since we're in the browser by the time this runs).
@@ -47,6 +48,10 @@ function createAuth() {
 		accessToken = access;
 	}
 
+	function setReady() {
+		authReady = true;
+	}
+
 	function clear() {
 		accessToken = null;
 		user = null;
@@ -70,6 +75,9 @@ function createAuth() {
 		get isAuthenticated() {
 			return !!accessToken;
 		},
+		get authReady() {
+			return authReady;
+		},
 		get isAdmin() {
 			return !!accessToken && user?.global_role === 'admin';
 		},
@@ -80,6 +88,7 @@ function createAuth() {
 			return user?.passkeys_configured ?? false;
 		},
 		setToken,
+		setReady,
 		clear,
 		tryRefresh,
 	};
