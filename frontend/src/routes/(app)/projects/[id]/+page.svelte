@@ -553,14 +553,16 @@
 			{:else}
 				<div class="divide-y rounded-lg border">
 					{#each members.data! as member}
+						{@const isSelf = member.user_id === auth.user?.id}
 						<div class="flex items-center gap-3 px-4 py-3">
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium">{member.username}</p>
 								<p class="text-xs text-muted-foreground">Added {formatDate(member.created_at)}</p>
 							</div>
 							<select
-								class="rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+								class="rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 								value={member.role}
+								disabled={isSelf}
 								onchange={(e) => updateMemberRole.mutate({ memberId: member.id, role: e.currentTarget.value })}
 							>
 								<option value="translator">Translator</option>
@@ -572,7 +574,7 @@
 								size="icon"
 								class="size-7 shrink-0 text-muted-foreground hover:text-destructive"
 								onclick={() => removeMember.mutate(member.id)}
-								disabled={removeMember.isPending}
+								disabled={isSelf || removeMember.isPending}
 							>
 								<Trash2 size={14} />
 							</Button>
