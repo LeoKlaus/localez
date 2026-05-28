@@ -507,7 +507,7 @@
 							href="/projects/{p.id}/strings?language={lang.language}"
 							class="flex flex-1 items-center gap-4"
 						>
-							<span class="shrink-0 text-sm font-medium">{languageName(lang.language)}</span>
+							<span class="w-36 shrink-0 truncate text-sm font-medium">{languageName(lang.language)}</span>
 
 							<div class="flex h-2 flex-1 overflow-hidden rounded-full bg-muted-foreground/20">
 								{#if total > 0}
