@@ -15,7 +15,7 @@ from app.core import prefill_events
 from app.core.limiter import limiter
 from app.database import create_db_session, get_db
 from app.dependencies.auth import get_current_active_user, get_optional_user, require_admin
-from app.dependencies.project_access import require_member, require_project_admin, require_read_access, require_reviewer
+from app.dependencies.project_access import require_member, require_project_admin, require_read_access, require_reviewer, require_write_access
 from app.dependencies.project_token import generate_project_token
 from app.models.localization import Localization, LocalizationState
 from app.models.translation_proposal import TranslationProposal
@@ -75,7 +75,7 @@ async def _run_prefill(
 
     SourceLoc = aliased(Localization)
     rows = (await db.execute(
-        select(Localization, SourceLoc.value.label("source_value"), StringKey.comment)
+        select(Localization, SourceLoc.value.label("source_value"), StringKey.comment, StringKey.key.label("key_name"))
         .join(StringKey, StringKey.id == Localization.string_key_id)
         .outerjoin(SourceLoc, (
             (SourceLoc.string_key_id == Localization.string_key_id) &
@@ -91,8 +91,8 @@ async def _run_prefill(
         )
     )).all()
 
-    to_translate = [(loc, src, comment) for loc, src, comment in rows if src]
-    skipped = len(rows) - len(to_translate)
+    to_translate = [(loc, src or key_name, comment) for loc, src, comment, key_name in rows]
+    skipped = 0
 
     if not to_translate:
         return 0, skipped
@@ -294,7 +294,7 @@ async def add_language(
     project_id: uuid.UUID,
     body: LanguageAdd,
     background_tasks: BackgroundTasks,
-    user: User = Depends(require_member),
+    user: User = Depends(require_write_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project(project_id, db)
@@ -304,13 +304,14 @@ async def add_language(
     if any(pl.language == body.language for pl in project.languages):
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "LANGUAGE_ALREADY_EXISTS", "message": f"Language '{body.language}' is already added to this project"})
 
+    source_language = project.source_language  # capture before commit expires attributes
     db.add(ProjectLanguage(project_id=project_id, language=body.language))
     await db.flush()
     await fill_missing_localizations(project_id, db)
     await db.commit()
     db.expire(project, ["languages"])
     prefill_events.register(project_id, body.language)
-    background_tasks.add_task(_run_prefill_background, project_id, body.language, project.source_language, user.id)
+    background_tasks.add_task(_run_prefill_background, project_id, body.language, source_language, user.id)
     project = await _get_project(project_id, db)
     return project
 

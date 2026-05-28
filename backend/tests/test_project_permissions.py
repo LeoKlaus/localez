@@ -286,13 +286,23 @@ async def test_reviewer_can_add_language(
         assert (await c.post(f"/api/projects/{proj['id']}/languages", json={"language": "fr"})).status_code == 201
 
 
-async def test_non_member_cannot_add_language(
+async def test_non_member_cannot_add_language_to_private_project(
     admin_client: AsyncClient, member_client, unique_username
 ):
-    proj = await _create_project(admin_client, "LangAddNonMember")
+    proj = await _create_project(admin_client, "LangAddNonMember")  # private by default
     username = unique_username("lang_non_member")
     async with member_client(username) as c:
         assert (await c.post(f"/api/projects/{proj['id']}/languages", json={"language": "ja"})).status_code == 403
+
+
+async def test_authenticated_user_can_add_language_to_public_project(
+    admin_client: AsyncClient, member_client, unique_username
+):
+    proj = await _create_project(admin_client, "LangAddPublic", is_public=True)
+    username = unique_username("lang_public_user")
+    async with member_client(username) as c:
+        resp = await c.post(f"/api/projects/{proj['id']}/languages", json={"language": "ja"})
+        assert resp.status_code == 201
 
 
 # ===========================================================================
