@@ -217,7 +217,7 @@ async def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: uuid.UUID,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_project_admin),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)

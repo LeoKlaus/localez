@@ -245,10 +245,19 @@
 		return total === 0 ? 0 : Math.round((n / total) * 100);
 	}
 
-	// API tokens (admin only)
+	// Derive the current user's project role from the project response (my_role is populated by get_project)
+	let myProjectRole = $derived(project.data?.my_role ?? null);
+	// project admin: global admin OR member with admin role
+	let isProjectAdmin = $derived(auth.isAdmin || myProjectRole === 'admin');
+	// project reviewer: project admin OR member with reviewer role
+	let isProjectReviewer = $derived(isProjectAdmin || myProjectRole === 'reviewer');
+	// project member: global admin OR any member (any role)
+	let isProjectMember = $derived(auth.isAdmin || myProjectRole !== null);
+
+	// API tokens (project admin and above)
 	const tokens = createQuery(() => ({
 		queryKey: ['tokens', projectId],
-		enabled: auth.isAdmin,
+		enabled: isProjectAdmin,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/tokens', {
 				params: { path: { project_id: projectId } }
@@ -300,10 +309,10 @@
 		toast.success('Token copied to clipboard');
 	}
 
-	// Members (admin only)
+	// Members (project admin and above only)
 	const members = createQuery(() => ({
 		queryKey: ['members', projectId],
-		enabled: auth.isAdmin,
+		enabled: isProjectAdmin,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/members', {
 				params: { path: { project_id: projectId } }
@@ -396,33 +405,35 @@
 					<p class="mt-1 text-sm text-muted-foreground">Created {formatDate(p.created_at)}</p>
 				</div>
 			</div>
-			{#if auth.isAdmin}
+			{#if isProjectReviewer}
 				<div class="flex flex-wrap gap-2">
 					<Button variant="outline" size="sm" href="/projects/{p.id}/review">
 						<ClipboardCheck size={14} class="mr-1" /> Review
 					</Button>
-					<Button variant="outline" size="sm" onclick={openEdit}>
-						<Pencil size={14} class="mr-1" /> Edit
-					</Button>
-					<Button variant="outline" size="sm" onclick={() => iconInput?.click()} disabled={iconLoading}>
-						<Upload size={14} class="mr-1" /> {iconLoading ? 'Uploading…' : p.has_icon ? 'Replace icon' : 'Upload icon'}
-					</Button>
-					<input bind:this={iconInput} type="file" accept="image/*" class="hidden" onchange={handleIconUpload} />
-					{#if p.has_icon}
-						<Button variant="outline" size="sm" onclick={() => deleteIcon.mutate()} disabled={deleteIcon.isPending}>
-							<Trash2 size={14} class="mr-1" /> Remove icon
+					{#if isProjectAdmin}
+						<Button variant="outline" size="sm" onclick={openEdit}>
+							<Pencil size={14} class="mr-1" /> Edit
+						</Button>
+						<Button variant="outline" size="sm" onclick={() => iconInput?.click()} disabled={iconLoading}>
+							<Upload size={14} class="mr-1" /> {iconLoading ? 'Uploading…' : p.has_icon ? 'Replace icon' : 'Upload icon'}
+						</Button>
+						<input bind:this={iconInput} type="file" accept="image/*" class="hidden" onchange={handleIconUpload} />
+						{#if p.has_icon}
+							<Button variant="outline" size="sm" onclick={() => deleteIcon.mutate()} disabled={deleteIcon.isPending}>
+								<Trash2 size={14} class="mr-1" /> Remove icon
+							</Button>
+						{/if}
+						<Button variant="outline" size="sm" onclick={handleExport}>
+							<Download size={14} class="mr-1" /> Export
+						</Button>
+						<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
+							<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
+						</Button>
+						<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
+						<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
+							<Trash2 size={14} class="mr-1" /> Delete
 						</Button>
 					{/if}
-					<Button variant="outline" size="sm" onclick={handleExport}>
-						<Download size={14} class="mr-1" /> Export
-					</Button>
-					<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
-						<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
-					</Button>
-					<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
-					<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
-						<Trash2 size={14} class="mr-1" /> Delete
-					</Button>
 				</div>
 			{/if}
 		</div>
@@ -468,7 +479,7 @@
 					<p class="text-sm text-muted-foreground">{stats.data.total_strings} translatable strings</p>
 				{/if}
 			</div>
-			{#if auth.isAuthenticated}
+			{#if isProjectMember}
 				<Button size="sm" onclick={() => { addLangOpen = true; newLanguage = ''; addLangError = ''; }}>
 					<Plus size={14} class="mr-1" /> Add language
 				</Button>
@@ -506,7 +517,7 @@
 							<span class="hidden text-right text-xs text-muted-foreground sm:inline">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
 							<span class="text-right text-xs text-muted-foreground sm:hidden">{pct(lang.translated, total)}%</span>
 						</a>
-						{#if auth.isAdmin}
+						{#if isProjectAdmin}
 							<Button
 								variant="ghost"
 								size="icon"
@@ -522,7 +533,7 @@
 			</div>
 		{/if}
 
-		{#if auth.isAdmin}
+		{#if isProjectAdmin}
 			<Separator class="my-6" />
 
 			<div class="mb-4 flex items-center justify-between">

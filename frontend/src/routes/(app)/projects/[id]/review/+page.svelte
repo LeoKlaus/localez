@@ -37,8 +37,27 @@
 		offset = 0;
 	});
 
-	onMount(() => {
-		if (!auth.isAdmin) goto('/projects');
+	const project = createQuery(() => ({
+		queryKey: ['project', projectId],
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	// Allow global admins, project admins, and project reviewers
+	let canReview = $derived(
+		auth.isAdmin ||
+		project.data?.my_role === 'admin' ||
+		project.data?.my_role === 'reviewer'
+	);
+
+	$effect(() => {
+		// Wait until project has loaded before redirecting, to avoid false negatives
+		if (!project.isPending && !canReview) goto('/projects');
 	});
 
 	const qc = useQueryClient();

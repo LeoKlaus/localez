@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { client } from '$lib/api/client';
+	import { useQueryClient } from '@tanstack/svelte-query';
 	import { startAuthentication } from '@simplewebauthn/browser';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -11,6 +12,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
+	const qc = useQueryClient();
 
 	let username = $state('');
 	let password = $state('');
@@ -60,6 +62,7 @@
 			const data = await res.json();
 			auth.setToken(data.access_token);
 			await fetchMe(data.access_token);
+			qc.clear();
 			goto('/projects');
 		} finally {
 			loading = false;
@@ -95,6 +98,7 @@
 			const data = await completeRes.json();
 			auth.setToken(data.access_token);
 			await fetchMe(data.access_token);
+			qc.clear();
 			goto('/projects');
 		} catch (err) {
 			if (err instanceof Error && err.name !== 'NotAllowedError') {

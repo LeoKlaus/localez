@@ -5,7 +5,7 @@
 	import { legalStore } from '$lib/stores/legal.svelte';
 	import { client } from '$lib/api/client';
 	import { onMount } from 'svelte';
-	import { createQuery } from '@tanstack/svelte-query';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -19,6 +19,7 @@
 	import Languages from 'lucide-svelte/icons/languages';
 
 	let { children } = $props();
+	const qc = useQueryClient();
 
 	const navItems = [
 		{ href: '/projects', label: 'All Projects', icon: FolderOpen }
@@ -45,6 +46,7 @@
 	async function handleLogout() {
 		await fetch('/api/auth/logout/cookie', { method: 'POST' });
 		auth.clear();
+		qc.clear();
 		goto('/login');
 	}
 

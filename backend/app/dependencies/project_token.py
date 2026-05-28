@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_access_token, hash_token
 from app.database import get_db
+from app.models.project_member import ProjectMember
 from app.models.project_token import ProjectToken, TokenType
 from app.models.user import GlobalRole, User
 
@@ -47,8 +48,8 @@ async def _resolve_project_token(
     return True
 
 
-async def _require_jwt_admin(token: str, db: AsyncSession) -> None:
-    """Validate a JWT bearer token and assert global admin role."""
+async def _require_jwt_project_admin(token: str, project_id: uuid.UUID, db: AsyncSession) -> None:
+    """Validate a JWT bearer token and assert global admin or project admin role."""
     try:
         payload = decode_access_token(token)
         user_id = uuid.UUID(payload["sub"])
@@ -64,10 +65,19 @@ async def _require_jwt_admin(token: str, db: AsyncSession) -> None:
             status.HTTP_401_UNAUTHORIZED,
             detail={"code": "INVALID_TOKEN", "message": "Invalid or expired token"},
         )
-    if user.global_role != GlobalRole.admin:
+    if user.global_role == GlobalRole.admin:
+        return
+
+    member = await db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+        )
+    )
+    if member is None or member.role != "admin":
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            detail={"code": "INSUFFICIENT_ROLE", "message": "Insufficient global role"},
+            detail={"code": "INSUFFICIENT_ROLE", "message": "Project admin role required"},
         )
 
 
@@ -79,7 +89,7 @@ async def require_import_access(
     if token.startswith(IMPORT_TOKEN_PREFIX):
         await _resolve_project_token(token, project_id, TokenType.import_token, db)
         return
-    await _require_jwt_admin(token, db)
+    await _require_jwt_project_admin(token, project_id, db)
 
 
 async def require_export_access(
@@ -90,4 +100,4 @@ async def require_export_access(
     if token.startswith(EXPORT_TOKEN_PREFIX):
         await _resolve_project_token(token, project_id, TokenType.export_token, db)
         return
-    await _require_jwt_admin(token, db)
+    await _require_jwt_project_admin(token, project_id, db)
