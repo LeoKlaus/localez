@@ -4,17 +4,20 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.language import LanguageCode
+from app.models.project_member import ProjectRole
 from app.models.project_token import TokenType
 
 
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     source_language: LanguageCode
+    is_public: bool = False
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     source_language: LanguageCode | None = None
+    is_public: bool | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -24,7 +27,9 @@ class ProjectResponse(BaseModel):
     created_by: uuid.UUID | None
     created_at: datetime
     has_icon: bool
+    is_public: bool
     languages: list[LanguageCode] = []
+    my_role: ProjectRole | None = None  # Current user's project role; None for global admins and non-members
 
     model_config = {"from_attributes": True}
 
@@ -41,6 +46,7 @@ class ProjectResponse(BaseModel):
             "created_by": data.created_by,
             "created_at": data.created_at,
             "has_icon": data.icon is not None,
+            "is_public": data.is_public,
             "languages": sorted(pl.language for pl in langs),
         }
 
@@ -68,6 +74,24 @@ class PrefillResponse(BaseModel):
 
 class BackTranslateResponse(BaseModel):
     text: str
+
+
+class ProjectMemberCreate(BaseModel):
+    username: str
+    role: ProjectRole = ProjectRole.translator
+
+
+class ProjectMemberUpdate(BaseModel):
+    role: ProjectRole
+
+
+class ProjectMemberResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    user_id: uuid.UUID
+    username: str
+    role: ProjectRole
+    created_at: datetime
 
 
 class ProjectTokenCreateRequest(BaseModel):

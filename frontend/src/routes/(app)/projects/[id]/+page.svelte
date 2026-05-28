@@ -22,6 +22,8 @@
 	import ClipboardCheck from 'lucide-svelte/icons/clipboard-check';
 	import Key from 'lucide-svelte/icons/key';
 	import Copy from 'lucide-svelte/icons/copy';
+	import Globe from 'lucide-svelte/icons/globe';
+	import Lock from 'lucide-svelte/icons/lock';
 	import { toast } from 'svelte-sonner';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
@@ -55,10 +57,12 @@
 	let editOpen = $state(false);
 	let editName = $state('');
 	let editLang = $state('');
+	let editIsPublic = $state(false);
 
 	function openEdit() {
 		editName = project.data?.name ?? '';
 		editLang = project.data?.source_language ?? '';
+		editIsPublic = project.data?.is_public ?? false;
 		editOpen = true;
 	}
 
@@ -66,7 +70,7 @@
 		mutationFn: async () => {
 			const { data, error } = await client.PATCH('/api/projects/{project_id}', {
 				params: { path: { project_id: projectId } },
-				body: { name: editName, source_language: editLang }
+				body: { name: editName, source_language: editLang, is_public: editIsPublic }
 			});
 			if (error) throw error;
 			return data;
@@ -241,10 +245,19 @@
 		return total === 0 ? 0 : Math.round((n / total) * 100);
 	}
 
-	// API tokens (admin only)
+	// Derive the current user's project role from the project response (my_role is populated by get_project)
+	let myProjectRole = $derived(project.data?.my_role ?? null);
+	// project admin: global admin OR member with admin role
+	let isProjectAdmin = $derived(auth.isAdmin || myProjectRole === 'admin');
+	// project reviewer: project admin OR member with reviewer role
+	let isProjectReviewer = $derived(isProjectAdmin || myProjectRole === 'reviewer');
+	// project member: global admin OR any member (any role)
+	let isProjectMember = $derived(auth.isAdmin || myProjectRole !== null);
+
+	// API tokens (project admin and above)
 	const tokens = createQuery(() => ({
 		queryKey: ['tokens', projectId],
-		enabled: auth.isAdmin,
+		enabled: isProjectAdmin,
 		queryFn: async () => {
 			const { data, error } = await client.GET('/api/projects/{project_id}/tokens', {
 				params: { path: { project_id: projectId } }
@@ -295,6 +308,72 @@
 		await navigator.clipboard.writeText(token);
 		toast.success('Token copied to clipboard');
 	}
+
+	// Members (project admin and above only)
+	const members = createQuery(() => ({
+		queryKey: ['members', projectId],
+		enabled: isProjectAdmin,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}/members', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	let addMemberOpen = $state(false);
+	let newMemberUsername = $state('');
+	let addMemberError = $state('');
+
+	const addMember = createMutation(() => ({
+		mutationFn: async () => {
+			const { data, error } = await client.POST('/api/projects/{project_id}/members', {
+				params: { path: { project_id: projectId } },
+				body: { username: newMemberUsername.trim() }
+			});
+			if (error) throw error;
+			return data;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['members', projectId] });
+			addMemberOpen = false;
+			newMemberUsername = '';
+			addMemberError = '';
+		},
+		onError: (err: unknown) => {
+			const code = (err as { detail?: { code?: string } })?.detail?.code;
+			if (code === 'USER_NOT_FOUND') addMemberError = 'User not found.';
+			else if (code === 'ALREADY_MEMBER') addMemberError = 'User is already a member.';
+			else addMemberError = 'Failed to add member.';
+		}
+	}));
+
+	const updateMemberRole = createMutation(() => ({
+		mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
+			const { data, error } = await client.PATCH('/api/projects/{project_id}/members/{member_id}', {
+				params: { path: { project_id: projectId, member_id: memberId } },
+				body: { role: role as 'admin' | 'reviewer' | 'translator' }
+			});
+			if (error) throw error;
+			return data;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['members', projectId] });
+		}
+	}));
+
+	const removeMember = createMutation(() => ({
+		mutationFn: async (memberId: string) => {
+			const { error } = await client.DELETE('/api/projects/{project_id}/members/{member_id}', {
+				params: { path: { project_id: projectId, member_id: memberId } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['members', projectId] });
+		}
+	}));
 </script>
 
 <div class="p-6">
@@ -310,40 +389,51 @@
 					<img src="{BASE_URL}/api/projects/{p.id}/icon" alt="" class="size-16 rounded-xl object-cover shadow-sm" />
 				{/if}
 				<div>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-2 flex-wrap">
 						<h1 class="text-2xl font-bold">{p.name}</h1>
 						<Badge variant="secondary">{p.source_language}</Badge>
+						{#if p.is_public}
+							<Badge variant="outline" class="gap-1 text-muted-foreground">
+								<Globe size={11} />Public
+							</Badge>
+						{:else}
+							<Badge variant="outline" class="gap-1 text-muted-foreground">
+								<Lock size={11} />Private
+							</Badge>
+						{/if}
 					</div>
 					<p class="mt-1 text-sm text-muted-foreground">Created {formatDate(p.created_at)}</p>
 				</div>
 			</div>
-			{#if auth.isAdmin}
+			{#if isProjectReviewer}
 				<div class="flex flex-wrap gap-2">
 					<Button variant="outline" size="sm" href="/projects/{p.id}/review">
 						<ClipboardCheck size={14} class="mr-1" /> Review
 					</Button>
-					<Button variant="outline" size="sm" onclick={openEdit}>
-						<Pencil size={14} class="mr-1" /> Edit
-					</Button>
-					<Button variant="outline" size="sm" onclick={() => iconInput?.click()} disabled={iconLoading}>
-						<Upload size={14} class="mr-1" /> {iconLoading ? 'Uploading…' : p.has_icon ? 'Replace icon' : 'Upload icon'}
-					</Button>
-					<input bind:this={iconInput} type="file" accept="image/*" class="hidden" onchange={handleIconUpload} />
-					{#if p.has_icon}
-						<Button variant="outline" size="sm" onclick={() => deleteIcon.mutate()} disabled={deleteIcon.isPending}>
-							<Trash2 size={14} class="mr-1" /> Remove icon
+					{#if isProjectAdmin}
+						<Button variant="outline" size="sm" onclick={openEdit}>
+							<Pencil size={14} class="mr-1" /> Edit
+						</Button>
+						<Button variant="outline" size="sm" onclick={() => iconInput?.click()} disabled={iconLoading}>
+							<Upload size={14} class="mr-1" /> {iconLoading ? 'Uploading…' : p.has_icon ? 'Replace icon' : 'Upload icon'}
+						</Button>
+						<input bind:this={iconInput} type="file" accept="image/*" class="hidden" onchange={handleIconUpload} />
+						{#if p.has_icon}
+							<Button variant="outline" size="sm" onclick={() => deleteIcon.mutate()} disabled={deleteIcon.isPending}>
+								<Trash2 size={14} class="mr-1" /> Remove icon
+							</Button>
+						{/if}
+						<Button variant="outline" size="sm" onclick={handleExport}>
+							<Download size={14} class="mr-1" /> Export
+						</Button>
+						<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
+							<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
+						</Button>
+						<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
+						<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
+							<Trash2 size={14} class="mr-1" /> Delete
 						</Button>
 					{/if}
-					<Button variant="outline" size="sm" onclick={handleExport}>
-						<Download size={14} class="mr-1" /> Export
-					</Button>
-					<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
-						<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
-					</Button>
-					<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
-					<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
-						<Trash2 size={14} class="mr-1" /> Delete
-					</Button>
 				</div>
 			{/if}
 		</div>
@@ -389,7 +479,7 @@
 					<p class="text-sm text-muted-foreground">{stats.data.total_strings} translatable strings</p>
 				{/if}
 			</div>
-			{#if auth.isAuthenticated}
+			{#if isProjectMember}
 				<Button size="sm" onclick={() => { addLangOpen = true; newLanguage = ''; addLangError = ''; }}>
 					<Plus size={14} class="mr-1" /> Add language
 				</Button>
@@ -427,7 +517,7 @@
 							<span class="hidden text-right text-xs text-muted-foreground sm:inline">{pct(lang.translated, total)}% done · {pct(lang.needs_review, total)}% in review · {pct(lang.missing, total)}% missing</span>
 							<span class="text-right text-xs text-muted-foreground sm:hidden">{pct(lang.translated, total)}%</span>
 						</a>
-						{#if auth.isAdmin}
+						{#if isProjectAdmin}
 							<Button
 								variant="ghost"
 								size="icon"
@@ -443,7 +533,56 @@
 			</div>
 		{/if}
 
-		{#if auth.isAdmin}
+		{#if isProjectAdmin}
+			<Separator class="my-6" />
+
+			<div class="mb-4 flex items-center justify-between">
+				<div>
+					<h2 class="text-lg font-semibold">Members</h2>
+					<p class="text-sm text-muted-foreground">Users with explicit access to this project.</p>
+				</div>
+				<Button size="sm" onclick={() => { addMemberOpen = true; newMemberUsername = ''; addMemberError = ''; }}>
+					<Plus size={14} class="mr-1" /> Add member
+				</Button>
+			</div>
+
+			{#if members.isPending}
+				<div class="h-16 animate-pulse rounded-lg bg-muted"></div>
+			{:else if (members.data?.length ?? 0) === 0}
+				<p class="text-sm text-muted-foreground">No members yet.</p>
+			{:else}
+				<div class="divide-y rounded-lg border">
+					{#each members.data! as member}
+						{@const isSelf = member.user_id === auth.user?.id}
+						<div class="flex items-center gap-3 px-4 py-3">
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium">{member.username}</p>
+								<p class="text-xs text-muted-foreground">Added {formatDate(member.created_at)}</p>
+							</div>
+							<select
+								class="rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+								value={member.role}
+								disabled={isSelf}
+								onchange={(e) => updateMemberRole.mutate({ memberId: member.id, role: e.currentTarget.value })}
+							>
+								<option value="translator">Translator</option>
+								<option value="reviewer">Reviewer</option>
+								<option value="admin">Admin</option>
+							</select>
+							<Button
+								variant="ghost"
+								size="icon"
+								class="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+								onclick={() => removeMember.mutate(member.id)}
+								disabled={isSelf || removeMember.isPending}
+							>
+								<Trash2 size={14} />
+							</Button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			<Separator class="my-6" />
 
 			<div class="mb-4 flex items-center justify-between">
@@ -513,6 +652,13 @@
 				<Label>Source language</Label>
 				<Input bind:value={editLang} required maxlength={20} />
 			</div>
+			<label class="flex items-center gap-3 cursor-pointer select-none">
+				<input type="checkbox" bind:checked={editIsPublic} class="size-4 rounded border accent-primary" />
+				<div>
+					<span class="text-sm font-medium">Public project</span>
+					<p class="text-xs text-muted-foreground">Anyone can read; authenticated users can translate</p>
+				</div>
+			</label>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (editOpen = false)}>Cancel</Button>
 				<Button type="submit" disabled={updateProject.isPending}>Save</Button>
@@ -619,6 +765,31 @@
 		<Dialog.Footer>
 			<Button onclick={() => (createdTokenOpen = false)}>Done</Button>
 		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Add member dialog -->
+<Dialog.Root bind:open={addMemberOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Add member</Dialog.Title>
+			<Dialog.Description>Enter the username of the user to add to this project.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={(e) => { e.preventDefault(); addMember.mutate(); }} class="space-y-4">
+			{#if addMemberError}
+				<p class="text-sm text-destructive">{addMemberError}</p>
+			{/if}
+			<div class="space-y-2">
+				<Label>Username</Label>
+				<Input bind:value={newMemberUsername} placeholder="username" required maxlength={150} />
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (addMemberOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={!newMemberUsername.trim() || addMember.isPending}>
+					{addMember.isPending ? 'Adding…' : 'Add'}
+				</Button>
+			</Dialog.Footer>
+		</form>
 	</Dialog.Content>
 </Dialog.Root>
 

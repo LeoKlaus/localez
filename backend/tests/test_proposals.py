@@ -34,12 +34,13 @@ async def _first_new_localization(admin_client, xcstrings_project):
 # Create proposals
 # ---------------------------------------------------------------------------
 
-async def test_any_user_can_create_proposal(
+async def test_translator_member_can_create_proposal(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
     username = unique_username("tr_create")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         resp = await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -63,12 +64,27 @@ async def test_unauthenticated_cannot_create_proposal(
     assert resp.status_code == 401
 
 
+async def test_non_member_cannot_create_proposal(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    username = unique_username("tr_nonmember")
+    async with member_client(username) as c:
+        key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
+        resp = await c.post(
+            f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
+            json={"proposed_value": "Übersetzt", "comment": "test"},
+        )
+        assert resp.status_code == 403
+
+
 async def test_proposal_on_new_localization_returns_409(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
     username = unique_username("tr_novalue")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
         assert loc_id is not None, "No 'new' localization found in xcstrings_project"
 
@@ -90,6 +106,7 @@ async def test_list_proposals_for_localization(
     pid = xcstrings_project["id"]
     username = unique_username("tr_list")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -108,6 +125,7 @@ async def test_list_project_proposals_dashboard(
     pid = xcstrings_project["id"]
     username = unique_username("tr_dash")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -119,14 +137,25 @@ async def test_list_project_proposals_dashboard(
     assert len(resp.json()) >= 1
 
 
-async def test_any_user_can_access_proposals_dashboard(
+async def test_member_can_access_proposals_dashboard(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
     username = unique_username("tr_nodash")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         resp = await c.get(f"/api/projects/{pid}/proposals")
         assert resp.status_code == 200
+
+
+async def test_non_member_cannot_access_proposals_dashboard(
+    admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
+):
+    pid = xcstrings_project["id"]
+    username = unique_username("tr_nodash_nm")
+    async with member_client(username) as c:
+        resp = await c.get(f"/api/projects/{pid}/proposals")
+        assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +168,7 @@ async def test_admin_can_accept_proposal(
     pid = xcstrings_project["id"]
     username = unique_username("tr_accept")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -160,6 +190,7 @@ async def test_accept_updates_canonical_localization(
     pid = xcstrings_project["id"]
     username = unique_username("tr_canon")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -185,7 +216,9 @@ async def test_accept_deletes_all_proposals_atomically(
     tr2_name = unique_username("tr_atom2")
 
     async with member_client(tr1_name) as tr1:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": tr1_name})
         async with member_client(tr2_name) as tr2:
+            await admin_client.post(f"/api/projects/{pid}/members", json={"username": tr2_name})
             key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
             prop1 = (await tr1.post(
                 f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -214,6 +247,7 @@ async def test_non_admin_cannot_accept_proposal(
     pid = xcstrings_project["id"]
     username = unique_username("tr_noaccept")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -236,6 +270,7 @@ async def test_admin_can_reject_proposal(
     pid = xcstrings_project["id"]
     username = unique_username("tr_reject")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -254,6 +289,7 @@ async def test_reject_does_not_update_canonical_value(
     pid = xcstrings_project["id"]
     username = unique_username("tr_rejval")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, original_loc = await _first_localization(admin_client, xcstrings_project)
         original_value = original_loc["value"]
         prop = (await c.post(
@@ -281,6 +317,7 @@ async def test_resubmit_same_value_returns_409(
     pid = xcstrings_project["id"]
     username = unique_username("tr_dup")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -300,6 +337,7 @@ async def test_resubmit_new_value_overrides_existing_proposal(
     pid = xcstrings_project["id"]
     username = unique_username("tr_override")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",
@@ -329,6 +367,7 @@ async def test_proposal_matching_current_translation_returns_409(
     pid = xcstrings_project["id"]
     username = unique_username("tr_matchval")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
         key = next(s for s in strings if s["key"] == "Reviewed")
         locs = (await admin_client.get(f"/api/projects/{pid}/strings/{key['id']}/localizations")).json()
@@ -348,6 +387,7 @@ async def test_proposal_on_existing_translation_stays_pending(
     pid = xcstrings_project["id"]
     username = unique_username("tr_pending")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         strings = (await admin_client.get(f"/api/projects/{pid}/strings")).json()
         key = next(s for s in strings if s["key"] == "Reviewed")
         locs = (await admin_client.get(f"/api/projects/{pid}/strings/{key['id']}/localizations")).json()
@@ -367,6 +407,7 @@ async def test_accept_deleted_proposal_returns_404(
     pid = xcstrings_project["id"]
     username = unique_username("tr_dbl")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id, _ = await _first_localization(admin_client, xcstrings_project)
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/proposals",

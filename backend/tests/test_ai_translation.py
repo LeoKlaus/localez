@@ -124,6 +124,7 @@ async def test_back_translate_proposal_returns_422_when_no_provider(
 
     username = unique_username("bt_prop_noprov")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key['id']}/localizations/{loc['id']}/proposals",
             json={"proposed_value": "Vorschlag", "comment": "test"},
@@ -147,6 +148,7 @@ async def test_back_translate_proposal_happy_path(
 
     username = unique_username("bt_prop_ok")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         prop = (await c.post(
             f"/api/projects/{pid}/strings/{key['id']}/localizations/{loc['id']}/proposals",
             json={"proposed_value": "Ein Vorschlag", "comment": "test"},

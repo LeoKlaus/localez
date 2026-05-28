@@ -10,6 +10,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import Plus from 'lucide-svelte/icons/plus';
 	import FolderOpen from 'lucide-svelte/icons/folder-open';
+	import Globe from 'lucide-svelte/icons/globe';
 	import { auth } from '$lib/stores/auth.svelte';
 
 	const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL ?? '');
@@ -28,12 +29,13 @@
 	let createOpen = $state(false);
 	let name = $state('');
 	let sourceLanguage = $state('en');
+	let isPublic = $state(false);
 	let createError = $state('');
 
 	const createProject = createMutation(() => ({
 		mutationFn: async () => {
 			const { data, error } = await client.POST('/api/projects', {
-				body: { name, source_language: sourceLanguage }
+				body: { name, source_language: sourceLanguage, is_public: isPublic }
 			});
 			if (error) throw error;
 			return data;
@@ -43,6 +45,7 @@
 			createOpen = false;
 			name = '';
 			sourceLanguage = 'en';
+			isPublic = false;
 			createError = '';
 		},
 		onError: () => {
@@ -98,6 +101,11 @@
 								{/if}
 								<span class="truncate">{project.name}</span>
 								<Badge variant="secondary" class="shrink-0">{project.source_language}</Badge>
+								{#if project.is_public}
+									<Badge variant="outline" class="shrink-0 gap-1 text-muted-foreground">
+										<Globe size={10} />Public
+									</Badge>
+								{/if}
 							</Card.Title>
 							<Card.Description>Created {formatDate(project.created_at)}</Card.Description>
 						</Card.Header>
@@ -126,6 +134,13 @@
 				<Input id="lang" bind:value={sourceLanguage} placeholder="en" required maxlength={20} />
 				<p class="text-xs text-muted-foreground">BCP 47 language code, e.g. en, de, ja</p>
 			</div>
+			<label class="flex items-center gap-3 cursor-pointer select-none">
+				<input type="checkbox" bind:checked={isPublic} class="size-4 rounded border accent-primary" />
+				<div>
+					<span class="text-sm font-medium">Public project</span>
+					<p class="text-xs text-muted-foreground">Anyone can read; authenticated users can translate</p>
+				</div>
+			</label>
 			<Dialog.Footer>
 				<Button type="button" variant="outline" onclick={() => (createOpen = false)}>Cancel</Button>
 				<Button type="submit" disabled={createProject.isPending}>

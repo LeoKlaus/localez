@@ -6,6 +6,13 @@ from pydantic import BaseModel, Field
 from app.models.user import GlobalRole
 
 
+class UserPublicResponse(BaseModel):
+    id: uuid.UUID
+    username: str
+
+    model_config = {"from_attributes": True}
+
+
 class UserResponse(BaseModel):
     id: uuid.UUID
     username: str

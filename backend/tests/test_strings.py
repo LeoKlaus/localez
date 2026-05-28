@@ -9,18 +9,26 @@ pytestmark = pytest.mark.usefixtures("setup_database")
 # Strings list
 # ---------------------------------------------------------------------------
 
-async def test_list_strings_as_any_user(member_client, unique_username, xcstrings_project: dict):
+async def test_list_strings_as_member(admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict):
     username = unique_username("str_user")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{xcstrings_project['id']}/members", json={"username": username})
         resp = await c.get(f"/api/projects/{xcstrings_project['id']}/strings")
         assert resp.status_code == 200
         assert len(resp.json()) > 0
         assert "X-Total-Count" in resp.headers
 
 
-async def test_list_strings_unauthenticated(client: AsyncClient, xcstrings_project: dict):
+async def test_non_member_cannot_list_strings_of_private_project(member_client, unique_username, xcstrings_project: dict):
+    username = unique_username("str_nonmember")
+    async with member_client(username) as c:
+        resp = await c.get(f"/api/projects/{xcstrings_project['id']}/strings")
+        assert resp.status_code == 403
+
+
+async def test_unauthenticated_cannot_list_strings_of_private_project(client: AsyncClient, xcstrings_project: dict):
     resp = await client.get(f"/api/projects/{xcstrings_project['id']}/strings")
-    assert resp.status_code == 200
+    assert resp.status_code == 401
 
 
 async def test_list_strings_filter_should_translate(admin_client: AsyncClient, xcstrings_project: dict):
@@ -168,12 +176,13 @@ async def _first_new_localization(admin_client, xcstrings_project):
     return None, None
 
 
-async def test_any_user_can_set_initial_value(
+async def test_translator_member_can_set_initial_value(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
     username = unique_username("sv_user")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
         assert loc_id is not None, "No 'new' localization found"
         resp = await c.put(
@@ -186,7 +195,7 @@ async def test_any_user_can_set_initial_value(
         assert data["state"] == "needs_review"
 
 
-async def test_non_admin_cannot_override_existing_value(
+async def test_non_reviewer_member_cannot_override_existing_value(
     admin_client: AsyncClient, member_client, unique_username, xcstrings_project: dict
 ):
     pid = xcstrings_project["id"]
@@ -197,6 +206,7 @@ async def test_non_admin_cannot_override_existing_value(
 
     username = unique_username("sv_nooverride")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         resp = await c.put(
             f"/api/projects/{pid}/strings/{key['id']}/localizations/{loc['id']}/value",
             json={"value": "Überschrieben"},
@@ -243,6 +253,7 @@ async def test_original_author_can_override_own_value(
     pid = xcstrings_project["id"]
     username = unique_username("sv_author")
     async with member_client(username) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": username})
         key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
         assert loc_id is not None, "No 'new' localization found"
 
@@ -266,6 +277,7 @@ async def test_different_user_cannot_override_others_value(
     intruder = unique_username("sv_intruder")
 
     async with member_client(author) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": author})
         key_id, loc_id = await _first_new_localization(admin_client, xcstrings_project)
         assert loc_id is not None, "No 'new' localization found"
         await c.put(
@@ -274,6 +286,7 @@ async def test_different_user_cannot_override_others_value(
         )
 
     async with member_client(intruder) as c:
+        await admin_client.post(f"/api/projects/{pid}/members", json={"username": intruder})
         resp = await c.put(
             f"/api/projects/{pid}/strings/{key_id}/localizations/{loc_id}/value",
             json={"value": "Überschreiben versucht"},

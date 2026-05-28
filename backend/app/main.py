@@ -10,8 +10,8 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.core.limiter import limiter
-from app.models import project_language, project_token  # noqa: F401 — ensure models are registered with Base
-from app.routers import auth, projects, proposals, strings, users, xcstrings
+from app.models import project_language, project_member, project_token  # noqa: F401 — ensure models are registered with Base
+from app.routers import auth, config, projects, proposals, strings, users, xcstrings
 
 app = FastAPI(title="Localez", version="0.1.0", root_path="/api")
 app.state.limiter = limiter
@@ -22,6 +22,7 @@ _allowed_hosts = list({*settings.allowed_hosts.split(), "localhost"})
 if _allowed_hosts != ["*"]:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
 
+app.include_router(config.router, prefix="/config", tags=["config"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(projects.router, prefix="/projects", tags=["projects"])
