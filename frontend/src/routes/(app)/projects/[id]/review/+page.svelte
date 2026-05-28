@@ -412,7 +412,7 @@
 										class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
 									>
 										<Languages size={12} />
-										{backTranslations[loc.id] ? 'Hide back-translation' : backTranslating[loc.id] ? 'Translating…' : `Back-translate via ${configStore.providerLabel}`}
+										{backTranslations[loc.id] ? 'Hide back-translation' : backTranslating[loc.id] ? 'Translating…' : `Back-translate with ${configStore.providerLabel}`}
 									</button>
 									{#if backTranslations[loc.id]}
 										<p class="mt-1.5 font-mono text-xs text-muted-foreground">
@@ -443,7 +443,7 @@
 												class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
 											>
 												<Languages size={12} />
-												{backTranslations[proposal.id] ? 'Hide back-translation' : backTranslating[proposal.id] ? 'Translating…' : `Back-translate via ${configStore.providerLabel}`}
+												{backTranslations[proposal.id] ? 'Hide back-translation' : backTranslating[proposal.id] ? 'Translating…' : `Back-translate with ${configStore.providerLabel}`}
 											</button>
 											{#if backTranslations[proposal.id]}
 												<p class="mt-1.5 font-mono text-xs text-muted-foreground">
