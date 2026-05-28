@@ -12,12 +12,14 @@ class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     source_language: LanguageCode
     is_public: bool = False
+    description: str | None = Field(default=None, max_length=10_000)
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     source_language: LanguageCode | None = None
     is_public: bool | None = None
+    description: str | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -28,6 +30,7 @@ class ProjectResponse(BaseModel):
     created_at: datetime
     has_icon: bool
     is_public: bool
+    description: str | None = None
     languages: list[LanguageCode] = []
     my_role: ProjectRole | None = None  # Current user's project role; None for global admins and non-members
 
@@ -47,6 +50,7 @@ class ProjectResponse(BaseModel):
             "created_at": data.created_at,
             "has_icon": data.icon is not None,
             "is_public": data.is_public,
+            "description": data.description,
             "languages": sorted(pl.language for pl in langs),
         }
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, LargeBinary, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, LargeBinary, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,7 @@ class Project(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     icon: Mapped[bytes | None] = mapped_column(LargeBinary(), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     languages: Mapped[list["ProjectLanguage"]] = relationship(  # noqa: F821
         back_populates="project", cascade="all, delete-orphan"

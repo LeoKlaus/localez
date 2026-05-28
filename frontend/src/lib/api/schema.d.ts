@@ -1190,6 +1190,8 @@ export interface components {
              * @default false
              */
             is_public?: boolean;
+            /** Description */
+            description?: string | null;
         };
         /** ProjectResponse */
         ProjectResponse: {
@@ -1213,6 +1215,8 @@ export interface components {
             has_icon: boolean;
             /** Is Public */
             is_public: boolean;
+            /** Description */
+            description?: string | null;
             /**
              * Languages
              * @default []
@@ -1287,6 +1291,8 @@ export interface components {
             source_language?: string | null;
             /** Is Public */
             is_public?: boolean | null;
+            /** Description */
+            description?: string | null;
         };
         /** ProposalCreate */
         ProposalCreate: {
