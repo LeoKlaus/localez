@@ -175,7 +175,7 @@
 			{/if}
 			{#if configStore.version}
 				<div class="mt-auto flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
-					<span>v{configStore.version}</span>
+					<span>{configStore.channel === 'stable' ? 'v' : ''}{configStore.version}</span>
 					{#if configStore.channel === 'beta'}
 						<button onclick={() => channelInfoOpen = true} class="rounded bg-blue-100 px-1.5 py-0.5 font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60">Beta</button>
 					{:else if configStore.channel === 'preview'}
