@@ -137,7 +137,9 @@
 
 	$effect(() => {
 		for (const loc of langStrings.data?.items ?? []) {
-			if (!(loc.id in drafts)) drafts[loc.id] = loc.value ?? '';
+			if (document.activeElement !== textareaRefs[loc.id]) {
+				drafts[loc.id] = loc.value ?? '';
+			}
 		}
 	});
 
