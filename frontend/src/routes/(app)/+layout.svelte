@@ -3,12 +3,14 @@
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { legalStore } from '$lib/stores/legal.svelte';
+	import { configStore } from '$lib/stores/config.svelte';
 	import { client } from '$lib/api/client';
 	import { onMount } from 'svelte';
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { initials } from '$lib/utils';
 	import FolderOpen from 'lucide-svelte/icons/folder-open';
 	import Settings from 'lucide-svelte/icons/settings';
@@ -17,9 +19,12 @@
 	import LogIn from 'lucide-svelte/icons/log-in';
 	import ClipboardCheck from 'lucide-svelte/icons/clipboard-check';
 	import Languages from 'lucide-svelte/icons/languages';
+	import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
 
 	let { children } = $props();
 	const qc = useQueryClient();
+
+	let channelInfoOpen = $state(false);
 
 	const navItems = [
 		{ href: '/projects', label: 'All Projects', icon: FolderOpen }
@@ -168,7 +173,17 @@
 					{/each}
 				{/if}
 			{/if}
-			<a href="https://github.com/leoklaus/localez" target="_blank" rel="noopener noreferrer" class="mt-auto flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+			{#if configStore.version}
+				<div class="mt-auto flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
+					<span>v{configStore.version}</span>
+					{#if configStore.channel === 'beta'}
+						<button onclick={() => channelInfoOpen = true} class="rounded bg-blue-100 px-1.5 py-0.5 font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60">Beta</button>
+					{:else if configStore.channel === 'preview'}
+						<button onclick={() => channelInfoOpen = true} class="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:hover:bg-amber-900/60">Preview</button>
+					{/if}
+				</div>
+			{/if}
+			<a href="https://github.com/leoklaus/localez" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
 				<svg viewBox="0 0 24 24" class="size-4 shrink-0 fill-current" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.026 2.747-1.026.546 1.378.202 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.944.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.2 22 16.447 22 12.021 22 6.484 17.523 2 12 2z"/></svg>
 				Localez on GitHub
 			</a>
@@ -238,23 +253,37 @@
 					<span class="font-bold">Localez</span>
 				</a>
 			{/if}
-			<div class="flex items-center gap-3">
-				{#if legalStore.hasImprint || legalStore.hasPrivacy || legalStore.hasContributions}
-					<div class="flex gap-3 text-xs text-muted-foreground">
-						{#if legalStore.hasImprint}
-							<a href="/legal/imprint" class="hover:text-foreground hover:underline">Imprint</a>
-						{/if}
-						{#if legalStore.hasPrivacy}
-							<a href="/legal/privacy" class="hover:text-foreground hover:underline">Privacy Policy</a>
-						{/if}
-						{#if legalStore.hasContributions}
-							<a href="/legal/contributions" class="hover:text-foreground hover:underline">Contribution Guidelines</a>
-						{/if}
-					</div>
+			<div class="flex items-center gap-2">
+				{#if configStore.channel === 'beta'}
+					<button onclick={() => channelInfoOpen = true} class="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60">Beta</button>
+				{:else if configStore.channel === 'preview'}
+					<button onclick={() => channelInfoOpen = true} class="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:hover:bg-amber-900/60">Preview</button>
 				{/if}
-				<a href="https://github.com/leoklaus/localez" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" class="text-muted-foreground hover:text-foreground">
-					<svg viewBox="0 0 24 24" class="size-4 fill-current" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.026 2.747-1.026.546 1.378.202 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.944.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.2 22 16.447 22 12.021 22 6.484 17.523 2 12 2z"/></svg>
-				</a>
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger class="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
+						<MoreHorizontal size={18} />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						<DropdownMenu.Item class="p-0">
+							<a href="https://github.com/leoklaus/localez" target="_blank" rel="noopener noreferrer" class="flex w-full items-center px-1.5 py-2">
+								<svg viewBox="0 0 24 24" class="mr-2 size-4 shrink-0 fill-current" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.026 2.747-1.026.546 1.378.202 2.397.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.944.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.2 22 16.447 22 12.021 22 6.484 17.523 2 12 2z"/></svg>
+								Localez on GitHub
+							</a>
+						</DropdownMenu.Item>
+						{#if legalStore.hasImprint || legalStore.hasPrivacy || legalStore.hasContributions}
+							<DropdownMenu.Separator />
+							{#if legalStore.hasImprint}
+								<DropdownMenu.Item class="p-0"><a href="/legal/imprint" class="block w-full px-1.5 py-2">Imprint</a></DropdownMenu.Item>
+							{/if}
+							{#if legalStore.hasPrivacy}
+								<DropdownMenu.Item class="p-0"><a href="/legal/privacy" class="block w-full px-1.5 py-2">Privacy Policy</a></DropdownMenu.Item>
+							{/if}
+							{#if legalStore.hasContributions}
+								<DropdownMenu.Item class="p-0"><a href="/legal/contributions" class="block w-full px-1.5 py-2">Contribution Guidelines</a></DropdownMenu.Item>
+							{/if}
+						{/if}
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
 			</div>
 		</header>
 
@@ -322,3 +351,21 @@
 		</main>
 	</div>
 </div>
+
+<Dialog.Root bind:open={channelInfoOpen}>
+	<Dialog.Content class="max-w-sm">
+		<Dialog.Header>
+			{#if configStore.channel === 'beta'}
+				<Dialog.Title>Beta</Dialog.Title>
+				<Dialog.Description>
+					This is a beta release. Beta builds are pre-release versions that may contain incomplete features or bugs. Please <a href="https://github.com/LeoKlaus/localez/issues/new/choose" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline">report any issues</a> you encounter.
+				</Dialog.Description>
+			{:else if configStore.channel === 'preview'}
+				<Dialog.Title>Preview</Dialog.Title>
+				<Dialog.Description>
+					This is a preview build, automatically built from the latest commit on the main branch. Preview builds may be unstable and are intended for testing purposes only. Please <a href="https://github.com/LeoKlaus/localez/issues/new/choose" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline">report any issues</a> you encounter.
+				</Dialog.Description>
+			{/if}
+		</Dialog.Header>
+	</Dialog.Content>
+</Dialog.Root>

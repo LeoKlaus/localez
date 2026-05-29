@@ -37,6 +37,14 @@ jobs:
         id: tag
         run: echo "suffix=$(echo '${{ matrix.platform }}' | tr '/' '-')" >> $GITHUB_OUTPUT
 
+      - name: Strip version prefix
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Set channel
+        id: channel
+        run: echo "channel=${{ github.event.release.prerelease && 'beta' || 'stable' }}" >> $GITHUB_OUTPUT
+
       - name: Build and push backend
         uses: docker/build-push-action@v7
         with:
@@ -44,6 +52,9 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           tags: ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:${{ github.ref_name }}-${{ steps.tag.outputs.suffix }}
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.version }}
+            CHANNEL=${{ steps.channel.outputs.channel }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

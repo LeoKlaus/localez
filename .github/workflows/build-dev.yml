@@ -37,6 +37,10 @@ jobs:
         id: tag
         run: echo "suffix=$(echo '${{ matrix.platform }}' | tr '/' '-')" >> $GITHUB_OUTPUT
 
+      - name: Short SHA
+        id: sha
+        run: echo "sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
       - name: Build and push backend
         uses: docker/build-push-action@v7
         with:
@@ -44,6 +48,9 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           tags: ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:dev-${{ steps.tag.outputs.suffix }}
+          build-args: |
+            APP_VERSION=dev-${{ steps.sha.outputs.sha }}
+            CHANNEL=preview
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
