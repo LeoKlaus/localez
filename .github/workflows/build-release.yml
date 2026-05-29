@@ -87,17 +87,25 @@ jobs:
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Merge backend manifest
+        env:
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
-          docker buildx imagetools create \
-            -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:${{ github.ref_name }} \
-            -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:latest \
+          TAGS="-t ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:${{ github.ref_name }}"
+          if [ "$IS_PRERELEASE" = "false" ]; then
+            TAGS="$TAGS -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:latest"
+          fi
+          docker buildx imagetools create $TAGS \
             ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:${{ github.ref_name }}-linux-amd64 \
             ghcr.io/${{ steps.meta.outputs.owner }}/localez-backend:${{ github.ref_name }}-linux-arm64
 
       - name: Merge frontend manifest
+        env:
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
-          docker buildx imagetools create \
-            -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:${{ github.ref_name }} \
-            -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:latest \
+          TAGS="-t ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:${{ github.ref_name }}"
+          if [ "$IS_PRERELEASE" = "false" ]; then
+            TAGS="$TAGS -t ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:latest"
+          fi
+          docker buildx imagetools create $TAGS \
             ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:${{ github.ref_name }}-linux-amd64 \
             ghcr.io/${{ steps.meta.outputs.owner }}/localez-frontend:${{ github.ref_name }}-linux-arm64
