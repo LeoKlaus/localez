@@ -491,7 +491,7 @@ async def list_language_localizations(
             (SourceLoc.variation_key == Localization.variation_key)
         ))
         .where(StringKey.project_id == project_id, StringKey.should_translate == True, Localization.language == language)
-        .order_by(StringKey.key)
+        .order_by(StringKey.key, Localization.variation_key)
     )
 
     if state is not None:

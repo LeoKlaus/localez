@@ -75,7 +75,7 @@ async def get_string(
     if not sk.should_translate:
         return StringKeyDetail(**StringKeyResponse.model_validate(sk).model_dump(), localizations=[])
 
-    result = await db.execute(select(Localization).where(Localization.string_key_id == key_id).order_by(Localization.language))
+    result = await db.execute(select(Localization).where(Localization.string_key_id == key_id).order_by(Localization.language, Localization.variation_key))
     localizations = result.scalars().all()
 
     # Validate base fields from the ORM object first (avoids lazy-loading sk.localizations)
