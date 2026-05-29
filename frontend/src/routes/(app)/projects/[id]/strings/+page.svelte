@@ -283,6 +283,12 @@
 					}}
 				></textarea>
 			</div>
+			{@const sourceText = loc.source_value ?? loc.key}
+			<button
+				type="button"
+				class="mt-0.5 pl-1 text-xs text-muted-foreground/60 hover:text-muted-foreground"
+				onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = sourceText; requestAnimationFrame(() => textareaRefs[loc.id]?.focus()); }}
+			>Copy original</button>
 		{:else}
 			<!-- ── Other users: read-only value + "Propose change" button ── -->
 			<span class="whitespace-pre-wrap break-words px-1 py-0.5 text-sm">{loc.value ?? '—'}</span>
@@ -321,6 +327,11 @@
 							}}
 						></textarea>
 					</div>
+					<button
+						type="button"
+						class="pl-0.5 text-xs text-muted-foreground/60 hover:text-muted-foreground"
+						onmousedown={(e) => { e.preventDefault(); drafts[loc.id] = loc.source_value ?? loc.key; requestAnimationFrame(() => textareaRefs[loc.id]?.focus()); }}
+					>Copy source</button>
 					<textarea
 						class="w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
 						style="resize: none;"
