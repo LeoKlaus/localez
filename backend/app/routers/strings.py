@@ -38,7 +38,7 @@ async def list_strings(
     response: Response = None,
 ):
     limit = min(limit, MAX_LIMIT)
-    query = select(StringKey).where(StringKey.project_id == project_id)
+    query = select(StringKey).where(StringKey.project_id == project_id).order_by(StringKey.key)
 
     if should_translate is not None:
         query = query.where(StringKey.should_translate == should_translate)
@@ -75,7 +75,7 @@ async def get_string(
     if not sk.should_translate:
         return StringKeyDetail(**StringKeyResponse.model_validate(sk).model_dump(), localizations=[])
 
-    result = await db.execute(select(Localization).where(Localization.string_key_id == key_id))
+    result = await db.execute(select(Localization).where(Localization.string_key_id == key_id).order_by(Localization.language))
     localizations = result.scalars().all()
 
     # Validate base fields from the ORM object first (avoids lazy-loading sk.localizations)
