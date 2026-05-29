@@ -137,7 +137,9 @@
 
 	$effect(() => {
 		for (const loc of langStrings.data?.items ?? []) {
-			if (!(loc.id in drafts)) drafts[loc.id] = loc.value ?? '';
+			if (document.activeElement !== textareaRefs[loc.id]) {
+				drafts[loc.id] = loc.value ?? '';
+			}
 		}
 	});
 
@@ -147,7 +149,7 @@
 	 */
 	async function saveValue(loc: LocalizationWithKey) {
 		const draft = drafts[loc.id] ?? '';
-		if (draft === (loc.value ?? '') || !draft.trim()) return;
+		if (draft === (loc.value ?? '')) return;
 		submitting[loc.id] = true;
 		submitError[loc.id] = '';
 		try {
@@ -155,7 +157,7 @@
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/value',
 				{
 					params: { path: { project_id: projectId, key_id: loc.string_key_id, loc_id: loc.id } },
-					body: { value: draft }
+					body: { value: draft.trim() || null }
 				}
 			);
 			if (error) throw error;

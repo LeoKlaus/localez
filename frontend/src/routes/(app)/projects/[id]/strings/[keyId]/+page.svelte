@@ -62,7 +62,7 @@
 				'/api/projects/{project_id}/strings/{key_id}/localizations/{loc_id}/value',
 				{
 					params: { path: { project_id: projectId, key_id: keyId, loc_id: setValueLocId } },
-					body: { value: setValue }
+					body: { value: setValue.trim() || null }
 				}
 			);
 			if (error) throw error;
@@ -217,7 +217,6 @@
 					style="caret-color: hsl(var(--foreground)); resize: none;"
 					placeholder="Enter the translation…"
 					rows={4}
-					required
 					value={setValue}
 					oninput={(e) => { setValue = e.currentTarget.value; }}
 					onscroll={(e) => { if (setValueMirrorEl) setValueMirrorEl.scrollTop = e.currentTarget.scrollTop; }}

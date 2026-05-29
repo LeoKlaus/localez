@@ -48,7 +48,7 @@ class StringKeyResponse(BaseModel):
 
 
 class LocalizationValueSet(BaseModel):
-    value: str
+    value: str | None
 
 
 class LocalizationStateUpdate(BaseModel):
