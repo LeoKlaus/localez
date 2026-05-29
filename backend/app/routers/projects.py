@@ -269,7 +269,6 @@ async def delete_icon(
 @router.get("/{project_id}/icon")
 async def get_icon(
     project_id: uuid.UUID,
-    _access: User | None = Depends(require_read_access),
     db: AsyncSession = Depends(get_db),
 ):
     project = await db.get(Project, project_id)
