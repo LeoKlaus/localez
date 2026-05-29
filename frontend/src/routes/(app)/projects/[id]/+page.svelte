@@ -199,18 +199,29 @@
 	}));
 
 	// Export
+	let exportOpen = $state(false);
+	let exportState = $state<'translated' | 'needs_review' | 'new' | 'all'>('translated');
+	let exportLoading = $state(false);
+
 	async function handleExport() {
-		const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export`, {
-			headers: { Authorization: `Bearer ${auth.accessToken}` }
-		});
-		if (!res.ok) return;
-		const blob = await res.blob();
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `${project.data?.name ?? 'project'}.xcstrings`;
-		a.click();
-		URL.revokeObjectURL(url);
+		exportLoading = true;
+		try {
+			const params = exportState !== 'all' ? `?state=${exportState}` : '';
+			const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export${params}`, {
+				headers: { Authorization: `Bearer ${auth.accessToken}` }
+			});
+			if (!res.ok) return;
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${project.data?.name ?? 'project'}.xcstrings`;
+			a.click();
+			URL.revokeObjectURL(url);
+			exportOpen = false;
+		} finally {
+			exportLoading = false;
+		}
 	}
 
 	// Import
@@ -441,7 +452,7 @@
 								<Trash2 size={14} class="mr-1" /> Remove icon
 							</Button>
 						{/if}
-						<Button variant="outline" size="sm" onclick={handleExport}>
+						<Button variant="outline" size="sm" onclick={() => { exportOpen = true; exportState = 'translated'; }}>
 							<Download size={14} class="mr-1" /> Export
 						</Button>
 						<Button variant="outline" size="sm" onclick={() => { importOpen = true; importError = ''; importSuccess = ''; importConflict = 'skip'; importPrune = false; }}>
@@ -655,6 +666,45 @@
 		{/if}
 	{/if}
 </div>
+
+<!-- Export dialog -->
+<Dialog.Root bind:open={exportOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Export xcstrings</Dialog.Title>
+			<Dialog.Description>Choose which localizations to include in the export.</Dialog.Description>
+		</Dialog.Header>
+		<div class="space-y-4">
+			<div class="space-y-2">
+				<Label>Include strings</Label>
+				<div class="grid grid-cols-2 gap-2">
+					{#each [
+						{ value: 'translated', label: 'Translated', description: 'Only reviewed and approved' },
+						{ value: 'needs_review', label: 'Needs review', description: 'Translated but unreviewed' },
+						{ value: 'new', label: 'New', description: 'Not yet translated' },
+						{ value: 'all', label: 'All', description: 'Every string regardless of state' },
+					] as option}
+						<button
+							type="button"
+							onclick={() => (exportState = option.value as typeof exportState)}
+							class="rounded-md border px-3 py-2 text-left text-sm transition-colors {exportState === option.value ? 'border-primary bg-primary/5 font-medium' : 'border-border hover:bg-muted'}"
+						>
+							<span class="font-medium">{option.label}</span>
+							<p class="mt-0.5 text-xs text-muted-foreground">{option.description}</p>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</div>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (exportOpen = false)}>Cancel</Button>
+			<Button onclick={handleExport} disabled={exportLoading}>
+				<Download size={14} class="mr-1" />
+				{exportLoading ? 'Exporting…' : 'Export'}
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <!-- Import dialog -->
 <Dialog.Root bind:open={importOpen}>
