@@ -56,12 +56,13 @@ async def import_xcstrings(
             project_id=project_id,
             key=sk.key,
             comment=sk.comment,
+            comment_auto_generated=sk.comment_auto_generated,
             should_translate=sk.should_translate,
         )
         if conflict == "overwrite":
             stmt = stmt.on_conflict_do_update(
                 index_elements=["project_id", "key"],
-                set_={"comment": sk.comment, "should_translate": sk.should_translate},
+                set_={"comment": sk.comment, "comment_auto_generated": sk.comment_auto_generated, "should_translate": sk.should_translate},
             )
         else:
             stmt = stmt.on_conflict_do_nothing()

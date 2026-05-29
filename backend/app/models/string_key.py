@@ -17,6 +17,7 @@ class StringKey(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     key: Mapped[str] = mapped_column(Text, nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment_auto_generated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     should_translate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

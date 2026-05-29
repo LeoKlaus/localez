@@ -29,6 +29,7 @@ class LocalizationWithKeyResponse(LocalizationResponse):
     string_key_id: uuid.UUID
     key: str
     comment: str | None
+    comment_auto_generated: bool
     source_value: str | None
     ai_suggestion: str | None
 
@@ -38,6 +39,7 @@ class StringKeyResponse(BaseModel):
     project_id: uuid.UUID
     key: str
     comment: str | None
+    comment_auto_generated: bool
     should_translate: bool
     created_at: datetime
     updated_at: datetime

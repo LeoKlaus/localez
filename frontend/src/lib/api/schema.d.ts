@@ -1085,6 +1085,8 @@ export interface components {
             key: string;
             /** Comment */
             comment: string | null;
+            /** Comment Auto Generated */
+            comment_auto_generated: boolean;
             /** Source Value */
             source_value: string | null;
             /** Ai Suggestion */
@@ -1391,6 +1393,8 @@ export interface components {
             key: string;
             /** Comment */
             comment: string | null;
+            /** Comment Auto Generated */
+            comment_auto_generated: boolean;
             /** Should Translate */
             should_translate: boolean;
             /**
@@ -1425,6 +1429,8 @@ export interface components {
             key: string;
             /** Comment */
             comment: string | null;
+            /** Comment Auto Generated */
+            comment_auto_generated: boolean;
             /** Should Translate */
             should_translate: boolean;
             /**
