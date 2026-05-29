@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { initials } from '$lib/utils';
 	import FolderOpen from 'lucide-svelte/icons/folder-open';
 	import Settings from 'lucide-svelte/icons/settings';
@@ -22,6 +23,8 @@
 
 	let { children } = $props();
 	const qc = useQueryClient();
+
+	let channelInfoOpen = $state(false);
 
 	const navItems = [
 		{ href: '/projects', label: 'All Projects', icon: FolderOpen }
@@ -174,9 +177,9 @@
 				<div class="mt-auto flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
 					<span>v{configStore.version}</span>
 					{#if configStore.channel === 'beta'}
-						<span class="rounded bg-blue-100 px-1.5 py-0.5 font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Beta</span>
+						<button onclick={() => channelInfoOpen = true} class="rounded bg-blue-100 px-1.5 py-0.5 font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60">Beta</button>
 					{:else if configStore.channel === 'preview'}
-						<span class="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Preview</span>
+						<button onclick={() => channelInfoOpen = true} class="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:hover:bg-amber-900/60">Preview</button>
 					{/if}
 				</div>
 			{/if}
@@ -252,9 +255,9 @@
 			{/if}
 			<div class="flex items-center gap-2">
 				{#if configStore.channel === 'beta'}
-					<span class="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Beta</span>
+					<button onclick={() => channelInfoOpen = true} class="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60">Beta</button>
 				{:else if configStore.channel === 'preview'}
-					<span class="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Preview</span>
+					<button onclick={() => channelInfoOpen = true} class="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:hover:bg-amber-900/60">Preview</button>
 				{/if}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger class="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
@@ -348,3 +351,21 @@
 		</main>
 	</div>
 </div>
+
+<Dialog.Root bind:open={channelInfoOpen}>
+	<Dialog.Content class="max-w-sm">
+		<Dialog.Header>
+			{#if configStore.channel === 'beta'}
+				<Dialog.Title>Beta</Dialog.Title>
+				<Dialog.Description>
+					This is a beta release. Beta builds are pre-release versions that may contain incomplete features or bugs. Please <a href="https://github.com/LeoKlaus/localez/issues/new/choose" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline">report any issues</a> you encounter.
+				</Dialog.Description>
+			{:else if configStore.channel === 'preview'}
+				<Dialog.Title>Preview</Dialog.Title>
+				<Dialog.Description>
+					This is a preview build, automatically built from the latest commit on the main branch. Preview builds may be unstable and are intended for testing purposes only. Please <a href="https://github.com/LeoKlaus/localez/issues/new/choose" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline">report any issues</a> you encounter.
+				</Dialog.Description>
+			{/if}
+		</Dialog.Header>
+	</Dialog.Content>
+</Dialog.Root>
