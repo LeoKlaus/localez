@@ -397,7 +397,7 @@
 
 						{#if loc.source_value}
 							<p class="mb-2 text-xs text-muted-foreground">
-								<span class="font-medium">Source:</span>
+								<span class="font-medium">Original:</span>
 								<span class="font-mono">{loc.source_value}</span>
 							</p>
 						{/if}

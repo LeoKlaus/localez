@@ -507,7 +507,7 @@
 								</a>
 								{#if loc.source_value && loc.source_value !== loc.key}
 									<p class="mt-0.5 break-words text-xs text-muted-foreground">
-										<span class="font-medium">Source:</span> {loc.source_value}
+										<span class="font-medium">Original:</span> {loc.source_value}
 									</p>
 								{/if}
 								{#if loc.comment}
@@ -532,7 +532,7 @@
 							</a>
 							{#if anySource}
 								<p class="mt-0.5 break-words text-xs text-muted-foreground">
-									<span class="font-medium">Source:</span> {anySource}
+									<span class="font-medium">Original:</span> {anySource}
 								</p>
 							{/if}
 							{#if group.entries[0].comment}
@@ -583,7 +583,7 @@
 									</a>
 									{#if loc.source_value && loc.source_value !== loc.key}
 										<p class="mt-0.5 break-words text-xs text-muted-foreground">
-											<span class="font-medium">Source:</span> {loc.source_value}
+											<span class="font-medium">Original:</span> {loc.source_value}
 										</p>
 									{/if}
 								</Table.Cell>
@@ -604,7 +604,7 @@
 									{@const anySource = group.entries.find(e => e.source_value && e.source_value !== group.key)?.source_value}
 									{#if anySource}
 										<p class="mt-0.5 break-words text-xs text-muted-foreground">
-											<span class="font-medium">Source:</span> {anySource}
+											<span class="font-medium">Original:</span> {anySource}
 										</p>
 									{/if}
 								</Table.Cell>
