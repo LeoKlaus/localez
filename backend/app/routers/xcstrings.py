@@ -26,6 +26,7 @@ async def import_xcstrings(
     project_id: uuid.UUID,
     file: UploadFile = File(..., description="xcstrings file to import"),
     conflict: str = Query(default="skip", pattern="^(skip|overwrite)$"),
+    prune: bool = Query(default=False, description="Delete keys not present in the uploaded file"),
     _: None = Depends(require_import_access),
     db: AsyncSession = Depends(get_db),
 ):
@@ -109,13 +110,23 @@ async def import_xcstrings(
             .on_conflict_do_nothing()
         )
 
+    # Remove keys not present in the uploaded file
+    removed_count = 0
+    if prune:
+        incoming_keys = {sk.key for sk in parsed.string_keys}
+        existing_result = await db.execute(select(StringKey).where(StringKey.project_id == project_id))
+        for sk in existing_result.scalars().all():
+            if sk.key not in incoming_keys:
+                await db.delete(sk)
+                removed_count += 1
+
     # Fill placeholder rows for any (string_key, project_language) without a flat localization
     await fill_missing_localizations(project_id, db)
     await db.commit()
 
     keys_count = len(parsed.string_keys)
     locs_count = len(parsed.localizations)
-    return {"imported_keys": keys_count, "imported_localizations": locs_count}
+    return {"imported_keys": keys_count, "imported_localizations": locs_count, "removed_keys": removed_count}
 
 
 @router.get("/{project_id}/export")

@@ -240,6 +240,143 @@ async def test_import_fills_variation_placeholders_for_missing_languages(admin_c
 
 
 # ---------------------------------------------------------------------------
+# Prune
+# ---------------------------------------------------------------------------
+
+def _minimal_xcstrings(source_language: str = "en", keys: list[str] | None = None) -> dict:
+    """Build a minimal xcstrings dict containing only the specified keys."""
+    keys = keys or ["KeyA", "KeyB"]
+    return {
+        "sourceLanguage": source_language,
+        "version": "1.2",
+        "strings": {
+            key: {
+                "localizations": {
+                    source_language: {"stringUnit": {"state": "translated", "value": key}}
+                }
+            }
+            for key in keys
+        },
+    }
+
+
+async def test_prune_false_retains_absent_keys(admin_client: AsyncClient):
+    """Without prune, keys missing from the new file are kept."""
+    proj = (await admin_client.post("/api/projects", json={"name": "PruneFalse", "source_language": "en"})).json()
+
+    # Import two keys
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload(_minimal_xcstrings(keys=["KeyA", "KeyB"])))
+
+    # Re-import with only one key, no prune
+    resp = await admin_client.post(
+        f"/api/projects/{proj['id']}/import?prune=false",
+        files=_upload(_minimal_xcstrings(keys=["KeyA"])),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["removed_keys"] == 0
+
+    strings = (await admin_client.get(f"/api/projects/{proj['id']}/strings")).json()
+    key_names = {s["key"] for s in strings}
+    assert "KeyA" in key_names
+    assert "KeyB" in key_names
+
+
+async def test_prune_true_removes_absent_keys(admin_client: AsyncClient):
+    """With prune=true, keys missing from the new file are deleted."""
+    proj = (await admin_client.post("/api/projects", json={"name": "PruneTrue", "source_language": "en"})).json()
+
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload(_minimal_xcstrings(keys=["KeyA", "KeyB", "KeyC"])))
+
+    resp = await admin_client.post(
+        f"/api/projects/{proj['id']}/import?prune=true",
+        files=_upload(_minimal_xcstrings(keys=["KeyA"])),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["removed_keys"] == 2
+
+    strings = (await admin_client.get(f"/api/projects/{proj['id']}/strings")).json()
+    key_names = {s["key"] for s in strings}
+    assert "KeyA" in key_names
+    assert "KeyB" not in key_names
+    assert "KeyC" not in key_names
+
+
+async def test_prune_true_removes_zero_when_all_keys_present(admin_client: AsyncClient):
+    """prune=true removes nothing when the uploaded file contains all existing keys."""
+    proj = (await admin_client.post("/api/projects", json={"name": "PruneNoOp", "source_language": "en"})).json()
+
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload(_minimal_xcstrings(keys=["KeyA", "KeyB"])))
+
+    resp = await admin_client.post(
+        f"/api/projects/{proj['id']}/import?prune=true",
+        files=_upload(_minimal_xcstrings(keys=["KeyA", "KeyB"])),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["removed_keys"] == 0
+
+    strings = (await admin_client.get(f"/api/projects/{proj['id']}/strings")).json()
+    assert len(strings) == 2
+
+
+async def test_prune_true_cascades_to_localizations(admin_client: AsyncClient):
+    """Deleting a key via prune also removes its localizations."""
+    proj = (await admin_client.post("/api/projects", json={"name": "PruneCascade", "source_language": "en"})).json()
+
+    await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload(_minimal_xcstrings(keys=["KeyA", "KeyB"])))
+
+    # Confirm localizations exist for KeyB before pruning
+    strings_before = (await admin_client.get(f"/api/projects/{proj['id']}/strings")).json()
+    key_b = next(s for s in strings_before if s["key"] == "KeyB")
+    locs_before = (await admin_client.get(f"/api/projects/{proj['id']}/strings/{key_b['id']}/localizations")).json()
+    assert len(locs_before) > 0
+
+    # Prune KeyB
+    await admin_client.post(
+        f"/api/projects/{proj['id']}/import?prune=true",
+        files=_upload(_minimal_xcstrings(keys=["KeyA"])),
+    )
+
+    # KeyB's string detail should now 404
+    resp = await admin_client.get(f"/api/projects/{proj['id']}/strings/{key_b['id']}")
+    assert resp.status_code == 404
+
+
+async def test_prune_true_only_affects_target_project(admin_client: AsyncClient):
+    """Prune must not delete keys belonging to other projects."""
+    proj_a = (await admin_client.post("/api/projects", json={"name": "PruneIsolationA", "source_language": "en"})).json()
+    proj_b = (await admin_client.post("/api/projects", json={"name": "PruneIsolationB", "source_language": "en"})).json()
+
+    shared_payload = _minimal_xcstrings(keys=["SharedKey"])
+    await admin_client.post(f"/api/projects/{proj_a['id']}/import", files=_upload(shared_payload))
+    await admin_client.post(f"/api/projects/{proj_b['id']}/import", files=_upload(shared_payload))
+
+    # Prune project A by uploading an empty-ish file (different key)
+    await admin_client.post(
+        f"/api/projects/{proj_a['id']}/import?prune=true",
+        files=_upload(_minimal_xcstrings(keys=["DifferentKey"])),
+    )
+
+    # Project B's SharedKey must still exist
+    strings_b = (await admin_client.get(f"/api/projects/{proj_b['id']}/strings")).json()
+    assert any(s["key"] == "SharedKey" for s in strings_b)
+
+
+async def test_prune_response_always_includes_removed_keys_field(admin_client: AsyncClient):
+    """removed_keys is present in the response regardless of the prune flag."""
+    proj = (await admin_client.post("/api/projects", json={"name": "PruneField", "source_language": "en"})).json()
+
+    resp_no_prune = await admin_client.post(f"/api/projects/{proj['id']}/import", files=_upload(_minimal_xcstrings()))
+    assert "removed_keys" in resp_no_prune.json()
+    assert resp_no_prune.json()["removed_keys"] == 0
+
+    resp_prune = await admin_client.post(
+        f"/api/projects/{proj['id']}/import?prune=true",
+        files=_upload(_minimal_xcstrings()),
+    )
+    assert "removed_keys" in resp_prune.json()
+
+
+# ---------------------------------------------------------------------------
 # Export tokens
 # ---------------------------------------------------------------------------
 

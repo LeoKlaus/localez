@@ -199,47 +199,67 @@
 	}));
 
 	// Export
+	let exportOpen = $state(false);
+	let exportState = $state<'translated' | 'needs_review' | 'new' | 'all'>('translated');
+	let exportLoading = $state(false);
+
 	async function handleExport() {
-		const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export`, {
-			headers: { Authorization: `Bearer ${auth.accessToken}` }
-		});
-		if (!res.ok) return;
-		const blob = await res.blob();
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `${project.data?.name ?? 'project'}.xcstrings`;
-		a.click();
-		URL.revokeObjectURL(url);
+		exportLoading = true;
+		try {
+			const params = exportState !== 'all' ? `?state=${exportState}` : '';
+			const res = await fetch(`${BASE_URL}/api/projects/${projectId}/export${params}`, {
+				headers: { Authorization: `Bearer ${auth.accessToken}` }
+			});
+			if (!res.ok) return;
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${project.data?.name ?? 'project'}.xcstrings`;
+			a.click();
+			URL.revokeObjectURL(url);
+			exportOpen = false;
+		} finally {
+			exportLoading = false;
+		}
 	}
 
 	// Import
+	let importOpen = $state(false);
 	let importInput = $state<HTMLInputElement | undefined>(undefined);
+	let importConflict = $state<'skip' | 'overwrite'>('skip');
+	let importPrune = $state(false);
 	let importLoading = $state(false);
 	let importError = $state('');
-	let importSuccess = $state(false);
+	let importSuccess = $state('');
 
-	async function handleImport() {
+	async function handleImport(e: SubmitEvent) {
+		e.preventDefault();
 		const file = importInput?.files?.[0];
 		if (!file) return;
 		importError = '';
-		importSuccess = false;
+		importSuccess = '';
 		importLoading = true;
 		try {
 			const formData = new FormData();
 			formData.append('file', file);
-			const res = await fetch(`${BASE_URL}/api/projects/${projectId}/import`, {
+			const url = `${BASE_URL}/api/projects/${projectId}/import?conflict=${importConflict}${importPrune ? '&prune=true' : ''}`;
+			const res = await fetch(url, {
 				method: 'POST',
 				headers: { Authorization: `Bearer ${auth.accessToken}` },
 				body: formData
 			});
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
-				importError = data.detail ?? 'Import failed.';
+				importError = data.detail?.message ?? data.detail ?? 'Import failed.';
 				return;
 			}
-			importSuccess = true;
+			const result = await res.json();
+			const removedNote = result.removed_keys > 0 ? ` ${result.removed_keys} key${result.removed_keys === 1 ? '' : 's'} removed.` : '';
+			importSuccess = `Imported ${result.imported_keys} key${result.imported_keys === 1 ? '' : 's'}.${removedNote}`;
+			importOpen = false;
 			qc.invalidateQueries({ queryKey: ['strings', projectId] });
+			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
 			qc.invalidateQueries({ queryKey: ['stats', projectId] });
 			qc.invalidateQueries({ queryKey: ['project', projectId] });
 		} finally {
@@ -432,13 +452,12 @@
 								<Trash2 size={14} class="mr-1" /> Remove icon
 							</Button>
 						{/if}
-						<Button variant="outline" size="sm" onclick={handleExport}>
+						<Button variant="outline" size="sm" onclick={() => { exportOpen = true; exportState = 'translated'; }}>
 							<Download size={14} class="mr-1" /> Export
 						</Button>
-						<Button variant="outline" size="sm" onclick={() => importInput?.click()} disabled={importLoading}>
-							<Upload size={14} class="mr-1" /> {importLoading ? 'Importing…' : 'Import'}
+						<Button variant="outline" size="sm" onclick={() => { importOpen = true; importError = ''; importSuccess = ''; importConflict = 'skip'; importPrune = false; }}>
+							<Upload size={14} class="mr-1" /> Import
 						</Button>
-						<input bind:this={importInput} type="file" accept=".xcstrings,.json" class="hidden" onchange={handleImport} />
 						<Button variant="outline" size="sm" class="text-destructive" onclick={() => (deleteOpen = true)}>
 							<Trash2 size={14} class="mr-1" /> Delete
 						</Button>
@@ -454,12 +473,7 @@
 
 		{#if importSuccess}
 			<Alert.Root class="mb-4 border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
-				<Alert.Description>File imported successfully.</Alert.Description>
-			</Alert.Root>
-		{/if}
-		{#if importError}
-			<Alert.Root class="mb-4 border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
-				<Alert.Description>{importError}</Alert.Description>
+				<Alert.Description>{importSuccess}</Alert.Description>
 			</Alert.Root>
 		{/if}
 
@@ -652,6 +666,104 @@
 		{/if}
 	{/if}
 </div>
+
+<!-- Export dialog -->
+<Dialog.Root bind:open={exportOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Export xcstrings</Dialog.Title>
+			<Dialog.Description>Choose which localizations to include in the export.</Dialog.Description>
+		</Dialog.Header>
+		<div class="space-y-4">
+			<div class="space-y-2">
+				<Label>Include strings</Label>
+				<div class="grid grid-cols-2 gap-2">
+					{#each [
+						{ value: 'translated', label: 'Translated', description: 'Only reviewed and approved' },
+						{ value: 'needs_review', label: 'Needs review', description: 'Translated but unreviewed' },
+						{ value: 'new', label: 'New', description: 'Not yet translated' },
+						{ value: 'all', label: 'All', description: 'Every string regardless of state' },
+					] as option}
+						<button
+							type="button"
+							onclick={() => (exportState = option.value as typeof exportState)}
+							class="rounded-md border px-3 py-2 text-left text-sm transition-colors {exportState === option.value ? 'border-primary bg-primary/5 font-medium' : 'border-border hover:bg-muted'}"
+						>
+							<span class="font-medium">{option.label}</span>
+							<p class="mt-0.5 text-xs text-muted-foreground">{option.description}</p>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</div>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (exportOpen = false)}>Cancel</Button>
+			<Button onclick={handleExport} disabled={exportLoading}>
+				<Download size={14} class="mr-1" />
+				{exportLoading ? 'Exporting…' : 'Export'}
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Import dialog -->
+<Dialog.Root bind:open={importOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Import xcstrings</Dialog.Title>
+			<Dialog.Description>Select an xcstrings or JSON file to import. Existing string values are overwritten.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={handleImport} class="space-y-4">
+			{#if importError}
+				<p class="text-sm text-destructive">{importError}</p>
+			{/if}
+			<div class="space-y-2">
+				<Label>File</Label>
+				<input
+					bind:this={importInput}
+					type="file"
+					accept=".xcstrings,.json"
+					required
+					class="flex w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+				/>
+			</div>
+			<div class="space-y-2">
+				<Label>Existing translations</Label>
+				<div class="grid grid-cols-2 gap-2">
+					<button
+						type="button"
+						onclick={() => (importConflict = 'skip')}
+						class="rounded-md border px-3 py-2 text-left text-sm transition-colors {importConflict === 'skip' ? 'border-primary bg-primary/5 font-medium' : 'border-border hover:bg-muted'}"
+					>
+						<span class="font-medium">Keep</span>
+						<p class="mt-0.5 text-xs text-muted-foreground">Don't overwrite translated values</p>
+					</button>
+					<button
+						type="button"
+						onclick={() => (importConflict = 'overwrite')}
+						class="rounded-md border px-3 py-2 text-left text-sm transition-colors {importConflict === 'overwrite' ? 'border-primary bg-primary/5 font-medium' : 'border-border hover:bg-muted'}"
+					>
+						<span class="font-medium">Overwrite</span>
+						<p class="mt-0.5 text-xs text-muted-foreground">Replace values with file contents</p>
+					</button>
+				</div>
+			</div>
+			<label class="flex items-start gap-3 cursor-pointer select-none">
+				<input type="checkbox" bind:checked={importPrune} class="mt-0.5 size-4 rounded border accent-primary" />
+				<div>
+					<span class="text-sm font-medium">Remove deleted keys</span>
+					<p class="text-xs text-muted-foreground">Delete keys that exist in the project but are absent from this file. Use for full-sync imports.</p>
+				</div>
+			</label>
+			<Dialog.Footer>
+				<Button type="button" variant="outline" onclick={() => (importOpen = false)}>Cancel</Button>
+				<Button type="submit" disabled={importLoading}>
+					{importLoading ? 'Importing…' : 'Import'}
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
 
 <!-- Edit project dialog -->
 <Dialog.Root bind:open={editOpen}>
