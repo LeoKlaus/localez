@@ -172,7 +172,9 @@
 			{#if configStore.version}
 				<div class="mt-auto flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
 					<span>v{configStore.version}</span>
-					{#if configStore.channel === 'preview'}
+					{#if configStore.channel === 'beta'}
+						<span class="rounded bg-blue-100 px-1.5 py-0.5 font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Beta</span>
+					{:else if configStore.channel === 'preview'}
 						<span class="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Preview</span>
 					{/if}
 				</div>

@@ -3,7 +3,9 @@ FROM python:3.13-slim
 WORKDIR /app
 
 ARG APP_VERSION=dev
+ARG CHANNEL=preview
 ENV APP_VERSION=${APP_VERSION}
+ENV CHANNEL=${CHANNEL}
 
 # Install the package and its dependencies
 COPY pyproject.toml .

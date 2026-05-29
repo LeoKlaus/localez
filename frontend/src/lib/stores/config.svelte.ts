@@ -1,5 +1,5 @@
 type Provider = 'llm' | 'deepl' | null;
-type Channel = 'stable' | 'preview';
+type Channel = 'stable' | 'beta' | 'preview';
 
 function createConfigStore() {
 	let provider = $state<Provider>(null);
