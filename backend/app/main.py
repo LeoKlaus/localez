@@ -10,10 +10,11 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.core.limiter import limiter
+from app.version import __version__
 from app.models import project_language, project_member, project_token  # noqa: F401 — ensure models are registered with Base
 from app.routers import auth, config, projects, proposals, strings, users, xcstrings
 
-app = FastAPI(title="Localez", version="0.1.0", root_path="/api")
+app = FastAPI(title="Localez", version=__version__, root_path="/api")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)

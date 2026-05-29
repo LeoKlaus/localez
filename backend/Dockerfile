@@ -2,6 +2,9 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 # Install the package and its dependencies
 COPY pyproject.toml .
 RUN pip install --no-cache-dir .
