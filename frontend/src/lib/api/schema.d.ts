@@ -1052,7 +1052,7 @@ export interface components {
         /** LocalizationValueSet */
         LocalizationValueSet: {
             /** Value */
-            value: string;
+            value: string | null;
         };
         /** LocalizationWithKeyResponse */
         LocalizationWithKeyResponse: {
