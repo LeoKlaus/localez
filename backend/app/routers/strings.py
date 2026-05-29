@@ -286,5 +286,6 @@ async def suggest_localization(
     data = {c.name: getattr(loc, c.name) for c in loc.__table__.columns}
     data["key"] = sk.key
     data["comment"] = sk.comment
+    data["comment_auto_generated"] = sk.comment_auto_generated
     data["source_value"] = source_loc.value if source_loc else None
     return LocalizationWithKeyResponse.model_validate(data)
