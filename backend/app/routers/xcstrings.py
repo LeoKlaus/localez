@@ -1,7 +1,7 @@
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -14,6 +14,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.project_language import ProjectLanguage
 from app.models.string_key import StringKey
+from app.routers.projects import _run_prefill_background
 from app.services.localization_service import fill_missing_localizations
 from app.services.xcstrings_exporter import build_xcstrings
 from app.services.xcstrings_parser import parse_xcstrings
@@ -24,6 +25,7 @@ router = APIRouter()
 @router.post("/{project_id}/import", status_code=status.HTTP_200_OK)
 async def import_xcstrings(
     project_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="xcstrings file to import"),
     conflict: str = Query(default="skip", pattern="^(skip|overwrite)$"),
     prune: bool = Query(default=False, description="Delete keys not present in the uploaded file"),
@@ -124,6 +126,15 @@ async def import_xcstrings(
     # Fill placeholder rows for any (string_key, project_language) without a flat localization
     await fill_missing_localizations(project_id, db)
     await db.commit()
+
+    # Fetch all project languages to prefill new keys
+    lang_rows = await db.execute(select(ProjectLanguage).where(ProjectLanguage.project_id == project_id))
+    project_languages = lang_rows.scalars().all()
+    source_lang = project.source_language
+    sentinel_user_id = uuid.UUID(int=0)
+    for pl in project_languages:
+        if pl.language != source_lang:
+            background_tasks.add_task(_run_prefill_background, project_id, pl.language, source_lang, sentinel_user_id)
 
     keys_count = len(parsed.string_keys)
     locs_count = len(parsed.localizations)

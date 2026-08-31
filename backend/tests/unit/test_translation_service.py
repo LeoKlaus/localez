@@ -124,6 +124,9 @@ async def test_translate_with_llm_happy_path():
         mock_settings.llm_api_key = mock_key
         mock_settings.llm_api_base = "https://api.openai.com/v1"
         mock_settings.llm_model = "gpt-4o-mini"
+        mock_settings.llm_structured_output = False
+        mock_settings.llm_temperature = None
+        mock_settings.llm_max_tokens = None
         result = await translate_with_llm("en", "de", ["Hello", "World"])
 
     assert result == ["Hallo", "Welt"]
@@ -153,6 +156,9 @@ async def test_translate_with_llm_with_comments_builds_notes():
         mock_settings.llm_api_key = mock_key
         mock_settings.llm_api_base = "https://api.openai.com/v1"
         mock_settings.llm_model = "gpt-4o-mini"
+        mock_settings.llm_structured_output = False
+        mock_settings.llm_temperature = None
+        mock_settings.llm_max_tokens = None
         result = await translate_with_llm("en", "de", ["Hello"], comments=["A greeting"])
 
     assert result == ["Hallo"]
@@ -187,6 +193,9 @@ async def test_translate_with_llm_strips_markdown_code_fences():
         mock_settings.llm_api_key = mock_key
         mock_settings.llm_api_base = "https://api.openai.com/v1"
         mock_settings.llm_model = "gpt-4o-mini"
+        mock_settings.llm_structured_output = False
+        mock_settings.llm_temperature = None
+        mock_settings.llm_max_tokens = None
         result = await translate_with_llm("en", "de", ["Hello"])
 
     assert result == ["Hallo"]
@@ -212,6 +221,9 @@ async def test_translate_with_llm_non_200_raises():
         mock_settings.llm_api_key = mock_key
         mock_settings.llm_api_base = "https://api.openai.com/v1"
         mock_settings.llm_model = "gpt-4o-mini"
+        mock_settings.llm_structured_output = False
+        mock_settings.llm_temperature = None
+        mock_settings.llm_max_tokens = None
         with pytest.raises(RuntimeError, match="LLM_ERROR"):
             await translate_with_llm("en", "de", ["Hello"])
 
@@ -239,6 +251,9 @@ async def test_translate_with_llm_malformed_json_raises():
         mock_settings.llm_api_key = mock_key
         mock_settings.llm_api_base = "https://api.openai.com/v1"
         mock_settings.llm_model = "gpt-4o-mini"
+        mock_settings.llm_structured_output = False
+        mock_settings.llm_temperature = None
+        mock_settings.llm_max_tokens = None
         with pytest.raises(RuntimeError, match="malformed JSON"):
             await translate_with_llm("en", "de", ["Hello"])
 
@@ -267,6 +282,9 @@ async def test_translate_with_llm_wrong_list_length_raises():
         mock_settings.llm_api_key = mock_key
         mock_settings.llm_api_base = "https://api.openai.com/v1"
         mock_settings.llm_model = "gpt-4o-mini"
+        mock_settings.llm_structured_output = False
+        mock_settings.llm_temperature = None
+        mock_settings.llm_max_tokens = None
         with pytest.raises(RuntimeError, match="expected list of 1 items"):
             await translate_with_llm("en", "de", ["Hello"])
 

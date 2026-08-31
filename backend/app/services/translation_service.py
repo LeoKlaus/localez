@@ -51,13 +51,21 @@ async def _translate_batch_with_llm(
     key = settings.llm_api_key
     payload = json.dumps(texts, ensure_ascii=False)
 
+    structured = settings.llm_structured_output
     has_comments = comments and any(c for c in comments)
+    return_instruction = (
+        'Return a JSON object with a single key "translations" whose value is an array of strings '
+        "of the same length in the same order as the input."
+        if structured
+        else "Return a JSON array of strings of the same length in the same order."
+    )
+
     if has_comments:
         notes = "\n".join(f"  [{i}] {c}" for i, c in enumerate(comments) if c)
         system_prompt = (
             f"You are a professional app localizer. Translate the following JSON array of UI strings "
             f"from '{source_lang}' to '{target_lang}'. "
-            "Return a JSON array of strings of the same length in the same order. "
+            f"{return_instruction} "
             "Return only valid JSON, no explanation.\n\n"
             f"Developer notes for some strings (use as context, do not translate):\n{notes}"
         )
@@ -65,7 +73,7 @@ async def _translate_batch_with_llm(
         system_prompt = (
             f"You are a professional app localizer. Translate the following JSON array of UI strings "
             f"from '{source_lang}' to '{target_lang}'. "
-            "Return a JSON array of strings of the same length in the same order. "
+            f"{return_instruction} "
             "Return only valid JSON, no explanation."
         )
 
@@ -78,17 +86,23 @@ async def _translate_batch_with_llm(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": payload},
             ],
+            **({"response_format": {"type": "json_object"}} if structured else {}),
             **({"temperature": settings.llm_temperature} if settings.llm_temperature is not None else {}),
+            **({"max_tokens": settings.llm_max_tokens} if settings.llm_max_tokens is not None else {}),
         },
     )
     if resp.status_code != 200:
         raise RuntimeError(f"LLM_ERROR: {resp.status_code} {resp.text}")
 
     content = resp.json()["choices"][0]["message"]["content"].strip()
-    content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
 
     try:
-        translated = json.loads(content)
+        if structured:
+            parsed = json.loads(content)
+            translated = parsed.get("translations") if isinstance(parsed, dict) else None
+        else:
+            content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
+            translated = json.loads(content)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"LLM_ERROR: malformed JSON response: {e}") from e
 
