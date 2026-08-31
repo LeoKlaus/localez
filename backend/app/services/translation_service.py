@@ -82,7 +82,7 @@ async def translate_with_llm(
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": payload},
                 ],
-                "temperature": 0.2,
+                **({"temperature": settings.llm_temperature} if settings.llm_temperature is not None else {}),
             },
         )
         if resp.status_code != 200:

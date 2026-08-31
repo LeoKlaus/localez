@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     llm_api_base: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
+    llm_temperature: float | None = 0.2
 
     @field_validator("secret_key", mode="before")
     @classmethod
