@@ -28,10 +28,19 @@ class Settings(BaseSettings):
     llm_api_base: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float | None = 0.2
+    llm_max_tokens: int | None = None
+    llm_structured_output: bool = False
 
     @field_validator("llm_temperature", mode="before")
     @classmethod
     def coerce_empty_temperature(cls, v: object) -> object:
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    @field_validator("llm_max_tokens", mode="before")
+    @classmethod
+    def coerce_empty_max_tokens(cls, v: object) -> object:
         if isinstance(v, str) and v.strip() == "":
             return None
         return v
