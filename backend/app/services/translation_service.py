@@ -38,25 +38,22 @@ async def translate_with_deepl(source_lang: str, target_lang: str, texts: list[s
     return results
 
 
-async def translate_with_llm(
+_LLM_BATCH_SIZE = 50
+
+
+async def _translate_batch_with_llm(
     source_lang: str,
     target_lang: str,
     texts: list[str],
-    comments: list[str | None] | None = None,
+    comments: list[str | None] | None,
+    client: httpx.AsyncClient,
 ) -> list[str]:
     key = settings.llm_api_key
-    if not key:
-        raise RuntimeError("LLM_NOT_CONFIGURED")
-
-    # Always send texts as a plain string array; put comments in the system prompt
-    # to avoid the model mirroring an object input format back in its response.
     payload = json.dumps(texts, ensure_ascii=False)
 
     has_comments = comments and any(c for c in comments)
     if has_comments:
-        notes = "\n".join(
-            f"  [{i}] {c}" for i, c in enumerate(comments) if c
-        )
+        notes = "\n".join(f"  [{i}] {c}" for i, c in enumerate(comments) if c)
         system_prompt = (
             f"You are a professional app localizer. Translate the following JSON array of UI strings "
             f"from '{source_lang}' to '{target_lang}'. "
@@ -72,24 +69,22 @@ async def translate_with_llm(
             "Return only valid JSON, no explanation."
         )
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            f"{settings.llm_api_base}/chat/completions",
-            headers={"Authorization": f"Bearer {key.get_secret_value()}"},
-            json={
-                "model": settings.llm_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": payload},
-                ],
-                **({"temperature": settings.llm_temperature} if settings.llm_temperature is not None else {}),
-            },
-        )
-        if resp.status_code != 200:
-            raise RuntimeError(f"LLM_ERROR: {resp.status_code} {resp.text}")
+    resp = await client.post(
+        f"{settings.llm_api_base}/chat/completions",
+        headers={"Authorization": f"Bearer {key.get_secret_value()}"},
+        json={
+            "model": settings.llm_model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": payload},
+            ],
+            **({"temperature": settings.llm_temperature} if settings.llm_temperature is not None else {}),
+        },
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"LLM_ERROR: {resp.status_code} {resp.text}")
 
     content = resp.json()["choices"][0]["message"]["content"].strip()
-    # Strip markdown code fences if present
     content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
 
     try:
@@ -101,6 +96,28 @@ async def translate_with_llm(
         raise RuntimeError(f"LLM_ERROR: expected list of {len(texts)} items, got {translated!r:.200}")
 
     return [str(t) for t in translated]
+
+
+async def translate_with_llm(
+    source_lang: str,
+    target_lang: str,
+    texts: list[str],
+    comments: list[str | None] | None = None,
+) -> list[str]:
+    if not settings.llm_api_key:
+        raise RuntimeError("LLM_NOT_CONFIGURED")
+
+    results: list[str] = []
+    async with httpx.AsyncClient(timeout=60) as client:
+        for i in range(0, len(texts), _LLM_BATCH_SIZE):
+            batch_texts = texts[i : i + _LLM_BATCH_SIZE]
+            batch_comments = comments[i : i + _LLM_BATCH_SIZE] if comments else None
+            batch_result = await _translate_batch_with_llm(
+                source_lang, target_lang, batch_texts, batch_comments, client
+            )
+            results.extend(batch_result)
+
+    return results
 
 
 async def prefill(
