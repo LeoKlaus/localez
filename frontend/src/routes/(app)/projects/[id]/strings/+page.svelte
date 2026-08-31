@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+	import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { client } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { Input } from '$lib/components/ui/input';
@@ -13,6 +13,7 @@
 	import { prefillStore } from '$lib/stores/prefill.svelte';
 	import { configStore } from '$lib/stores/config.svelte';
 	import Search from 'lucide-svelte/icons/search';
+	import Sparkles from 'lucide-svelte/icons/sparkles';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import {
@@ -87,6 +88,32 @@
 			});
 			if (error) throw error;
 			return data ?? [];
+		}
+	}));
+
+	const project = createQuery(() => ({
+		queryKey: ['project', projectId],
+		enabled: auth.authReady && auth.isAuthenticated,
+		queryFn: async () => {
+			const { data, error } = await client.GET('/api/projects/{project_id}', {
+				params: { path: { project_id: projectId } }
+			});
+			if (error) throw error;
+			return data;
+		}
+	}));
+
+	let isProjectAdmin = $derived(auth.isAdmin || project.data?.my_role === 'admin');
+
+	const prefillMutation = createMutation(() => ({
+		mutationFn: async () => {
+			const { error } = await client.POST('/api/projects/{project_id}/languages/{language}/prefill', {
+				params: { path: { project_id: projectId, language } }
+			});
+			if (error) throw error;
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['lang-strings', projectId] });
 		}
 	}));
 
@@ -476,6 +503,18 @@
 				<Select.Item value="translated">Translated</Select.Item>
 			</Select.Content>
 		</Select.Root>
+		{#if language && isProjectAdmin && configStore.provider}
+			<Button
+				variant="outline"
+				size="sm"
+				disabled={prefillMutation.isPending}
+				onclick={() => prefillMutation.mutate()}
+				class="ml-auto gap-1.5"
+			>
+				<Sparkles size={14} />
+				{prefillMutation.isPending ? 'Generating…' : 'Generate AI suggestions'}
+			</Button>
+		{/if}
 	</div>
 
 	{#if language}
