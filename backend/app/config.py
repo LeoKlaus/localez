@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float | None = 0.2
 
+    @field_validator("llm_temperature", mode="before")
+    @classmethod
+    def coerce_empty_temperature(cls, v: object) -> object:
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
     @field_validator("secret_key", mode="before")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
